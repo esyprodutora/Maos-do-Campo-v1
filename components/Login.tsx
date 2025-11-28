@@ -1,9 +1,9 @@
 
 import React, { useState } from 'react';
 import { supabase } from '../services/supabaseClient';
-import { Loader2, Mail, Lock, ArrowRight, User } from 'lucide-react';
+import { Loader2, Mail, Lock, ArrowRight, User, AlertTriangle } from 'lucide-react';
 
-// Ícones SVG Inline para Social Login
+// Ícones SVG Inline para Social Login com cores oficiais
 const GoogleIcon = () => (
   <svg className="w-5 h-5" viewBox="0 0 24 24">
     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
@@ -22,7 +22,7 @@ const AppleIcon = () => (
 export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState(''); // Added for signup visual completeness
+  const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [msg, setMsg] = useState<{type: 'error' | 'success', text: string} | null>(null);
@@ -30,7 +30,7 @@ export const Login: React.FC = () => {
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     if(!supabase) {
-        setMsg({type: 'error', text: 'Supabase não configurado.'});
+        setMsg({type: 'error', text: 'Supabase não configurado. Verifique as chaves de API.'});
         return;
     }
 
@@ -64,11 +64,17 @@ export const Login: React.FC = () => {
   };
 
   const handleSocialLogin = async (provider: 'google' | 'apple') => {
-    if (!supabase) return;
+    if (!supabase) {
+        setMsg({type: 'error', text: 'Configuração de banco de dados ausente.'});
+        return;
+    }
     setLoading(true);
     try {
         const { error } = await supabase.auth.signInWithOAuth({
             provider: provider,
+            options: {
+              redirectTo: window.location.origin // Garante retorno para a URL base correta
+            }
         });
         if (error) throw error;
     } catch (e: any) {
@@ -81,94 +87,106 @@ export const Login: React.FC = () => {
     <div className="min-h-screen relative flex items-center justify-center p-4 overflow-hidden">
       {/* Background Image with Overlay */}
       <div 
-        className="absolute inset-0 z-0 bg-cover bg-center"
+        className="absolute inset-0 z-0 bg-cover bg-center transition-transform duration-[20s] hover:scale-105"
         style={{ 
-            backgroundImage: `url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=2832&auto=format&fit=crop')` 
+            backgroundImage: `url('https://images.unsplash.com/photo-1625246333195-78d9c38ad449?q=80&w=2940&auto=format&fit=crop')` 
         }}
       ></div>
-      <div className="absolute inset-0 z-0 bg-gradient-to-t from-black/80 via-black/40 to-black/20 backdrop-blur-[2px]"></div>
+      {/* Gradient Overlay mais sofisticado */}
+      <div className="absolute inset-0 z-0 bg-gradient-to-t from-agro-green/90 via-black/50 to-black/30 backdrop-blur-[1px]"></div>
 
       {/* Main Card */}
       <div className="w-full max-w-md relative z-10 animate-slide-up">
         
         {/* Brand Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl border border-white/30 mb-4 shadow-2xl">
-            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 mb-4 shadow-2xl ring-1 ring-white/10">
+            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white filter drop-shadow-lg">
                 <path d="M7 20h10" />
                 <path d="M10 20c5.5-2.5.8-6.4 3-10" />
                 <path d="M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8z" />
+                <path d="M14.1 6a7 7 0 0 0-1.1 4c1.9-.1 3.3-.6 4.3-1.4 1-1 1.6-2.3 1.7-4.6-2.7.1-4 1-4.9 2z" />
             </svg>
           </div>
-          <h1 className="text-4xl font-extrabold text-white tracking-tight mb-1">MÃOS DO CAMPO</h1>
-          <p className="text-green-100 font-medium text-lg opacity-90">Sua lavoura, seu controle.</p>
+          <h1 className="text-4xl font-extrabold text-white tracking-tight mb-2 drop-shadow-md">MÃOS DO CAMPO</h1>
+          <p className="text-green-50 font-medium text-lg opacity-90">Gestão inteligente para sua lavoura</p>
         </div>
 
         {/* Auth Form Card */}
-        <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-8 shadow-2xl">
+        <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-8 shadow-2xl ring-1 ring-white/10">
+          
+          {/* Warning if Supabase is missing */}
+          {!supabase && (
+             <div className="mb-6 p-4 bg-red-500/80 rounded-xl border border-red-400/50 text-white text-sm flex gap-3 backdrop-blur-sm shadow-lg">
+                <AlertTriangle className="flex-shrink-0" size={20}/>
+                <div>
+                   <strong>Atenção:</strong> Banco de dados não conectado. Verifique as chaves de API no arquivo <code>.env</code> ou painel Vercel.
+                </div>
+             </div>
+          )}
           
           {/* Toggle Switch */}
-          <div className="flex p-1 bg-black/20 rounded-xl mb-6 relative">
+          <div className="flex p-1 bg-black/30 rounded-xl mb-8 relative">
             <div 
-                className={`absolute top-1 bottom-1 w-[calc(50%-4px)] bg-white rounded-lg shadow-md transition-all duration-300 ease-out ${mode === 'signin' ? 'left-1' : 'left-[calc(50%+4px)]'}`}
+                className={`absolute top-1 bottom-1 w-[calc(50%-4px)] bg-white/95 rounded-lg shadow-lg transition-all duration-300 ease-out ${mode === 'signin' ? 'left-1' : 'left-[calc(50%+4px)]'}`}
             ></div>
             <button 
                 onClick={() => setMode('signin')}
-                className={`flex-1 relative z-10 py-2.5 text-sm font-bold transition-colors ${mode === 'signin' ? 'text-gray-900' : 'text-white/70 hover:text-white'}`}
+                className={`flex-1 relative z-10 py-2.5 text-sm font-bold transition-colors ${mode === 'signin' ? 'text-gray-900' : 'text-white/80 hover:text-white'}`}
             >
                 Entrar
             </button>
             <button 
                 onClick={() => setMode('signup')}
-                className={`flex-1 relative z-10 py-2.5 text-sm font-bold transition-colors ${mode === 'signup' ? 'text-gray-900' : 'text-white/70 hover:text-white'}`}
+                className={`flex-1 relative z-10 py-2.5 text-sm font-bold transition-colors ${mode === 'signup' ? 'text-gray-900' : 'text-white/80 hover:text-white'}`}
             >
                 Criar Conta
             </button>
           </div>
 
           {msg && (
-            <div className={`p-4 rounded-xl mb-6 text-sm font-bold flex items-center gap-2 border ${msg.type === 'error' ? 'bg-red-500/20 border-red-500/50 text-red-100' : 'bg-green-500/20 border-green-500/50 text-green-100'}`}>
-              <div className={`w-2 h-2 rounded-full ${msg.type === 'error' ? 'bg-red-400' : 'bg-green-400'}`}></div>
+            <div className={`p-4 rounded-xl mb-6 text-sm font-bold flex items-center gap-3 border backdrop-blur-md ${msg.type === 'error' ? 'bg-red-500/20 border-red-500/50 text-red-50' : 'bg-green-500/20 border-green-500/50 text-green-50'}`}>
+              <div className={`w-2 h-2 rounded-full ${msg.type === 'error' ? 'bg-red-400' : 'bg-green-400'} shadow-[0_0_8px_rgba(255,255,255,0.5)]`}></div>
               {msg.text}
             </div>
           )}
 
-          <form onSubmit={handleAuth} className="space-y-4">
+          <form onSubmit={handleAuth} className="space-y-5">
             {mode === 'signup' && (
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                     <label className="text-xs font-bold text-green-100 ml-1 uppercase tracking-wider">Nome Completo</label>
-                    <div className="relative">
-                        <User className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50" size={20} />
+                    <div className="relative group">
+                        <User className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50 group-focus-within:text-white transition-colors" size={20} />
                         <input 
                         type="text" 
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         className="w-full pl-12 pr-4 py-4 bg-black/20 border border-white/10 rounded-xl focus:bg-black/40 focus:border-white/40 outline-none transition-all text-white placeholder-white/30 font-medium"
-                        placeholder="João da Silva"
+                        placeholder="Seu nome"
                         />
                     </div>
                 </div>
             )}
 
-            <div className="space-y-1">
+            <div className="space-y-1.5">
                <label className="text-xs font-bold text-green-100 ml-1 uppercase tracking-wider">Email</label>
-               <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50" size={20} />
+               <div className="relative group">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50 group-focus-within:text-white transition-colors" size={20} />
                 <input 
                   type="email" 
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full pl-12 pr-4 py-4 bg-black/20 border border-white/10 rounded-xl focus:bg-black/40 focus:border-white/40 outline-none transition-all text-white placeholder-white/30 font-medium"
-                  placeholder="produtor@email.com"
+                  placeholder="exemplo@email.com"
                 />
               </div>
             </div>
             
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <label className="text-xs font-bold text-green-100 ml-1 uppercase tracking-wider">Senha</label>
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50" size={20} />
+              <div className="relative group">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50 group-focus-within:text-white transition-colors" size={20} />
                 <input 
                   type="password" 
                   required
@@ -183,8 +201,8 @@ export const Login: React.FC = () => {
 
             <button 
               type="submit" 
-              disabled={loading}
-              className="w-full py-4 mt-2 bg-agro-green hover:bg-green-500 text-white font-bold rounded-xl shadow-lg shadow-green-900/50 transition-all transform hover:scale-[1.02] disabled:opacity-70 disabled:scale-100 flex items-center justify-center gap-2 group"
+              disabled={loading || !supabase}
+              className="w-full py-4 mt-2 bg-gradient-to-r from-agro-green to-emerald-600 hover:from-emerald-500 hover:to-emerald-400 text-white font-bold rounded-xl shadow-lg shadow-green-900/50 transition-all transform hover:scale-[1.02] disabled:opacity-70 disabled:scale-100 flex items-center justify-center gap-2 group border border-white/10"
             >
               {loading ? <Loader2 className="animate-spin" /> : (
                 <>
@@ -202,32 +220,34 @@ export const Login: React.FC = () => {
                     <div className="w-full border-t border-white/10"></div>
                 </div>
                 <div className="relative flex justify-center">
-                    <span className="bg-transparent px-4 text-xs text-white/50 uppercase font-bold tracking-widest backdrop-blur-xl rounded">Ou continue com</span>
+                    <span className="bg-white/10 px-4 py-1 text-[10px] text-white/70 uppercase font-bold tracking-widest backdrop-blur-xl rounded-full">Ou entre com</span>
                 </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
                 <button 
                     onClick={() => handleSocialLogin('google')}
-                    className="flex items-center justify-center gap-2 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group"
+                    disabled={!supabase}
+                    className="flex items-center justify-center gap-2 py-3.5 bg-white text-gray-800 hover:bg-gray-50 border border-white/20 rounded-xl transition-all hover:scale-[1.02] shadow-lg font-bold text-sm disabled:opacity-50"
                 >
                     <GoogleIcon />
-                    <span className="text-white font-medium group-hover:text-white/90">Google</span>
+                    <span>Google</span>
                 </button>
                 <button 
                     onClick={() => handleSocialLogin('apple')}
-                    className="flex items-center justify-center gap-2 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all group"
+                    disabled={!supabase}
+                    className="flex items-center justify-center gap-2 py-3.5 bg-black text-white hover:bg-gray-900 border border-white/20 rounded-xl transition-all hover:scale-[1.02] shadow-lg font-bold text-sm disabled:opacity-50"
                 >
                     <AppleIcon />
-                    <span className="text-white font-medium group-hover:text-white/90">Apple</span>
+                    <span>Apple</span>
                 </button>
             </div>
           </div>
 
         </div>
         
-        <p className="mt-8 text-xs text-white/40 text-center font-medium">
-          Ao entrar, você concorda com nossos Termos de Uso e Política de Privacidade.
+        <p className="mt-8 text-[10px] text-white/40 text-center font-medium uppercase tracking-wide">
+          Protegido por SSL • Dados Criptografados
         </p>
       </div>
     </div>

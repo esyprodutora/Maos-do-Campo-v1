@@ -22,30 +22,32 @@ const App: React.FC = () => {
 
   // Check Auth
   useEffect(() => {
-    if(supabase) {
-      // 1. Get initial session
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        setSession(session);
+    // Se não tiver cliente supabase (erro de config), para o loading e deixa o app seguir (ou mostrar erro no login)
+    if(!supabase) {
         setAuthLoading(false);
-      });
-
-      // 2. Listen for changes (Sign In / Sign Out)
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-        setSession(session);
-        setAuthLoading(false);
-        
-        // Reset state on logout
-        if (!session) {
-          setCrops([]);
-          setSelectedCrop(null);
-          setActiveTab('dashboard');
-        }
-      });
-
-      return () => subscription.unsubscribe();
-    } else {
-        setAuthLoading(false); 
+        return;
     }
+
+    // 1. Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setAuthLoading(false);
+    });
+
+    // 2. Listen for changes (Sign In / Sign Out)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setAuthLoading(false);
+      
+      // Reset state on logout
+      if (!session) {
+        setCrops([]);
+        setSelectedCrop(null);
+        setActiveTab('dashboard');
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   // Load Data when session exists
@@ -103,8 +105,6 @@ const App: React.FC = () => {
       // Only set error state if we have NO data to show
       if (!localData && crops.length === 0) {
         setError("Não foi possível carregar seus dados. Verifique a conexão.");
-      } else {
-        // Silent fail (toast could go here) - User still sees local data
       }
     } finally {
       setIsLoading(false);
@@ -165,7 +165,6 @@ const App: React.FC = () => {
   };
 
   const renderContent = () => {
-    // Show loading only if we have NO data and are fetching
     if (isLoading && crops.length === 0 && !error) {
       return (
         <div className="flex flex-col items-center justify-center h-full text-gray-400 animate-pulse">
@@ -232,7 +231,9 @@ const App: React.FC = () => {
 
             <button 
               onClick={async () => {
+                // Logout manual da tela de settings
                 if (supabase) await supabase.auth.signOut();
+                localStorage.clear();
                 window.location.reload();
               }}
               className="text-red-500 hover:text-red-700 font-medium border border-red-200 px-6 py-3 rounded-xl hover:bg-red-50 transition-colors"
@@ -254,8 +255,8 @@ const App: React.FC = () => {
      )
   }
 
-  // FORCE LOGIN IF NO SESSION
-  if (!session && supabase) {
+  // FORCE LOGIN IF NO SESSION - Condição crítica
+  if (!session) {
     return <Login />;
   }
 
@@ -281,7 +282,7 @@ const App: React.FC = () => {
 
         {/* Offline Warning Banner */}
         {!navigator.onLine && (
-           <div className="mb-4 bg-gray-800 text-white px-4 py-3 rounded-xl flex items-center gap-3 text-sm">
+           <div className="mb-4 bg-gray-800 text-white px-4 py-3 rounded-xl flex items-center gap-3 text-sm animate-fade-in">
               <WifiOff size={16} />
               <span>Você está offline. Alterações serão salvas localmente.</span>
            </div>

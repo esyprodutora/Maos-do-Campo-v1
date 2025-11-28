@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { CropData } from '../types';
-import { TrendingUp, Droplets, Sun, Wind, ChevronRight, DollarSign, Calendar, Sprout, ArrowRight, MapPin, CloudSun } from 'lucide-react';
+import { TrendingUp, Droplets, Sun, Wind, ChevronRight, DollarSign, Calendar, Sprout, ArrowRight, MapPin, CloudSun, Plus } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface DashboardProps {
@@ -43,24 +43,33 @@ export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNew
   };
 
   return (
-    <div className="space-y-8 animate-fade-in pb-20 md:pb-0">
+    <div className="space-y-8 animate-fade-in pb-24 md:pb-0 relative">
+      
+      {/* Mobile Floating Action Button (FAB) */}
+      <button 
+        onClick={onNewCrop}
+        className="md:hidden fixed bottom-6 right-6 z-40 bg-agro-green text-white w-16 h-16 rounded-full shadow-2xl shadow-green-900/40 flex items-center justify-center animate-slide-up active:scale-95 transition-transform"
+      >
+         <Plus size={32} />
+      </button>
+
       {/* Header */}
       <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-             <span className="text-sm font-bold text-gray-400 uppercase tracking-wide bg-white px-3 py-1 rounded-full border border-gray-100 shadow-sm">{currentDate}</span>
+          <div className="flex items-center gap-2 mb-2">
+             <span className="text-[10px] md:text-xs font-bold text-gray-500 uppercase tracking-widest bg-white px-3 py-1 rounded-full border border-gray-100 shadow-sm">{currentDate}</span>
           </div>
-          <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">
+          <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight leading-tight">
             {getGreeting()}, <span className="text-agro-green">Produtor</span>
           </h1>
-          <p className="text-gray-500 mt-2 font-medium text-lg">Aqui está o resumo da sua produção hoje.</p>
+          <p className="text-gray-500 mt-1 font-medium text-base md:text-lg">Visão geral da sua propriedade.</p>
         </div>
         <button 
           onClick={onNewCrop}
-          className="group bg-agro-green hover:bg-green-700 text-white pl-6 pr-8 py-4 rounded-2xl font-bold shadow-xl shadow-green-600/20 transition-all transform hover:-translate-y-1 flex items-center"
+          className="hidden md:flex group bg-agro-green hover:bg-green-700 text-white pl-6 pr-8 py-4 rounded-2xl font-bold shadow-xl shadow-green-600/20 transition-all transform hover:-translate-y-1 items-center"
         >
           <div className="bg-white/20 p-1.5 rounded-lg mr-3 group-hover:rotate-90 transition-transform">
-             <span className="text-xl font-bold leading-none">+</span> 
+             <Plus size={20} className="font-bold" /> 
           </div>
           Nova Lavoura
         </button>
@@ -70,42 +79,42 @@ export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNew
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Weather Widget (Premium) */}
-        <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#3B82F6] to-[#2563EB] text-white shadow-2xl shadow-blue-500/20 p-8 flex flex-col justify-between min-h-[220px]">
+        <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#0EA5E9] via-[#2563EB] to-[#1E40AF] text-white shadow-xl shadow-blue-500/20 p-8 flex flex-col justify-between min-h-[220px]">
            {/* Background Decorations */}
-           <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white/10 rounded-full blur-3xl"></div>
+           <div className="absolute top-0 right-0 -mt-16 -mr-16 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
            <div className="absolute bottom-0 left-0 -mb-10 -ml-10 w-40 h-40 bg-[#60A5FA]/30 rounded-full blur-3xl"></div>
            
            <div className="relative z-10">
-             <div className="flex items-center gap-2 text-blue-100 text-sm font-bold mb-4 bg-white/10 w-fit px-3 py-1 rounded-full backdrop-blur-sm">
-               <MapPin size={14} /> {weather.location}
+             <div className="flex items-center gap-2 text-blue-100 text-xs font-bold mb-4 bg-black/20 w-fit px-3 py-1.5 rounded-full backdrop-blur-sm">
+               <MapPin size={12} /> {weather.location}
              </div>
              
              <div className="flex justify-between items-center">
                 <div>
-                   <h3 className="text-5xl font-extrabold tracking-tighter">{weather.temp}°</h3>
+                   <h3 className="text-6xl font-extrabold tracking-tighter drop-shadow-sm">{weather.temp}°</h3>
                    <p className="opacity-90 font-medium text-lg mt-1 flex items-center gap-2">
                      {weather.condition}
                    </p>
                 </div>
-                <div className="bg-gradient-to-br from-yellow-300 to-orange-400 p-4 rounded-2xl shadow-lg animate-pulse-slow">
-                   <Sun size={40} className="text-white" />
+                <div className="bg-gradient-to-br from-yellow-300 to-orange-400 p-4 rounded-2xl shadow-lg animate-pulse-slow ring-4 ring-white/10">
+                   <Sun size={40} className="text-white drop-shadow-md" />
                 </div>
              </div>
            </div>
 
            <div className="relative z-10 grid grid-cols-2 gap-4 mt-6">
-             <div className="bg-black/20 rounded-2xl p-3 flex items-center gap-3 backdrop-blur-md border border-white/5">
+             <div className="bg-white/10 rounded-2xl p-3 flex items-center gap-3 backdrop-blur-md border border-white/10">
                <div className="p-2 bg-blue-400/30 rounded-xl">
-                 <Droplets size={18} className="text-white"/>
+                 <Droplets size={16} className="text-white"/>
                </div>
                <div>
                  <p className="text-[10px] text-blue-100 uppercase tracking-wider font-bold">Umidade</p>
                  <p className="font-bold text-lg leading-none">{weather.humidity}%</p>
                </div>
              </div>
-             <div className="bg-black/20 rounded-2xl p-3 flex items-center gap-3 backdrop-blur-md border border-white/5">
+             <div className="bg-white/10 rounded-2xl p-3 flex items-center gap-3 backdrop-blur-md border border-white/10">
                 <div className="p-2 bg-blue-400/30 rounded-xl">
-                 <Wind size={18} className="text-white"/>
+                 <Wind size={16} className="text-white"/>
                </div>
                <div>
                  <p className="text-[10px] text-blue-100 uppercase tracking-wider font-bold">Vento</p>
@@ -120,27 +129,27 @@ export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNew
           
           <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-xl hover:border-green-100 transition-all group">
             <div className="flex justify-between items-start mb-6">
-               <div className="p-4 bg-green-50 text-agro-green rounded-2xl group-hover:scale-110 transition-transform duration-300">
+               <div className="p-4 bg-green-100 text-green-700 rounded-2xl group-hover:scale-110 transition-transform duration-300">
                  <Sprout size={28} />
                </div>
-               <span className="text-xs font-bold text-green-700 bg-green-100 px-3 py-1.5 rounded-full flex items-center gap-1">
-                 <TrendingUp size={12}/> Ativo
+               <span className="text-[10px] font-bold text-green-700 bg-green-100 px-2 py-1 rounded-full flex items-center gap-1">
+                 <TrendingUp size={10}/> Ativo
                </span>
             </div>
             <div>
-              <p className="text-gray-400 font-bold text-xs uppercase tracking-wider">Lavouras</p>
+              <p className="text-gray-400 font-bold text-xs uppercase tracking-wider">Total Lavouras</p>
               <h3 className="text-4xl font-extrabold text-gray-900 mt-1">{crops.length}</h3>
             </div>
           </div>
 
           <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-xl hover:border-yellow-100 transition-all group">
             <div className="flex justify-between items-start mb-6">
-               <div className="p-4 bg-yellow-50 text-yellow-600 rounded-2xl group-hover:scale-110 transition-transform duration-300">
+               <div className="p-4 bg-yellow-100 text-yellow-700 rounded-2xl group-hover:scale-110 transition-transform duration-300">
                  <DollarSign size={28} />
                </div>
             </div>
             <div>
-              <p className="text-gray-400 font-bold text-xs uppercase tracking-wider">Investimento</p>
+              <p className="text-gray-400 font-bold text-xs uppercase tracking-wider">Custo Estimado</p>
               <h3 className="text-3xl font-extrabold text-gray-900 mt-1 truncate tracking-tight" title={totalCost.toString()}>
                 {totalCost.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}
               </h3>
@@ -149,12 +158,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNew
 
           <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-xl hover:border-orange-100 transition-all group">
             <div className="flex justify-between items-start mb-6">
-               <div className="p-4 bg-orange-50 text-orange-500 rounded-2xl group-hover:scale-110 transition-transform duration-300">
+               <div className="p-4 bg-orange-100 text-orange-600 rounded-2xl group-hover:scale-110 transition-transform duration-300">
                  <MapPin size={28} />
                </div>
             </div>
             <div>
-              <p className="text-gray-400 font-bold text-xs uppercase tracking-wider">Área Total</p>
+              <p className="text-gray-400 font-bold text-xs uppercase tracking-wider">Área Plantada</p>
               <h3 className="text-4xl font-extrabold text-gray-900 mt-1">{totalArea} <span className="text-xl text-gray-400 font-medium">ha</span></h3>
             </div>
           </div>
@@ -172,19 +181,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNew
               <span className="w-1.5 h-8 bg-agro-green rounded-full block"></span>
               Minhas Lavouras
             </h2>
-            <button className="text-sm font-bold text-agro-green hover:bg-green-50 px-4 py-2 rounded-xl transition-colors">
+            <button className="text-xs font-bold text-agro-green hover:bg-green-50 px-4 py-2 rounded-xl transition-colors uppercase tracking-wider">
                 Ver todas
             </button>
           </div>
 
           {crops.length === 0 ? (
-            <div className="bg-white rounded-[2rem] p-12 text-center border-2 border-dashed border-gray-200 hover:border-agro-green transition-colors cursor-pointer group" onClick={onNewCrop}>
-               <div className="mx-auto w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center text-gray-400 mb-6 group-hover:scale-110 transition-transform group-hover:bg-green-50 group-hover:text-agro-green">
-                 <Sprout size={40} />
+            <div className="bg-white rounded-[2rem] p-12 text-center border-2 border-dashed border-gray-200 hover:border-agro-green transition-all cursor-pointer group" onClick={onNewCrop}>
+               <div className="mx-auto w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center text-gray-400 mb-6 group-hover:scale-110 transition-transform group-hover:bg-green-50 group-hover:text-agro-green shadow-sm">
+                 <Sprout size={48} />
                </div>
-               <h3 className="text-xl font-bold text-gray-800">Sua fazenda está vazia</h3>
-               <p className="text-gray-500 mb-8 max-w-sm mx-auto">Comece cadastrando seu primeiro talhão para obter previsões de custo e produtividade.</p>
-               <button className="bg-agro-green text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-green-200">Criar primeira lavoura</button>
+               <h3 className="text-2xl font-bold text-gray-800 mb-2">Comece seu planejamento</h3>
+               <p className="text-gray-500 mb-8 max-w-sm mx-auto leading-relaxed">Cadastre seu primeiro talhão e receba estimativas de custo e cronogramas com IA.</p>
+               <button className="bg-agro-green text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-green-200 group-hover:bg-green-700 transition-colors">Criar lavoura agora</button>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -196,16 +205,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNew
                   <div 
                     key={crop.id}
                     onClick={() => onSelectCrop(crop)}
-                    className="bg-white rounded-[2rem] p-6 shadow-sm border border-gray-100 hover:shadow-2xl hover:-translate-y-1 transition-all cursor-pointer group relative overflow-hidden"
+                    className="bg-white rounded-[2rem] p-6 shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer group relative overflow-hidden"
                   >
                     {/* Background Icon Watermark */}
-                    <div className="absolute -right-4 -bottom-4 text-[8rem] opacity-5 select-none pointer-events-none grayscale">
+                    <div className="absolute -right-4 -bottom-4 text-[8rem] opacity-5 select-none pointer-events-none grayscale group-hover:opacity-10 transition-opacity">
                         {styles.icon}
                     </div>
                     
                     <div className="flex justify-between items-start mb-6">
                       <div className="flex gap-4">
-                          <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-sm ${styles.light}`}>
+                          <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-inner ${styles.light}`}>
                               {styles.icon}
                           </div>
                           <div>
@@ -232,16 +241,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNew
                         ></div>
                       </div>
                       
-                      <div className="mt-6 pt-4 border-t border-gray-50 flex justify-between items-center">
+                      <div className="mt-6 pt-4 border-t border-gray-50 flex justify-between items-center relative z-10">
                          <div className="flex flex-col">
-                             <span className="text-xs text-gray-400 font-medium">Colheita Prevista</span>
+                             <span className="text-xs text-gray-400 font-medium uppercase tracking-wide">Colheita</span>
                              <span className="text-sm font-bold text-gray-800 flex items-center gap-1">
                                 <Calendar size={14} className="text-gray-400"/>
                                 {new Date(crop.estimatedHarvestDate).toLocaleDateString('pt-BR', {month: 'short', year: '2-digit'})}
                              </span>
                          </div>
                          <div className="flex flex-col text-right">
-                             <span className="text-xs text-gray-400 font-medium">Custo Est.</span>
+                             <span className="text-xs text-gray-400 font-medium uppercase tracking-wide">Custo Est.</span>
                              <span className="text-sm font-bold text-gray-800">
                                 {crop.estimatedCost.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}
                              </span>
@@ -286,7 +295,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNew
                   </ResponsiveContainer>
                   
                   {/* Custom Legend */}
-                  <div className="flex flex-wrap justify-center gap-3 mt-2">
+                  <div className="flex flex-wrap justify-center gap-3 mt-4">
                     {cropTypeData.map((d, i) => (
                       <div key={i} className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">
                         <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: d.color }}></div>
@@ -313,8 +322,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNew
                  <p className="text-sm text-indigo-700 leading-relaxed font-medium">
                    "Para aumentar a eficiência da adubação nitrogenada no milho, prefira aplicações parceladas em estádios V4 e V8."
                  </p>
-                 <button className="mt-6 text-xs font-extrabold text-indigo-600 bg-white px-4 py-2 rounded-lg shadow-sm hover:bg-indigo-500 hover:text-white transition-colors">
-                    LER MAIS
+                 <button className="mt-6 text-xs font-extrabold text-indigo-600 bg-white px-4 py-2 rounded-lg shadow-sm hover:bg-indigo-500 hover:text-white transition-colors uppercase tracking-wider">
+                    Ler artigo completo
                  </button>
               </div>
               <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-indigo-200 rounded-full blur-3xl opacity-50 group-hover:scale-150 transition-transform duration-700"></div>
