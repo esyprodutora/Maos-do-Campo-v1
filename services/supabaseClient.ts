@@ -1,15 +1,48 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Tenta pegar as variáveis da Vercel (NEXT_PUBLIC_) ou padrão Vite (VITE_) ou node (process.env)
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+// Helper function to safely get environment variables without crashing
+const getEnvVar = (key: string, viteKey: string): string => {
+  let value = '';
+  
+  // 1. Try import.meta.env (Vite standard)
+  try {
+    // @ts-ignore
+    if (typeof import.meta !== 'undefined' && import.meta.env) {
+      // @ts-ignore
+      value = import.meta.env[viteKey] || '';
+    }
+  } catch (e) {
+    // Ignore error if import.meta is not defined
+  }
 
-let supabase = null;
+  // 2. Try process.env (Node/Next.js/Webpack standard)
+  if (!value) {
+    try {
+      if (typeof process !== 'undefined' && process.env) {
+        value = process.env[key] || process.env[viteKey] || '';
+      }
+    } catch (e) {
+      // Ignore error if process is not defined
+    }
+  }
+
+  return value;
+};
+
+// Get credentials safely
+const supabaseUrl = getEnvVar('NEXT_PUBLIC_SUPABASE_URL', 'VITE_SUPABASE_URL');
+const supabaseKey = getEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY', 'VITE_SUPABASE_ANON_KEY');
+
+let supabase: any = null;
 
 if (supabaseUrl && supabaseKey) {
-  supabase = createClient(supabaseUrl, supabaseKey);
+  try {
+    supabase = createClient(supabaseUrl, supabaseKey);
+  } catch (e) {
+    console.error("Failed to initialize Supabase client:", e);
+  }
 } else {
-  console.warn("Supabase credentials not found. App will likely fail to save data remotely.");
+  console.warn("Supabase credentials not found. Check your .env file or Vercel settings.");
 }
 
 export { supabase };

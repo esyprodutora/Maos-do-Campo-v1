@@ -1,15 +1,17 @@
 import React from 'react';
 import { CropData } from '../types';
-import { TrendingUp, Droplets, Sun, Wind, ChevronRight, DollarSign, Calendar, Sprout, ArrowRight } from 'lucide-react';
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, AreaChart, Area, XAxis, YAxis } from 'recharts';
+import { TrendingUp, Droplets, Sun, Wind, ChevronRight, DollarSign, Calendar, Sprout, ArrowRight, Moon } from 'lucide-react';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface DashboardProps {
   crops: CropData[];
   onSelectCrop: (crop: CropData) => void;
   onNewCrop: () => void;
+  theme: string;
+  toggleTheme: () => void;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNewCrop }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNewCrop, theme, toggleTheme }) => {
   // Mock Weather Data
   const weather = { temp: 28, condition: 'Ensolarado', humidity: 62, wind: 14, location: 'Fazenda Santa Rita' };
 
@@ -40,15 +42,28 @@ export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNew
           <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">Visão Geral</h1>
           <p className="text-gray-500 dark:text-gray-400 mt-1 font-medium">Acompanhe o desempenho da sua produção.</p>
         </div>
-        <button 
-          onClick={onNewCrop}
-          className="hidden md:flex group bg-agro-green hover:bg-green-700 text-white pl-5 pr-6 py-3 rounded-xl font-bold shadow-lg shadow-green-600/20 transition-all transform hover:-translate-y-1 items-center"
-        >
-          <div className="bg-white/20 p-1 rounded-lg mr-3 group-hover:rotate-90 transition-transform">
-             <span className="text-lg font-bold">+</span> 
-          </div>
-          Nova Lavoura
-        </button>
+        
+        <div className="flex items-center gap-3 w-full md:w-auto">
+            {/* Theme Toggle Button - HIDDEN ON MOBILE because it's in the App header */}
+            <button 
+                onClick={toggleTheme}
+                className="hidden md:block p-3.5 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-500 dark:text-gray-400 hover:text-agro-yellow hover:border-agro-yellow dark:hover:text-yellow-400 transition-all shadow-sm"
+                aria-label="Alternar Tema"
+                title={theme === 'light' ? 'Ativar Modo Escuro' : 'Ativar Modo Claro'}
+            >
+                {theme === 'dark' ? <Sun size={24} /> : <Moon size={24} />}
+            </button>
+
+            <button 
+            onClick={onNewCrop}
+            className="flex-1 md:flex-none group bg-agro-green hover:bg-green-700 text-white pl-5 pr-6 py-3 rounded-xl font-bold shadow-lg shadow-green-600/20 transition-all transform hover:-translate-y-1 flex items-center justify-center"
+            >
+            <div className="bg-white/20 p-1 rounded-lg mr-3 group-hover:rotate-90 transition-transform">
+                <span className="text-lg font-bold leading-none">+</span> 
+            </div>
+            Nova Lavoura
+            </button>
+        </div>
       </header>
 
       {/* Hero Stats Section */}
@@ -256,7 +271,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNew
               <div className="relative z-10">
                  <h3 className="font-bold text-indigo-900 dark:text-indigo-300 mb-2">Dica do dia</h3>
                  <p className="text-sm text-indigo-700 dark:text-indigo-400 leading-relaxed">
-                   Monitore a umidade do solo antes de aplicar a próxima adubação nitrogenada para evitar perdas por lixiviação.
+                   Monitore a umidade do solo antes de iniciar a aplicação de defensivos para garantir a máxima absorção.
                  </p>
                  <button className="mt-4 text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wide hover:underline">Ler mais dicas</button>
               </div>

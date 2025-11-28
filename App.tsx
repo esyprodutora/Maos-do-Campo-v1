@@ -5,7 +5,7 @@ import { NewCropForm } from './components/NewCropForm';
 import { CropDetails } from './components/CropDetails';
 import { Login } from './components/Login';
 import { CropData } from './types';
-import { Menu, Loader2, WifiOff, RefreshCw } from 'lucide-react';
+import { Menu, Loader2, WifiOff, RefreshCw, Sun, Moon } from 'lucide-react';
 import { supabase } from './services/supabaseClient';
 
 const App: React.FC = () => {
@@ -220,6 +220,8 @@ const App: React.FC = () => {
             crops={crops} 
             onSelectCrop={setSelectedCrop} 
             onNewCrop={() => setActiveTab('new-crop')}
+            theme={theme}
+            toggleTheme={toggleTheme}
           />
         );
       case 'new-crop':
@@ -246,6 +248,7 @@ const App: React.FC = () => {
             <button 
               onClick={async () => {
                 if(confirm("Deseja mesmo sair?")) {
+                    localStorage.clear();
                     await supabase?.auth.signOut();
                     window.location.reload();
                 }
@@ -257,7 +260,7 @@ const App: React.FC = () => {
           </div>
         );
       default:
-        return <Dashboard crops={crops} onSelectCrop={setSelectedCrop} onNewCrop={() => setActiveTab('new-crop')} />;
+        return <Dashboard crops={crops} onSelectCrop={setSelectedCrop} onNewCrop={() => setActiveTab('new-crop')} theme={theme} toggleTheme={toggleTheme} />;
     }
   };
 
@@ -280,8 +283,6 @@ const App: React.FC = () => {
         setActiveTab={(tab) => { setActiveTab(tab); setSelectedCrop(null); }}
         isMobileMenuOpen={isMobileMenuOpen}
         setIsMobileMenuOpen={setIsMobileMenuOpen}
-        theme={theme}
-        toggleTheme={toggleTheme}
       />
 
       <main className="flex-1 p-4 md:p-8 h-screen overflow-y-auto custom-scrollbar">
@@ -290,12 +291,21 @@ const App: React.FC = () => {
            <div className="flex items-center gap-2">
               <span className="font-bold text-agro-green text-lg">MÃOS DO CAMPO</span>
            </div>
-           <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 bg-white dark:bg-slate-800 rounded-lg shadow-sm border dark:border-slate-700">
-             <Menu size={24} className="text-gray-600 dark:text-gray-300" />
-           </button>
+           <div className="flex items-center gap-3">
+               <button 
+                 onClick={toggleTheme}
+                 className="p-2 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-100 dark:border-slate-700 text-gray-600 dark:text-gray-300 active:scale-95 transition-transform"
+               >
+                 {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+               </button>
+               
+               <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-100 dark:border-slate-700">
+                 <Menu size={24} className="text-gray-600 dark:text-gray-300" />
+               </button>
+           </div>
         </div>
 
-        {/* Offline Warning Banner (if logic fails silently but we are offline) */}
+        {/* Offline Warning Banner */}
         {!navigator.onLine && (
            <div className="mb-4 bg-gray-800 dark:bg-black border border-gray-700 text-white px-4 py-3 rounded-xl flex items-center gap-3 text-sm">
               <WifiOff size={16} />

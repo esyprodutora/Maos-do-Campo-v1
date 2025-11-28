@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { LayoutDashboard, PlusCircle, Settings, LogOut, User, ChevronRight, Moon, Sun } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, Settings, LogOut } from 'lucide-react';
 import { supabase } from '../services/supabaseClient';
 
 interface SidebarProps {
@@ -7,11 +7,9 @@ interface SidebarProps {
   setActiveTab: (tab: string) => void;
   isMobileMenuOpen: boolean;
   setIsMobileMenuOpen: (open: boolean) => void;
-  theme: string;
-  toggleTheme: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileMenuOpen, setIsMobileMenuOpen, theme, toggleTheme }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileMenuOpen, setIsMobileMenuOpen }) => {
   const [userEmail, setUserEmail] = useState<string>('Produtor');
 
   useEffect(() => {
@@ -104,17 +102,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMob
 
         {/* Footer / User Profile */}
         <div className="p-4 m-4">
-           {/* Theme Toggle */}
-           <div className="mb-4 flex justify-end">
-             <button 
-                onClick={toggleTheme}
-                className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white transition-colors border border-white/10"
-                aria-label="Alternar Tema"
-             >
-                {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-             </button>
-           </div>
-
           <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-full bg-agro-yellow flex items-center justify-center text-agro-brown font-bold text-lg capitalize">
