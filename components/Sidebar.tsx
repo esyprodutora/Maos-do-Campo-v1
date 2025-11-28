@@ -25,13 +25,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMob
 
   const handleLogout = async () => {
     if (supabase) {
-      // Apenas faz o signout. O App.tsx vai detectar a mudança de estado e renderizar o Login.
-      const { error } = await supabase.auth.signOut();
-      if (error) console.error('Erro ao sair:', error);
-    } else {
-      // Fallback para modo offline/sem supabase
-      window.location.reload();
+      await supabase.auth.signOut();
     }
+    // Force reload to clear all state and ensure Login component renders
+    window.location.reload();
   };
 
   const menuItems = [

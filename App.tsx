@@ -233,6 +233,7 @@ const App: React.FC = () => {
             <button 
               onClick={async () => {
                 if (supabase) await supabase.auth.signOut();
+                window.location.reload();
               }}
               className="text-red-500 hover:text-red-700 font-medium border border-red-200 px-6 py-3 rounded-xl hover:bg-red-50 transition-colors"
             >
@@ -253,7 +254,7 @@ const App: React.FC = () => {
      )
   }
 
-  // Se não tem sessão mas o supabase existe, mostra Login.
+  // FORCE LOGIN IF NO SESSION
   if (!session && supabase) {
     return <Login />;
   }
