@@ -1,7 +1,15 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { CropData, CropType, SoilType } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Lazy initialization to prevent crashes on initial load if env is missing
+const getAiClient = () => {
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) {
+    console.warn("API Key não encontrada. Verifique as variáveis de ambiente.");
+    throw new Error("Chave de API não configurada");
+  }
+  return new GoogleGenAI({ apiKey });
+};
 
 export const generateCropPlan = async (
   name: string,
@@ -31,6 +39,7 @@ export const generateCropPlan = async (
   `;
 
   try {
+    const ai = getAiClient();
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: prompt,
@@ -104,12 +113,14 @@ export const generateCropPlan = async (
 
 export const getAssistantResponse = async (question: string, context: string): Promise<string> => {
     try {
+        const ai = getAiClient();
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash",
             contents: `Contexto da lavoura: ${context}. \nPergunta do produtor: ${question}. \nResponda de forma curta, prática e amigável, como um técnico agrícola.`,
         });
         return response.text || "Desculpe, não consegui processar sua pergunta no momento.";
     } catch (e) {
-        return "Erro de conexão com o assistente.";
+        console.error(e);
+        return "Erro de conexão com o assistente ou chave de API inválida.";
     }
 }
