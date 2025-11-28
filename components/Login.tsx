@@ -1,28 +1,11 @@
 
 import React, { useState } from 'react';
 import { supabase } from '../services/supabaseClient';
-import { Loader2, Mail, Lock, ArrowRight, User, AlertTriangle, RefreshCw } from 'lucide-react';
-
-// Ícones SVG Inline para Social Login com cores oficiais
-const GoogleIcon = () => (
-  <svg className="w-5 h-5" viewBox="0 0 24 24">
-    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
-    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
-  </svg>
-);
-
-const AppleIcon = () => (
-  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-    <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.74 1.18 0 2.45-1.11 3.67-1.11 1.4.11 2.37.5 3.35 1.19-.66 1.1-1.48 2.31-1.39 3.67.22 3.1 3.23 3.82 3.25 3.84-.04.42-.4 2.21-1.31 3.55-.65.98-1.55 2.09-2.65 2.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
-  </svg>
-);
+import { Loader2, Mail, Lock } from 'lucide-react';
 
 export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [msg, setMsg] = useState<{type: 'error' | 'success', text: string} | null>(null);
@@ -30,7 +13,7 @@ export const Login: React.FC = () => {
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     if(!supabase) {
-        setMsg({type: 'error', text: 'Supabase não conectado. Verifique o console.'});
+        setMsg({type: 'error', text: 'Supabase não configurado.'});
         return;
     }
 
@@ -42,12 +25,9 @@ export const Login: React.FC = () => {
         const { error } = await supabase.auth.signUp({
           email,
           password,
-          options: {
-            data: { full_name: name }
-          }
         });
         if (error) throw error;
-        setMsg({ type: 'success', text: 'Cadastro realizado! Verifique seu email para confirmar.' });
+        setMsg({ type: 'success', text: 'Cadastro realizado! Verifique seu email ou faça login.' });
         setMode('signin');
       } else {
         const { error } = await supabase.auth.signInWithPassword({
@@ -63,199 +43,87 @@ export const Login: React.FC = () => {
     }
   };
 
-  const handleSocialLogin = async (provider: 'google' | 'apple') => {
-    if (!supabase) {
-        setMsg({type: 'error', text: 'Banco de dados offline.'});
-        return;
-    }
-    setLoading(true);
-    try {
-        const { error } = await supabase.auth.signInWithOAuth({
-            provider: provider,
-            options: {
-              redirectTo: window.location.origin 
-            }
-        });
-        if (error) throw error;
-    } catch (e: any) {
-        setMsg({type: 'error', text: 'Erro no login social: ' + e.message});
-        setLoading(false);
-    }
-  }
-
   return (
-    <div className="min-h-screen relative flex items-center justify-center p-4 overflow-hidden">
-      {/* Background Image with Overlay */}
-      <div 
-        className="absolute inset-0 z-0 bg-cover bg-center transition-transform duration-[20s] hover:scale-105"
-        style={{ 
-            backgroundImage: `url('https://images.unsplash.com/photo-1625246333195-78d9c38ad449?q=80&w=2940&auto=format&fit=crop')` 
-        }}
-      ></div>
-      {/* Gradient Overlay mais sofisticado */}
-      <div className="absolute inset-0 z-0 bg-gradient-to-t from-agro-green/90 via-black/50 to-black/30 backdrop-blur-[1px]"></div>
-
-      {/* Main Card */}
-      <div className="w-full max-w-md relative z-10 animate-slide-up">
-        
-        {/* Brand Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 mb-4 shadow-2xl ring-1 ring-white/10">
-            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white filter drop-shadow-lg">
-                <path d="M7 20h10" />
-                <path d="M10 20c5.5-2.5.8-6.4 3-10" />
-                <path d="M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8z" />
-                <path d="M14.1 6a7 7 0 0 0-1.1 4c1.9-.1 3.3-.6 4.3-1.4 1-1 1.6-2.3 1.7-4.6-2.7.1-4 1-4.9 2z" />
-            </svg>
-          </div>
-          <h1 className="text-4xl font-extrabold text-white tracking-tight mb-2 drop-shadow-md">MÃOS DO CAMPO</h1>
-          <p className="text-green-50 font-medium text-lg opacity-90">Gestão inteligente para sua lavoura</p>
+    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+      <div className="mb-8 text-center animate-fade-in">
+        <div className="inline-flex items-center justify-center w-20 h-20 bg-agro-green rounded-3xl shadow-lg shadow-green-600/30 mb-4">
+          <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white">
+            <path d="M7 20h10" />
+            <path d="M10 20c5.5-2.5.8-6.4 3-10" />
+            <path d="M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8z" />
+          </svg>
         </div>
-
-        {/* Auth Form Card */}
-        <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-8 shadow-2xl ring-1 ring-white/10">
-          
-          {/* Warning if Supabase is missing */}
-          {!supabase && (
-             <div className="mb-6 p-4 bg-orange-500/80 rounded-xl border border-orange-400/50 text-white text-xs backdrop-blur-sm shadow-lg">
-                <div className="flex gap-3 mb-2">
-                   <AlertTriangle className="flex-shrink-0" size={18}/>
-                   <span className="font-bold">Conexão Pendente</span>
-                </div>
-                <p className="opacity-90 leading-relaxed mb-3">
-                   O app não encontrou as chaves do Supabase. Se você acabou de configurar no Vercel, tente recarregar.
-                </p>
-                <button onClick={() => window.location.reload()} className="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg font-bold text-[10px] flex items-center gap-1 transition-colors w-full justify-center">
-                   <RefreshCw size={12} /> Recarregar Página
-                </button>
-             </div>
-          )}
-          
-          {/* Toggle Switch */}
-          <div className="flex p-1 bg-black/30 rounded-xl mb-8 relative">
-            <div 
-                className={`absolute top-1 bottom-1 w-[calc(50%-4px)] bg-white/95 rounded-lg shadow-lg transition-all duration-300 ease-out ${mode === 'signin' ? 'left-1' : 'left-[calc(50%+4px)]'}`}
-            ></div>
-            <button 
-                onClick={() => setMode('signin')}
-                className={`flex-1 relative z-10 py-2.5 text-sm font-bold transition-colors ${mode === 'signin' ? 'text-gray-900' : 'text-white/80 hover:text-white'}`}
-            >
-                Entrar
-            </button>
-            <button 
-                onClick={() => setMode('signup')}
-                className={`flex-1 relative z-10 py-2.5 text-sm font-bold transition-colors ${mode === 'signup' ? 'text-gray-900' : 'text-white/80 hover:text-white'}`}
-            >
-                Criar Conta
-            </button>
-          </div>
-
-          {msg && (
-            <div className={`p-4 rounded-xl mb-6 text-sm font-bold flex items-center gap-3 border backdrop-blur-md ${msg.type === 'error' ? 'bg-red-500/20 border-red-500/50 text-red-50' : 'bg-green-500/20 border-green-500/50 text-green-50'}`}>
-              <div className={`w-2 h-2 rounded-full ${msg.type === 'error' ? 'bg-red-400' : 'bg-green-400'} shadow-[0_0_8px_rgba(255,255,255,0.5)]`}></div>
-              {msg.text}
-            </div>
-          )}
-
-          <form onSubmit={handleAuth} className="space-y-5">
-            {mode === 'signup' && (
-                <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-green-100 ml-1 uppercase tracking-wider">Nome Completo</label>
-                    <div className="relative group">
-                        <User className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50 group-focus-within:text-white transition-colors" size={20} />
-                        <input 
-                        type="text" 
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        className="w-full pl-12 pr-4 py-4 bg-black/20 border border-white/10 rounded-xl focus:bg-black/40 focus:border-white/40 outline-none transition-all text-white placeholder-white/30 font-medium"
-                        placeholder="Seu nome"
-                        />
-                    </div>
-                </div>
-            )}
-
-            <div className="space-y-1.5">
-               <label className="text-xs font-bold text-green-100 ml-1 uppercase tracking-wider">Email</label>
-               <div className="relative group">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50 group-focus-within:text-white transition-colors" size={20} />
-                <input 
-                  type="email" 
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 bg-black/20 border border-white/10 rounded-xl focus:bg-black/40 focus:border-white/40 outline-none transition-all text-white placeholder-white/30 font-medium"
-                  placeholder="exemplo@email.com"
-                />
-              </div>
-            </div>
-            
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-green-100 ml-1 uppercase tracking-wider">Senha</label>
-              <div className="relative group">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50 group-focus-within:text-white transition-colors" size={20} />
-                <input 
-                  type="password" 
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 bg-black/20 border border-white/10 rounded-xl focus:bg-black/40 focus:border-white/40 outline-none transition-all text-white placeholder-white/30 font-medium"
-                  placeholder="••••••••"
-                  minLength={6}
-                />
-              </div>
-            </div>
-
-            <button 
-              type="submit" 
-              disabled={loading || !supabase}
-              className="w-full py-4 mt-2 bg-gradient-to-r from-agro-green to-emerald-600 hover:from-emerald-500 hover:to-emerald-400 text-white font-bold rounded-xl shadow-lg shadow-green-900/50 transition-all transform hover:scale-[1.02] disabled:opacity-70 disabled:scale-100 flex items-center justify-center gap-2 group border border-white/10"
-            >
-              {loading ? <Loader2 className="animate-spin" /> : (
-                <>
-                  {mode === 'signin' ? 'Acessar Fazenda' : 'Iniciar Cadastro'} 
-                  {!loading && <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform"/>}
-                </>
-              )}
-            </button>
-          </form>
-
-          {/* Social Login Section */}
-          <div className="mt-8">
-            <div className="relative mb-6">
-                <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-white/10"></div>
-                </div>
-                <div className="relative flex justify-center">
-                    <span className="bg-white/10 px-4 py-1 text-[10px] text-white/70 uppercase font-bold tracking-widest backdrop-blur-xl rounded-full">Ou entre com</span>
-                </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-                <button 
-                    onClick={() => handleSocialLogin('google')}
-                    disabled={!supabase}
-                    className="flex items-center justify-center gap-2 py-3.5 bg-white text-gray-800 hover:bg-gray-50 border border-white/20 rounded-xl transition-all hover:scale-[1.02] shadow-lg font-bold text-sm disabled:opacity-50"
-                >
-                    <GoogleIcon />
-                    <span>Google</span>
-                </button>
-                <button 
-                    onClick={() => handleSocialLogin('apple')}
-                    disabled={!supabase}
-                    className="flex items-center justify-center gap-2 py-3.5 bg-black text-white hover:bg-gray-900 border border-white/20 rounded-xl transition-all hover:scale-[1.02] shadow-lg font-bold text-sm disabled:opacity-50"
-                >
-                    <AppleIcon />
-                    <span>Apple</span>
-                </button>
-            </div>
-          </div>
-
-        </div>
-        
-        <p className="mt-8 text-[10px] text-white/40 text-center font-medium uppercase tracking-wide">
-          Protegido por SSL • Dados Criptografados
-        </p>
+        <h1 className="text-3xl font-extrabold text-gray-800">MÃOS DO CAMPO</h1>
+        <p className="text-gray-500 font-medium">Gestão inteligente para sua lavoura</p>
       </div>
+
+      <div className="w-full max-w-md bg-white rounded-3xl shadow-xl p-8 animate-slide-up">
+        <div className="flex gap-4 mb-8 bg-gray-100 p-1 rounded-xl">
+          <button 
+            onClick={() => setMode('signin')}
+            className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${mode === 'signin' ? 'bg-white text-agro-green shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+          >
+            Entrar
+          </button>
+          <button 
+            onClick={() => setMode('signup')}
+            className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${mode === 'signup' ? 'bg-white text-agro-green shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+          >
+            Cadastrar
+          </button>
+        </div>
+
+        {msg && (
+          <div className={`p-4 rounded-xl mb-6 text-sm font-medium ${msg.type === 'error' ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-700'}`}>
+            {msg.text}
+          </div>
+        )}
+
+        <form onSubmit={handleAuth} className="space-y-4">
+          <div>
+            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Email</label>
+            <div className="relative">
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+              <input 
+                type="email" 
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-xl focus:bg-white focus:border-agro-green focus:ring-1 focus:ring-agro-green outline-none transition-all"
+                placeholder="seu@email.com"
+              />
+            </div>
+          </div>
+          
+          <div>
+            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Senha</label>
+            <div className="relative">
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+              <input 
+                type="password" 
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-xl focus:bg-white focus:border-agro-green focus:ring-1 focus:ring-agro-green outline-none transition-all"
+                placeholder="••••••••"
+                minLength={6}
+              />
+            </div>
+          </div>
+
+          <button 
+            type="submit" 
+            disabled={loading}
+            className="w-full py-4 bg-agro-green hover:bg-green-700 text-white font-bold rounded-xl shadow-lg shadow-green-600/20 transition-all active:scale-95 disabled:opacity-70 disabled:active:scale-100 flex items-center justify-center gap-2 mt-4"
+          >
+            {loading ? <Loader2 className="animate-spin" /> : (mode === 'signin' ? 'Acessar App' : 'Criar Conta')}
+          </button>
+        </form>
+      </div>
+      
+      <p className="mt-8 text-xs text-gray-400 text-center">
+        Versão Web/PWA • {new Date().getFullYear()} Mãos do Campo
+      </p>
     </div>
   );
 };

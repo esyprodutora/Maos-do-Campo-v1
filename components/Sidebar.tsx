@@ -24,21 +24,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMob
   }, []);
 
   const handleLogout = async () => {
-    // 1. Tenta avisar o Supabase (sem travar se falhar)
     if (supabase) {
-      try {
-        await supabase.auth.signOut();
-      } catch (e) {
-        console.error("Erro ao sair do Supabase", e);
-      }
+      await supabase.auth.signOut();
+      window.location.reload();
     }
-    
-    // 2. Limpeza Nuclear (Garante que dados antigos sumam)
-    localStorage.clear(); 
-    sessionStorage.clear();
-
-    // 3. Recarrega a página ATUAL (Evita erro de redirecionamento "Sad Face")
-    window.location.reload();
   };
 
   const menuItems = [
@@ -115,7 +104,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMob
         <div className="p-4 m-4 bg-white/5 rounded-2xl border border-white/10">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-full bg-agro-yellow flex items-center justify-center text-agro-brown font-bold text-lg capitalize">
-              {userEmail.charAt(0).toUpperCase()}
+              {userEmail.charAt(0)}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold text-white truncate capitalize">{userEmail}</p>
@@ -124,7 +113,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMob
           </div>
           <button 
             onClick={handleLogout}
-            className="flex items-center justify-center w-full py-2.5 rounded-lg border border-white/20 text-sm font-medium text-gray-300 hover:bg-white/10 hover:text-white hover:border-white/40 transition-all cursor-pointer"
+            className="flex items-center justify-center w-full py-2.5 rounded-lg border border-white/20 text-sm font-medium text-gray-300 hover:bg-white/10 hover:text-white transition-colors"
           >
             <LogOut size={16} className="mr-2" />
             Sair do App

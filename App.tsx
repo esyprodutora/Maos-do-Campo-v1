@@ -17,37 +17,25 @@ const App: React.FC = () => {
   const [selectedCrop, setSelectedCrop] = useState<CropData | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [crops, setCrops] = useState<CropData[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // Changed default to false to prevent initial block
   const [error, setError] = useState<string | null>(null);
 
   // Check Auth
   useEffect(() => {
-    // Se não tiver cliente supabase (erro de config), para o loading e deixa o app seguir (ou mostrar erro no login)
-    if(!supabase) {
+    if(supabase) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        setSession(session);
         setAuthLoading(false);
-        return;
+      });
+
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        setSession(session);
+      });
+
+      return () => subscription.unsubscribe();
+    } else {
+        setAuthLoading(false); 
     }
-
-    // 1. Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setAuthLoading(false);
-    });
-
-    // 2. Listen for changes (Sign In / Sign Out)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setAuthLoading(false);
-      
-      // Reset state on logout
-      if (!session) {
-        setCrops([]);
-        setSelectedCrop(null);
-        setActiveTab('dashboard');
-      }
-    });
-
-    return () => subscription.unsubscribe();
   }, []);
 
   // Load Data when session exists
@@ -105,6 +93,8 @@ const App: React.FC = () => {
       // Only set error state if we have NO data to show
       if (!localData && crops.length === 0) {
         setError("Não foi possível carregar seus dados. Verifique a conexão.");
+      } else {
+        // Silent fail (toast could go here) - User still sees local data
       }
     } finally {
       setIsLoading(false);
@@ -136,6 +126,7 @@ const App: React.FC = () => {
         if (error) throw error;
       } catch (e) {
         console.error("Erro ao salvar no Supabase:", e);
+        // We could add a "pending sync" flag here in future
       }
     }
   };
@@ -165,6 +156,7 @@ const App: React.FC = () => {
   };
 
   const renderContent = () => {
+    // Show loading only if we have NO data and are fetching
     if (isLoading && crops.length === 0 && !error) {
       return (
         <div className="flex flex-col items-center justify-center h-full text-gray-400 animate-pulse">
@@ -231,10 +223,10 @@ const App: React.FC = () => {
 
             <button 
               onClick={async () => {
-                // Logout manual da tela de settings
-                if (supabase) await supabase.auth.signOut();
-                localStorage.clear();
-                window.location.reload();
+                if(confirm("Deseja mesmo sair?")) {
+                    await supabase?.auth.signOut();
+                    window.location.reload();
+                }
               }}
               className="text-red-500 hover:text-red-700 font-medium border border-red-200 px-6 py-3 rounded-xl hover:bg-red-50 transition-colors"
             >
@@ -255,8 +247,7 @@ const App: React.FC = () => {
      )
   }
 
-  // FORCE LOGIN IF NO SESSION - Condição crítica
-  if (!session) {
+  if (!session && supabase) {
     return <Login />;
   }
 
@@ -280,9 +271,9 @@ const App: React.FC = () => {
            </button>
         </div>
 
-        {/* Offline Warning Banner */}
+        {/* Offline Warning Banner (if logic fails silently but we are offline) */}
         {!navigator.onLine && (
-           <div className="mb-4 bg-gray-800 text-white px-4 py-3 rounded-xl flex items-center gap-3 text-sm animate-fade-in">
+           <div className="mb-4 bg-gray-800 text-white px-4 py-3 rounded-xl flex items-center gap-3 text-sm">
               <WifiOff size={16} />
               <span>Você está offline. Alterações serão salvas localmente.</span>
            </div>
