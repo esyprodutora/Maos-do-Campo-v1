@@ -25,7 +25,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMob
 
   const handleLogout = async () => {
     if (supabase) {
-      await supabase.auth.signOut();
+      // Apenas faz o signout. O App.tsx vai detectar a mudança de estado e renderizar o Login.
+      const { error } = await supabase.auth.signOut();
+      if (error) console.error('Erro ao sair:', error);
+    } else {
+      // Fallback para modo offline/sem supabase
       window.location.reload();
     }
   };
@@ -113,7 +117,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMob
           </div>
           <button 
             onClick={handleLogout}
-            className="flex items-center justify-center w-full py-2.5 rounded-lg border border-white/20 text-sm font-medium text-gray-300 hover:bg-white/10 hover:text-white transition-colors"
+            className="flex items-center justify-center w-full py-2.5 rounded-lg border border-white/20 text-sm font-medium text-gray-300 hover:bg-white/10 hover:text-white hover:border-white/40 transition-all cursor-pointer"
           >
             <LogOut size={16} className="mr-2" />
             Sair do App
