@@ -25,24 +25,24 @@ export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNew
   // Helper for crop visuals
   const getCropStyle = (type: string) => {
     switch(type) {
-      case 'cafe': return { bg: 'bg-[#8E5A2E]', text: 'text-[#8E5A2E]', light: 'bg-[#F6EBE0]' };
-      case 'milho': return { bg: 'bg-[#E67E22]', text: 'text-[#E67E22]', light: 'bg-[#FEF5E7]' };
-      case 'soja': return { bg: 'bg-[#F2C94C]', text: 'text-[#B7950B]', light: 'bg-[#FCF3CF]' };
-      default: return { bg: 'bg-agro-green', text: 'text-agro-green', light: 'bg-green-50' };
+      case 'cafe': return { bg: 'bg-[#8E5A2E]', text: 'text-[#8E5A2E]', light: 'bg-[#F6EBE0] dark:bg-[#8E5A2E]/20' };
+      case 'milho': return { bg: 'bg-[#E67E22]', text: 'text-[#E67E22]', light: 'bg-[#FEF5E7] dark:bg-[#E67E22]/20' };
+      case 'soja': return { bg: 'bg-[#F2C94C]', text: 'text-[#B7950B] dark:text-[#F2C94C]', light: 'bg-[#FCF3CF] dark:bg-[#F2C94C]/20' };
+      default: return { bg: 'bg-agro-green', text: 'text-agro-green', light: 'bg-green-50 dark:bg-green-900/20' };
     }
   };
 
   return (
-    <div className="space-y-8 animate-fade-in pb-20 md:pb-0">
+    <div className="space-y-8 animate-fade-in pb-24 md:pb-0">
       {/* Header */}
       <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Visão Geral</h1>
-          <p className="text-gray-500 mt-1 font-medium">Acompanhe o desempenho da sua produção.</p>
+          <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">Visão Geral</h1>
+          <p className="text-gray-500 dark:text-gray-400 mt-1 font-medium">Acompanhe o desempenho da sua produção.</p>
         </div>
         <button 
           onClick={onNewCrop}
-          className="group bg-agro-green hover:bg-green-700 text-white pl-5 pr-6 py-3 rounded-xl font-bold shadow-lg shadow-green-600/20 transition-all transform hover:-translate-y-1 flex items-center"
+          className="hidden md:flex group bg-agro-green hover:bg-green-700 text-white pl-5 pr-6 py-3 rounded-xl font-bold shadow-lg shadow-green-600/20 transition-all transform hover:-translate-y-1 items-center"
         >
           <div className="bg-white/20 p-1 rounded-lg mr-3 group-hover:rotate-90 transition-transform">
              <span className="text-lg font-bold">+</span> 
@@ -93,42 +93,42 @@ export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNew
         {/* Quick Stats Grid */}
         <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
           
-          <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-md transition-shadow">
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col justify-between hover:shadow-md transition-shadow">
             <div className="flex justify-between items-start mb-4">
-               <div className="p-3 bg-green-50 text-agro-green rounded-2xl">
+               <div className="p-3 bg-green-50 dark:bg-green-900/30 text-agro-green rounded-2xl">
                  <Sprout size={24} />
                </div>
-               <span className="text-xs font-bold text-green-600 bg-green-100 px-2 py-1 rounded-full">+2 esse ano</span>
+               <span className="text-xs font-bold text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/50 px-2 py-1 rounded-full">+2 esse ano</span>
             </div>
             <div>
-              <p className="text-gray-500 font-medium text-sm">Lavouras Ativas</p>
-              <h3 className="text-3xl font-extrabold text-gray-900 mt-1">{crops.length}</h3>
+              <p className="text-gray-500 dark:text-gray-400 font-medium text-sm">Lavouras Ativas</p>
+              <h3 className="text-3xl font-extrabold text-gray-900 dark:text-white mt-1">{crops.length}</h3>
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-md transition-shadow">
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col justify-between hover:shadow-md transition-shadow">
             <div className="flex justify-between items-start mb-4">
-               <div className="p-3 bg-yellow-50 text-yellow-600 rounded-2xl">
+               <div className="p-3 bg-yellow-50 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 rounded-2xl">
                  <DollarSign size={24} />
                </div>
             </div>
             <div>
-              <p className="text-gray-500 font-medium text-sm">Custo Previsto</p>
-              <h3 className="text-2xl font-extrabold text-gray-900 mt-1 truncate" title={totalCost.toString()}>
+              <p className="text-gray-500 dark:text-gray-400 font-medium text-sm">Custo Previsto</p>
+              <h3 className="text-2xl font-extrabold text-gray-900 dark:text-white mt-1 truncate" title={totalCost.toString()}>
                 {totalCost.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}
               </h3>
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-md transition-shadow">
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col justify-between hover:shadow-md transition-shadow">
             <div className="flex justify-between items-start mb-4">
-               <div className="p-3 bg-orange-50 text-orange-500 rounded-2xl">
+               <div className="p-3 bg-orange-50 dark:bg-orange-900/30 text-orange-500 rounded-2xl">
                  <TrendingUp size={24} />
                </div>
             </div>
             <div>
-              <p className="text-gray-500 font-medium text-sm">Área Total</p>
-              <h3 className="text-3xl font-extrabold text-gray-900 mt-1">{totalArea} <span className="text-lg text-gray-400 font-normal">ha</span></h3>
+              <p className="text-gray-500 dark:text-gray-400 font-medium text-sm">Área Total</p>
+              <h3 className="text-3xl font-extrabold text-gray-900 dark:text-white mt-1">{totalArea} <span className="text-lg text-gray-400 dark:text-gray-500 font-normal">ha</span></h3>
             </div>
           </div>
 
@@ -141,7 +141,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNew
         {/* Crop Cards List */}
         <div className="xl:col-span-2 space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
               <span className="w-2 h-6 bg-agro-green rounded-full"></span>
               Minhas Lavouras
             </h2>
@@ -149,12 +149,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNew
           </div>
 
           {crops.length === 0 ? (
-            <div className="bg-white rounded-3xl p-10 text-center border-2 border-dashed border-gray-200">
-               <div className="mx-auto w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center text-gray-400 mb-4">
+            <div className="bg-white dark:bg-slate-800 rounded-3xl p-10 text-center border-2 border-dashed border-gray-200 dark:border-slate-700">
+               <div className="mx-auto w-16 h-16 bg-gray-50 dark:bg-slate-700 rounded-full flex items-center justify-center text-gray-400 dark:text-gray-300 mb-4">
                  <Sprout size={32} />
                </div>
-               <h3 className="text-lg font-bold text-gray-700">Comece sua jornada</h3>
-               <p className="text-gray-500 mb-6">Nenhuma lavoura cadastrada ainda.</p>
+               <h3 className="text-lg font-bold text-gray-700 dark:text-gray-200">Comece sua jornada</h3>
+               <p className="text-gray-500 dark:text-gray-400 mb-6">Nenhuma lavoura cadastrada ainda.</p>
                <button onClick={onNewCrop} className="text-agro-green font-bold hover:underline">Criar primeira lavoura</button>
             </div>
           ) : (
@@ -167,7 +167,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNew
                   <div 
                     key={crop.id}
                     onClick={() => onSelectCrop(crop)}
-                    className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100 hover:shadow-lg hover:border-green-100 transition-all cursor-pointer group relative overflow-hidden"
+                    className="bg-white dark:bg-slate-800 rounded-3xl p-5 shadow-sm border border-gray-100 dark:border-slate-700 hover:shadow-lg hover:border-green-100 dark:hover:border-green-900/50 transition-all cursor-pointer group relative overflow-hidden"
                   >
                     {/* Color Strip */}
                     <div className={`absolute left-0 top-0 bottom-0 w-2 ${styles.bg}`}></div>
@@ -177,8 +177,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNew
                         <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide mb-2 ${styles.light} ${styles.text}`}>
                           {crop.type}
                         </span>
-                        <h3 className="text-lg font-bold text-gray-800 group-hover:text-agro-green transition-colors">{crop.name}</h3>
-                        <p className="text-sm text-gray-500">{crop.areaHa} hectares</p>
+                        <h3 className="text-lg font-bold text-gray-800 dark:text-white group-hover:text-agro-green transition-colors">{crop.name}</h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{crop.areaHa} hectares</p>
                       </div>
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center ${styles.light} group-hover:scale-110 transition-transform`}>
                          <ArrowRight size={18} className={styles.text} />
@@ -186,19 +186,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNew
                     </div>
 
                     <div className="pl-3 mt-4">
-                      <div className="flex justify-between text-xs text-gray-500 mb-1 font-medium">
+                      <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1 font-medium">
                         <span>Progresso do Ciclo</span>
                         <span>{Math.round(percentDone)}%</span>
                       </div>
-                      <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                      <div className="w-full bg-gray-100 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
                         <div 
                           className={`h-full rounded-full ${styles.bg}`} 
                           style={{ width: `${percentDone}%` }}
                         ></div>
                       </div>
-                      <div className="mt-4 pt-4 border-t border-gray-50 flex items-center gap-2 text-sm text-gray-600">
+                      <div className="mt-4 pt-4 border-t border-gray-50 dark:border-slate-700 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
                         <Calendar size={14} className="text-gray-400"/>
-                        Colheita prev: <span className="font-bold text-gray-800">{new Date(crop.estimatedHarvestDate).toLocaleDateString('pt-BR')}</span>
+                        Colheita prev: <span className="font-bold text-gray-800 dark:text-white">{new Date(crop.estimatedHarvestDate).toLocaleDateString('pt-BR')}</span>
                       </div>
                     </div>
                   </div>
@@ -210,8 +210,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNew
 
         {/* Sidebar Charts */}
         <div className="space-y-6">
-           <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6">
-             <h3 className="font-bold text-gray-800 mb-6">Distribuição de Culturas</h3>
+           <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 p-6">
+             <h3 className="font-bold text-gray-800 dark:text-white mb-6">Distribuição de Culturas</h3>
              {cropTypeData.length > 0 ? (
                <div className="relative h-64">
                   <ResponsiveContainer width="100%" height="100%">
@@ -238,33 +238,42 @@ export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNew
                   {/* Legend */}
                   <div className="flex flex-wrap justify-center gap-3 mt-4">
                     {cropTypeData.map((d, i) => (
-                      <div key={i} className="flex items-center gap-2 bg-gray-50 px-3 py-1 rounded-full border border-gray-100">
+                      <div key={i} className="flex items-center gap-2 bg-gray-50 dark:bg-slate-700 px-3 py-1 rounded-full border border-gray-100 dark:border-slate-600">
                         <div className="w-2 h-2 rounded-full" style={{ backgroundColor: d.color }}></div>
-                        <span className="text-xs font-bold text-gray-600 capitalize">{d.name}</span>
+                        <span className="text-xs font-bold text-gray-600 dark:text-gray-300 capitalize">{d.name}</span>
                       </div>
                     ))}
                   </div>
                </div>
              ) : (
-               <div className="h-64 flex flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-100 rounded-2xl">
+               <div className="h-64 flex flex-col items-center justify-center text-gray-400 dark:text-gray-500 border-2 border-dashed border-gray-100 dark:border-slate-700 rounded-2xl">
                  <p className="text-sm">Sem dados suficientes</p>
                </div>
              )}
            </div>
 
-           <div className="bg-indigo-50 rounded-3xl p-6 border border-indigo-100 relative overflow-hidden">
+           <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-3xl p-6 border border-indigo-100 dark:border-indigo-900/30 relative overflow-hidden">
               <div className="relative z-10">
-                 <h3 className="font-bold text-indigo-900 mb-2">Dica do dia</h3>
-                 <p className="text-sm text-indigo-700 leading-relaxed">
+                 <h3 className="font-bold text-indigo-900 dark:text-indigo-300 mb-2">Dica do dia</h3>
+                 <p className="text-sm text-indigo-700 dark:text-indigo-400 leading-relaxed">
                    Monitore a umidade do solo antes de aplicar a próxima adubação nitrogenada para evitar perdas por lixiviação.
                  </p>
-                 <button className="mt-4 text-xs font-bold text-indigo-600 uppercase tracking-wide hover:underline">Ler mais dicas</button>
+                 <button className="mt-4 text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wide hover:underline">Ler mais dicas</button>
               </div>
-              <Sprout className="absolute bottom-[-10px] right-[-10px] text-indigo-200 w-32 h-32 opacity-50 rotate-12" />
+              <Sprout className="absolute bottom-[-10px] right-[-10px] text-indigo-200 dark:text-indigo-800 w-32 h-32 opacity-50 rotate-12" />
            </div>
         </div>
 
       </div>
+
+      {/* Mobile FAB for New Crop */}
+      <button 
+        onClick={onNewCrop}
+        className="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-agro-green text-white rounded-full shadow-xl shadow-green-600/40 flex items-center justify-center z-40 active:scale-90 transition-transform"
+      >
+        <span className="text-2xl font-bold">+</span>
+      </button>
+
     </div>
   );
 };

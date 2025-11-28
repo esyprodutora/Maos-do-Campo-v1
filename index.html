@@ -14,6 +14,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script>
       tailwind.config = {
+        darkMode: 'class',
         theme: {
           extend: {
             colors: {
@@ -57,7 +58,15 @@
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
         overscroll-behavior-y: none; /* Previne pull-to-refresh nativo em PWA */
+        transition: background-color 0.3s ease, color 0.3s ease;
       }
+      
+      /* Dark mode body override */
+      html.dark body {
+        background-color: #0f172a; /* Slate 900 */
+        color: #f1f5f9;
+      }
+
       /* Custom Scrollbar */
       ::-webkit-scrollbar {
         width: 6px;
@@ -70,6 +79,9 @@
         background: #cbd5e1; 
         border-radius: 3px;
       }
+      html.dark ::-webkit-scrollbar-thumb {
+        background: #475569;
+      }
       ::-webkit-scrollbar-thumb:hover {
         background: #94a3b8; 
       }
@@ -78,6 +90,8 @@
         background: rgba(255, 255, 255, 0.7);
         backdrop-filter: blur(10px);
       }
+      
+      /* Dark mode glass override inside components usually handled by utility classes */
     </style>
   <script type="importmap">
 {

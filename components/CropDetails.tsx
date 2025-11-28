@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { CropData, TimelineStage, Material } from '../types';
 import { getAssistantResponse } from '../services/geminiService';
@@ -25,10 +24,10 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
   // Helper styles based on crop type
   const getTheme = (type: string) => {
     switch(type) {
-      case 'cafe': return { main: 'text-[#8E5A2E]', bg: 'bg-[#8E5A2E]', light: 'bg-[#F6EBE0]' };
-      case 'milho': return { main: 'text-[#E67E22]', bg: 'bg-[#E67E22]', light: 'bg-[#FEF5E7]' };
-      case 'soja': return { main: 'text-[#F2C94C]', bg: 'bg-[#F2C94C]', light: 'bg-[#FCF3CF]' };
-      default: return { main: 'text-agro-green', bg: 'bg-agro-green', light: 'bg-green-50' };
+      case 'cafe': return { main: 'text-[#8E5A2E]', bg: 'bg-[#8E5A2E]', light: 'bg-[#F6EBE0] dark:bg-[#8E5A2E]/20' };
+      case 'milho': return { main: 'text-[#E67E22]', bg: 'bg-[#E67E22]', light: 'bg-[#FEF5E7] dark:bg-[#E67E22]/20' };
+      case 'soja': return { main: 'text-[#F2C94C]', bg: 'bg-[#F2C94C]', light: 'bg-[#FCF3CF] dark:bg-[#F2C94C]/20' };
+      default: return { main: 'text-agro-green', bg: 'bg-agro-green', light: 'bg-green-50 dark:bg-green-900/20' };
     }
   };
   const theme = getTheme(crop.type);
@@ -163,29 +162,29 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
 
   const renderOverview = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-slide-up">
-       <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 relative overflow-hidden group">
+       <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 relative overflow-hidden group">
           <div className={`absolute top-0 right-0 p-10 opacity-5 ${theme.main}`}>
              <Ruler size={100} />
           </div>
-          <h3 className="font-bold text-xl text-gray-800 mb-6 flex items-center gap-2">
+          <h3 className="font-bold text-xl text-gray-800 dark:text-white mb-6 flex items-center gap-2">
             <span className={`p-2 rounded-lg ${theme.light} ${theme.main}`}><Ruler size={20}/></span> 
             Dados da Área
           </h3>
           <div className="space-y-5 relative z-10">
-             <div className="flex justify-between items-center p-3 bg-gray-50 rounded-xl">
-               <span className="text-gray-500 font-medium">Área Total</span>
-               <span className="font-bold text-gray-800 text-lg">{crop.areaHa} ha</span>
+             <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-slate-700 rounded-xl">
+               <span className="text-gray-500 dark:text-gray-300 font-medium">Área Total</span>
+               <span className="font-bold text-gray-800 dark:text-white text-lg">{crop.areaHa} ha</span>
              </div>
-             <div className="flex justify-between items-center p-3 bg-gray-50 rounded-xl">
-               <span className="text-gray-500 font-medium">Solo</span>
-               <span className="font-bold capitalize text-gray-800">{crop.soilType}</span>
+             <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-slate-700 rounded-xl">
+               <span className="text-gray-500 dark:text-gray-300 font-medium">Solo</span>
+               <span className="font-bold capitalize text-gray-800 dark:text-white">{crop.soilType}</span>
              </div>
-             <div className="flex justify-between items-center p-3 bg-gray-50 rounded-xl">
-               <span className="text-gray-500 font-medium">Espaçamento</span>
-               <span className="font-bold text-gray-800">{crop.spacing}</span>
+             <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-slate-700 rounded-xl">
+               <span className="text-gray-500 dark:text-gray-300 font-medium">Espaçamento</span>
+               <span className="font-bold text-gray-800 dark:text-white">{crop.spacing}</span>
              </div>
-             <div className="flex justify-between items-center p-3 bg-gray-50 rounded-xl border border-dashed border-gray-300">
-               <span className="text-gray-500 font-medium">Meta</span>
+             <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-slate-700 rounded-xl border border-dashed border-gray-300 dark:border-slate-600">
+               <span className="text-gray-500 dark:text-gray-300 font-medium">Meta</span>
                <span className={`font-bold ${theme.main}`}>{crop.productivityGoal}</span>
              </div>
           </div>
@@ -196,13 +195,13 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
             <h3 className={`font-bold text-xl mb-4 flex items-center gap-2 ${theme.main}`}>
                <AlertCircle size={24}/> Recomendação Técnica
             </h3>
-            <p className="text-gray-700 italic leading-relaxed text-lg font-medium">
+            <p className="text-gray-700 dark:text-gray-200 italic leading-relaxed text-lg font-medium">
               "{crop.aiAdvice}"
             </p>
           </div>
           <div className="mt-8 relative z-10">
             <p className={`text-xs font-bold uppercase tracking-wider mb-1 ${theme.main}`}>Estimativa de Colheita</p>
-            <p className="text-3xl font-extrabold text-gray-800">
+            <p className="text-3xl font-extrabold text-gray-800 dark:text-white">
               {new Date(crop.estimatedHarvestDate).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
             </p>
           </div>
@@ -227,8 +226,8 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
       <div className="space-y-6 animate-slide-up">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
            {/* Chart Card */}
-           <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
-             <h3 className="font-bold text-gray-800 mb-6 text-xl">Distribuição de Custos</h3>
+           <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700">
+             <h3 className="font-bold text-gray-800 dark:text-white mb-6 text-xl">Distribuição de Custos</h3>
              <div className="h-64 w-full">
                <ResponsiveContainer width="100%" height="100%">
                  <BarChart data={data}>
@@ -246,32 +245,32 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                  </BarChart>
                </ResponsiveContainer>
              </div>
-             <div className="mt-6 flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
-               <p className="text-gray-500 font-medium">Total Estimado</p>
-               <p className="text-2xl font-bold text-gray-800">
+             <div className="mt-6 flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-700 rounded-2xl">
+               <p className="text-gray-500 dark:text-gray-300 font-medium">Total Estimado</p>
+               <p className="text-2xl font-bold text-gray-800 dark:text-white">
                  {crop.estimatedCost.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                </p>
              </div>
            </div>
 
            {/* Receipt Card */}
-           <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 flex flex-col">
-              <h3 className="font-bold text-gray-800 mb-6 text-xl flex items-center gap-2">
+           <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col">
+              <h3 className="font-bold text-gray-800 dark:text-white mb-6 text-xl flex items-center gap-2">
                  <ShoppingBag className="text-agro-green"/> Lista de Compras
               </h3>
-              <div className="flex-1 overflow-y-auto max-h-[400px] pr-2 custom-scrollbar bg-white">
+              <div className="flex-1 overflow-y-auto max-h-[400px] pr-2 custom-scrollbar bg-white dark:bg-slate-800">
                 <div className="space-y-3">
                   {crop.materials.map((m, i) => (
-                    <div key={i} className="flex justify-between items-center p-3 border-b border-gray-50 last:border-0 hover:bg-gray-50 rounded-lg transition-colors">
+                    <div key={i} className="flex justify-between items-center p-3 border-b border-gray-50 dark:border-slate-700 last:border-0 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-lg transition-colors">
                       <div>
-                        <p className="font-bold text-gray-700">{m.name}</p>
+                        <p className="font-bold text-gray-700 dark:text-gray-200">{m.name}</p>
                         <p className="text-xs text-gray-400 uppercase tracking-wide font-medium">{m.category}</p>
                       </div>
                       <div className="text-right">
-                         <p className="font-bold text-gray-800">
+                         <p className="font-bold text-gray-800 dark:text-white">
                            {(m.quantity * m.unitPriceEstimate).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                          </p>
-                         <p className="text-xs text-gray-500">{m.quantity} {m.unit}</p>
+                         <p className="text-xs text-gray-500 dark:text-gray-400">{m.quantity} {m.unit}</p>
                       </div>
                     </div>
                   ))}
@@ -284,15 +283,15 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
   };
 
   const renderTimeline = () => (
-    <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 animate-slide-up">
-      <h3 className="font-bold text-xl text-gray-800 mb-8 pl-4">Linha do Tempo</h3>
-      <div className="relative pl-8 border-l-2 border-gray-100 ml-4 space-y-10">
+    <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 animate-slide-up">
+      <h3 className="font-bold text-xl text-gray-800 dark:text-white mb-8 pl-4">Linha do Tempo</h3>
+      <div className="relative pl-8 border-l-2 border-gray-100 dark:border-slate-700 ml-4 space-y-10">
         {crop.timeline.map((stage, index) => (
           <div key={stage.id} className="relative group">
              {/* Timeline Dot */}
              <div className={`
-               absolute -left-[43px] top-0 w-8 h-8 rounded-full border-4 border-white shadow-md flex items-center justify-center
-               ${stage.status === 'concluido' ? 'bg-agro-green' : stage.status === 'em_andamento' ? 'bg-agro-yellow' : 'bg-gray-200'}
+               absolute -left-[43px] top-0 w-8 h-8 rounded-full border-4 border-white dark:border-slate-800 shadow-md flex items-center justify-center
+               ${stage.status === 'concluido' ? 'bg-agro-green' : stage.status === 'em_andamento' ? 'bg-agro-yellow' : 'bg-gray-200 dark:bg-slate-600'}
              `}>
                {stage.status === 'concluido' && <CheckCircle size={14} className="text-white"/>}
                {stage.status === 'em_andamento' && <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>}
@@ -301,15 +300,15 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
              {/* Content */}
              <div className={`
                 p-6 rounded-2xl border transition-all duration-300
-                ${stage.status === 'em_andamento' ? 'bg-white border-agro-yellow shadow-lg ring-1 ring-agro-yellow/20' : 'bg-gray-50/50 border-gray-100'}
+                ${stage.status === 'em_andamento' ? 'bg-white dark:bg-slate-800 border-agro-yellow shadow-lg ring-1 ring-agro-yellow/20' : 'bg-gray-50/50 dark:bg-slate-900 border-gray-100 dark:border-slate-700'}
              `}>
                <div className="flex justify-between items-start mb-3">
-                 <h4 className={`text-lg font-bold ${stage.status === 'em_andamento' ? 'text-gray-900' : 'text-gray-600'}`}>{stage.title}</h4>
-                 <span className="text-xs font-bold font-mono bg-white border border-gray-200 px-3 py-1 rounded-full text-gray-500 shadow-sm">
+                 <h4 className={`text-lg font-bold ${stage.status === 'em_andamento' ? 'text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-300'}`}>{stage.title}</h4>
+                 <span className="text-xs font-bold font-mono bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 px-3 py-1 rounded-full text-gray-500 dark:text-gray-300 shadow-sm">
                    {stage.dateEstimate}
                  </span>
                </div>
-               <p className="text-gray-500 mb-5 leading-relaxed">{stage.description}</p>
+               <p className="text-gray-500 dark:text-gray-400 mb-5 leading-relaxed">{stage.description}</p>
                
                <div className="grid gap-3">
                  {stage.tasks.map(task => (
@@ -318,16 +317,16 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                         className={`
                           flex items-center gap-4 p-3 rounded-xl cursor-pointer transition-all border
                           ${task.done 
-                            ? 'bg-green-50 border-green-100' 
-                            : 'bg-white border-gray-100 hover:border-agro-green hover:shadow-md'}
+                            ? 'bg-green-50 dark:bg-green-900/20 border-green-100 dark:border-green-900/30' 
+                            : 'bg-white dark:bg-slate-800 border-gray-100 dark:border-slate-700 hover:border-agro-green hover:shadow-md'}
                         `}>
                      <div className={`
                         w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors flex-shrink-0
-                        ${task.done ? 'bg-agro-green border-agro-green' : 'border-gray-300'}
+                        ${task.done ? 'bg-agro-green border-agro-green' : 'border-gray-300 dark:border-slate-500'}
                      `}>
                         {task.done && <CheckCircle size={14} className="text-white"/>}
                      </div>
-                     <span className={`text-sm font-medium ${task.done ? 'text-gray-400 line-through' : 'text-gray-700'}`}>
+                     <span className={`text-sm font-medium ${task.done ? 'text-gray-400 dark:text-gray-500 line-through' : 'text-gray-700 dark:text-gray-200'}`}>
                        {task.text}
                      </span>
                    </div>
@@ -341,7 +340,7 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
   );
 
   const renderAssistant = () => (
-    <div className="flex flex-col h-[650px] bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden animate-slide-up">
+    <div className="flex flex-col h-[650px] bg-white dark:bg-slate-800 rounded-3xl shadow-lg border border-gray-100 dark:border-slate-700 overflow-hidden animate-slide-up">
        <div className="bg-agro-green p-6 text-white flex items-center gap-4">
          <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-sm">
             <MessageSquare size={28} />
@@ -352,14 +351,14 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
          </div>
        </div>
 
-       <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-50/50">
+       <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-50/50 dark:bg-slate-900/50">
           {chatHistory.map((msg, idx) => (
             <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                <div className={`
                  max-w-[85%] p-5 rounded-2xl text-sm leading-relaxed shadow-sm
                  ${msg.role === 'user' 
                     ? 'bg-agro-green text-white rounded-tr-sm' 
-                    : 'bg-white text-gray-800 rounded-tl-sm border border-gray-100'}
+                    : 'bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 rounded-tl-sm border border-gray-100 dark:border-slate-600'}
                `}>
                  {msg.text}
                </div>
@@ -367,7 +366,7 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
           ))}
           {isChatLoading && (
             <div className="flex justify-start">
-               <div className="bg-white p-4 rounded-2xl rounded-tl-sm shadow-sm flex gap-2 border border-gray-100">
+               <div className="bg-white dark:bg-slate-700 p-4 rounded-2xl rounded-tl-sm shadow-sm flex gap-2 border border-gray-100 dark:border-slate-600">
                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-75"></div>
                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-150"></div>
@@ -376,16 +375,16 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
           )}
        </div>
 
-       <form onSubmit={handleChatSubmit} className="p-4 bg-white border-t border-gray-100 flex gap-3">
+       <form onSubmit={handleChatSubmit} className="p-4 bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-slate-700 flex gap-3">
          <input 
            type="text" 
            value={chatInput}
            onChange={(e) => setChatInput(e.target.value)}
            placeholder="Digite sua dúvida..."
-           className="flex-1 p-4 bg-gray-50 border border-transparent focus:bg-white focus:border-agro-green rounded-xl outline-none transition-all font-medium"
+           className="flex-1 p-4 bg-gray-50 dark:bg-slate-900 border border-transparent focus:bg-white dark:focus:bg-slate-800 focus:border-agro-green rounded-xl outline-none transition-all font-medium dark:text-white"
          />
          <button 
-           type="submit"
+           type="submit" 
            disabled={!chatInput.trim() || isChatLoading}
            className="bg-agro-green text-white p-4 rounded-xl hover:bg-green-700 disabled:opacity-50 transition-transform active:scale-95 shadow-lg shadow-green-600/20"
          >

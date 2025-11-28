@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './components/Dashboard';
@@ -13,12 +12,35 @@ const App: React.FC = () => {
   const [session, setSession] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
 
+  // Theme State
+  const [theme, setTheme] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('theme') || 'light';
+    }
+    return 'light';
+  });
+
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedCrop, setSelectedCrop] = useState<CropData | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [crops, setCrops] = useState<CropData[]>([]);
-  const [isLoading, setIsLoading] = useState(false); // Changed default to false to prevent initial block
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Apply Theme
+  useEffect(() => {
+    const root = window.document.documentElement;
+    if (theme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  };
 
   // Check Auth
   useEffect(() => {
@@ -161,15 +183,15 @@ const App: React.FC = () => {
       return (
         <div className="flex flex-col items-center justify-center h-full text-gray-400 animate-pulse">
            <Loader2 size={40} className="animate-spin mb-4 text-agro-green" />
-           <p>Sincronizando sua fazenda...</p>
+           <p className="dark:text-gray-300">Sincronizando sua fazenda...</p>
         </div>
       );
     }
 
     if (error && crops.length === 0) {
       return (
-        <div className="flex flex-col items-center justify-center h-full text-gray-500">
-           <WifiOff size={48} className="mb-4 text-gray-300" />
+        <div className="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400">
+           <WifiOff size={48} className="mb-4 text-gray-300 dark:text-gray-600" />
            <p className="mb-4 text-center max-w-xs">{error}</p>
            <button 
              onClick={fetchCrops}
@@ -209,17 +231,17 @@ const App: React.FC = () => {
         );
       case 'settings':
         return (
-          <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 text-center animate-slide-up">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Configurações</h2>
+          <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 text-center animate-slide-up">
+            <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">Configurações</h2>
             
             <div className="flex items-center justify-center gap-2 mb-6 text-sm">
                <div className={`w-3 h-3 rounded-full ${supabase ? 'bg-green-500' : 'bg-red-500'}`}></div>
-               <span className="text-gray-600">
+               <span className="text-gray-600 dark:text-gray-300">
                   {supabase ? 'Conectado à Nuvem (Supabase)' : 'Modo Offline (Local)'}
                </span>
             </div>
             
-            <p className="text-gray-500 mb-6">Conta: <strong>{session?.user?.email}</strong></p>
+            <p className="text-gray-500 dark:text-gray-400 mb-6">Conta: <strong>{session?.user?.email}</strong></p>
 
             <button 
               onClick={async () => {
@@ -228,7 +250,7 @@ const App: React.FC = () => {
                     window.location.reload();
                 }
               }}
-              className="text-red-500 hover:text-red-700 font-medium border border-red-200 px-6 py-3 rounded-xl hover:bg-red-50 transition-colors"
+              className="text-red-500 hover:text-red-700 font-medium border border-red-200 px-6 py-3 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
             >
               Desconectar Conta
             </button>
@@ -241,7 +263,7 @@ const App: React.FC = () => {
 
   if (authLoading) {
      return (
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center">
              <Loader2 size={40} className="animate-spin text-agro-green" />
         </div>
      )
@@ -252,28 +274,30 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="flex min-h-screen bg-[#F8F9FA] text-gray-800 font-sans">
+    <div className="flex min-h-screen bg-[#F8F9FA] dark:bg-slate-900 text-gray-800 dark:text-gray-100 font-sans transition-colors duration-300">
       <Sidebar 
         activeTab={activeTab} 
         setActiveTab={(tab) => { setActiveTab(tab); setSelectedCrop(null); }}
         isMobileMenuOpen={isMobileMenuOpen}
         setIsMobileMenuOpen={setIsMobileMenuOpen}
+        theme={theme}
+        toggleTheme={toggleTheme}
       />
 
-      <main className="flex-1 p-4 md:p-8 h-screen overflow-y-auto">
+      <main className="flex-1 p-4 md:p-8 h-screen overflow-y-auto custom-scrollbar">
         {/* Mobile Header */}
         <div className="md:hidden flex items-center justify-between mb-6">
            <div className="flex items-center gap-2">
               <span className="font-bold text-agro-green text-lg">MÃOS DO CAMPO</span>
            </div>
-           <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 bg-white rounded-lg shadow-sm">
-             <Menu size={24} className="text-gray-600" />
+           <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 bg-white dark:bg-slate-800 rounded-lg shadow-sm border dark:border-slate-700">
+             <Menu size={24} className="text-gray-600 dark:text-gray-300" />
            </button>
         </div>
 
         {/* Offline Warning Banner (if logic fails silently but we are offline) */}
         {!navigator.onLine && (
-           <div className="mb-4 bg-gray-800 text-white px-4 py-3 rounded-xl flex items-center gap-3 text-sm">
+           <div className="mb-4 bg-gray-800 dark:bg-black border border-gray-700 text-white px-4 py-3 rounded-xl flex items-center gap-3 text-sm">
               <WifiOff size={16} />
               <span>Você está offline. Alterações serão salvas localmente.</span>
            </div>

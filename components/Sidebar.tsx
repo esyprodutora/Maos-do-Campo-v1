@@ -1,6 +1,5 @@
-
 import React, { useEffect, useState } from 'react';
-import { LayoutDashboard, PlusCircle, Settings, LogOut, User, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, Settings, LogOut, User, ChevronRight, Moon, Sun } from 'lucide-react';
 import { supabase } from '../services/supabaseClient';
 
 interface SidebarProps {
@@ -8,9 +7,11 @@ interface SidebarProps {
   setActiveTab: (tab: string) => void;
   isMobileMenuOpen: boolean;
   setIsMobileMenuOpen: (open: boolean) => void;
+  theme: string;
+  toggleTheme: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileMenuOpen, setIsMobileMenuOpen }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileMenuOpen, setIsMobileMenuOpen, theme, toggleTheme }) => {
   const [userEmail, setUserEmail] = useState<string>('Produtor');
 
   useEffect(() => {
@@ -25,6 +26,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMob
 
   const handleLogout = async () => {
     if (supabase) {
+      localStorage.clear();
       await supabase.auth.signOut();
       window.location.reload();
     }
@@ -53,7 +55,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMob
 
       {/* Sidebar Container */}
       <aside className={`
-        fixed inset-y-0 left-0 z-50 w-72 bg-agro-dark text-white transform transition-transform duration-300 ease-out shadow-2xl
+        fixed inset-y-0 left-0 z-50 w-72 bg-agro-dark dark:bg-slate-950 text-white transform transition-transform duration-300 ease-out shadow-2xl
         ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
         md:translate-x-0 md:static md:h-screen md:shadow-none flex flex-col justify-between
       `}>
@@ -69,7 +71,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMob
               </svg>
             </div>
             <div>
-              <h1 className="font-bold text-xl leading-none tracking-tight">MÃOS DO<br/><span className="text-agro-yellow">CAMPO</span></h1>
+              <h1 className="font-bold text-xl leading-none tracking-tight text-white">MÃOS DO<br/><span className="text-agro-yellow">CAMPO</span></h1>
             </div>
           </div>
 
@@ -101,23 +103,36 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMob
         </div>
 
         {/* Footer / User Profile */}
-        <div className="p-4 m-4 bg-white/5 rounded-2xl border border-white/10">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-full bg-agro-yellow flex items-center justify-center text-agro-brown font-bold text-lg capitalize">
-              {userEmail.charAt(0)}
+        <div className="p-4 m-4">
+           {/* Theme Toggle */}
+           <div className="mb-4 flex justify-end">
+             <button 
+                onClick={toggleTheme}
+                className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white transition-colors border border-white/10"
+                aria-label="Alternar Tema"
+             >
+                {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+             </button>
+           </div>
+
+          <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-agro-yellow flex items-center justify-center text-agro-brown font-bold text-lg capitalize">
+                {userEmail.charAt(0)}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-white truncate capitalize">{userEmail}</p>
+                <p className="text-xs text-gray-400 truncate">Produtor Ativo</p>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-white truncate capitalize">{userEmail}</p>
-              <p className="text-xs text-gray-400 truncate">Produtor Ativo</p>
-            </div>
+            <button 
+              onClick={handleLogout}
+              className="flex items-center justify-center w-full py-2.5 rounded-lg border border-white/20 text-sm font-medium text-gray-300 hover:bg-white/10 hover:text-white transition-colors"
+            >
+              <LogOut size={16} className="mr-2" />
+              Sair do App
+            </button>
           </div>
-          <button 
-            onClick={handleLogout}
-            className="flex items-center justify-center w-full py-2.5 rounded-lg border border-white/20 text-sm font-medium text-gray-300 hover:bg-white/10 hover:text-white transition-colors"
-          >
-            <LogOut size={16} className="mr-2" />
-            Sair do App
-          </button>
         </div>
       </aside>
     </>
