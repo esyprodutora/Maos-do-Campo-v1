@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { supabase } from '../services/supabaseClient';
-import { Loader2, Mail, Lock, ArrowRight, User, AlertTriangle } from 'lucide-react';
+import { Loader2, Mail, Lock, ArrowRight, User, AlertTriangle, RefreshCw } from 'lucide-react';
 
 // Ícones SVG Inline para Social Login com cores oficiais
 const GoogleIcon = () => (
@@ -30,7 +30,7 @@ export const Login: React.FC = () => {
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     if(!supabase) {
-        setMsg({type: 'error', text: 'Supabase não configurado. Verifique as chaves de API.'});
+        setMsg({type: 'error', text: 'Supabase não conectado. Verifique o console.'});
         return;
     }
 
@@ -65,7 +65,7 @@ export const Login: React.FC = () => {
 
   const handleSocialLogin = async (provider: 'google' | 'apple') => {
     if (!supabase) {
-        setMsg({type: 'error', text: 'Configuração de banco de dados ausente.'});
+        setMsg({type: 'error', text: 'Banco de dados offline.'});
         return;
     }
     setLoading(true);
@@ -73,7 +73,7 @@ export const Login: React.FC = () => {
         const { error } = await supabase.auth.signInWithOAuth({
             provider: provider,
             options: {
-              redirectTo: window.location.origin // Garante retorno para a URL base correta
+              redirectTo: window.location.origin 
             }
         });
         if (error) throw error;
@@ -117,11 +117,17 @@ export const Login: React.FC = () => {
           
           {/* Warning if Supabase is missing */}
           {!supabase && (
-             <div className="mb-6 p-4 bg-red-500/80 rounded-xl border border-red-400/50 text-white text-sm flex gap-3 backdrop-blur-sm shadow-lg">
-                <AlertTriangle className="flex-shrink-0" size={20}/>
-                <div>
-                   <strong>Atenção:</strong> Banco de dados não conectado. Verifique as chaves de API no arquivo <code>.env</code> ou painel Vercel.
+             <div className="mb-6 p-4 bg-orange-500/80 rounded-xl border border-orange-400/50 text-white text-xs backdrop-blur-sm shadow-lg">
+                <div className="flex gap-3 mb-2">
+                   <AlertTriangle className="flex-shrink-0" size={18}/>
+                   <span className="font-bold">Conexão Pendente</span>
                 </div>
+                <p className="opacity-90 leading-relaxed mb-3">
+                   O app não encontrou as chaves do Supabase. Se você acabou de configurar no Vercel, tente recarregar.
+                </p>
+                <button onClick={() => window.location.reload()} className="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg font-bold text-[10px] flex items-center gap-1 transition-colors w-full justify-center">
+                   <RefreshCw size={12} /> Recarregar Página
+                </button>
              </div>
           )}
           
