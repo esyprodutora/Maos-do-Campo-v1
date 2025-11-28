@@ -1,8 +1,11 @@
+
 import React, { useState } from 'react';
 import { CropData, TimelineStage, Material } from '../types';
 import { getAssistantResponse } from '../services/geminiService';
-import { ArrowLeft, Calendar, DollarSign, ListTodo, MessageSquare, Send, CheckCircle, Circle, AlertCircle, Droplets, Ruler, ShoppingBag } from 'lucide-react';
+import { ArrowLeft, Calendar, DollarSign, ListTodo, MessageSquare, Send, CheckCircle, Circle, AlertCircle, Droplets, Ruler, ShoppingBag, Download, Loader2 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface CropDetailsProps {
   crop: CropData;
@@ -17,6 +20,7 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
     { role: 'ai', text: `Olá! Sou seu assistente para a lavoura ${crop.name}. Como posso ajudar hoje?` }
   ]);
   const [isChatLoading, setIsChatLoading] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   // Helper styles based on crop type
   const getTheme = (type: string) => {
@@ -61,6 +65,100 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
 
     setChatHistory(prev => [...prev, { role: 'ai', text: response }]);
     setIsChatLoading(false);
+  };
+
+  const generatePDF = () => {
+    setIsGeneratingPdf(true);
+    const doc = new jsPDF();
+
+    // Header
+    doc.setFillColor(39, 174, 96); // Agro Green
+    doc.rect(0, 0, 210, 30, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(22);
+    doc.setFont('helvetica', 'bold');
+    doc.text('MÃOS DO CAMPO', 105, 15, { align: 'center' });
+    doc.setFontSize(10);
+    doc.text('Relatório de Planejamento de Safra', 105, 22, { align: 'center' });
+
+    // Info Section
+    doc.setTextColor(40, 40, 40);
+    doc.setFontSize(14);
+    doc.text(`Lavoura: ${crop.name}`, 14, 45);
+    
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Cultura: ${crop.type.toUpperCase()}`, 14, 52);
+    doc.text(`Área: ${crop.areaHa} ha`, 60, 52);
+    doc.text(`Solo: ${crop.soilType}`, 100, 52);
+    doc.text(`Espaçamento: ${crop.spacing}`, 140, 52);
+
+    doc.text(`Data Relatório: ${new Date().toLocaleDateString('pt-BR')}`, 14, 58);
+    doc.text(`Previsão Colheita: ${new Date(crop.estimatedHarvestDate).toLocaleDateString('pt-BR')}`, 100, 58);
+
+    // Financial Table
+    doc.setFontSize(12);
+    doc.setTextColor(39, 174, 96);
+    doc.text('Resumo Financeiro e Materiais', 14, 70);
+
+    const tableData = crop.materials.map(m => [
+      m.name,
+      m.category,
+      `${m.quantity} ${m.unit}`,
+      `R$ ${m.unitPriceEstimate.toFixed(2)}`,
+      `R$ ${(m.quantity * m.unitPriceEstimate).toFixed(2)}`
+    ]);
+
+    autoTable(doc, {
+      startY: 75,
+      head: [['Item', 'Categoria', 'Qtd', 'Preço Unit.', 'Total']],
+      body: tableData,
+      theme: 'grid',
+      headStyles: { fillColor: [39, 174, 96] },
+      foot: [['', '', '', 'TOTAL ESTIMADO:', `R$ ${crop.estimatedCost.toLocaleString('pt-BR')}`]],
+      showFoot: 'lastPage'
+    });
+
+    // Timeline Section
+    const finalY = (doc as any).lastAutoTable.finalY + 15;
+    doc.setFontSize(12);
+    doc.setTextColor(39, 174, 96);
+    doc.text('Cronograma de Atividades', 14, finalY);
+
+    let currentY = finalY + 10;
+    
+    crop.timeline.forEach((stage, index) => {
+      // Check for page break
+      if (currentY > 270) {
+        doc.addPage();
+        currentY = 20;
+      }
+      
+      doc.setFontSize(10);
+      doc.setTextColor(0, 0, 0);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`${index + 1}. ${stage.title} (${stage.dateEstimate})`, 14, currentY);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(80, 80, 80);
+      
+      const descLines = doc.splitTextToSize(stage.description, 180);
+      doc.text(descLines, 14, currentY + 5);
+      
+      currentY += 15 + (descLines.length * 4);
+    });
+
+    // Footer
+    const pageCount = (doc as any).internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(150, 150, 150);
+        doc.text(`Página ${i} de ${pageCount}`, 195, 290, { align: 'right' });
+    }
+
+    doc.save(`plano_${crop.name.replace(/\s+/g, '_').toLowerCase()}.pdf`);
+    setIsGeneratingPdf(false);
   };
 
   const renderOverview = () => (
@@ -316,27 +414,38 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
               </div>
             </div>
             
-            <div className="flex gap-2 bg-white/10 p-1.5 rounded-2xl backdrop-blur-sm">
-                {[
-                  { id: 'overview', label: 'Visão Geral', icon: ListTodo },
-                  { id: 'finance', label: 'Financeiro', icon: DollarSign },
-                  { id: 'timeline', label: 'Cronograma', icon: Calendar },
-                  { id: 'assistant', label: 'IA', icon: MessageSquare },
-                ].map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id as any)}
-                    className={`
-                      flex items-center gap-2 px-4 py-3 rounded-xl font-bold text-sm transition-all
-                      ${activeTab === tab.id 
-                        ? 'bg-white text-gray-900 shadow-lg scale-105' 
-                        : 'text-white hover:bg-white/10'}
-                    `}
-                  >
-                    <tab.icon size={18} />
-                    <span className="hidden sm:inline">{tab.label}</span>
-                  </button>
-                ))}
+            <div className="flex flex-wrap md:flex-nowrap gap-2">
+                <div className="flex gap-2 bg-white/10 p-1.5 rounded-2xl backdrop-blur-sm mr-2">
+                  {[
+                    { id: 'overview', label: 'Visão', icon: ListTodo },
+                    { id: 'finance', label: 'Finanças', icon: DollarSign },
+                    { id: 'timeline', label: 'Etapas', icon: Calendar },
+                    { id: 'assistant', label: 'IA', icon: MessageSquare },
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id as any)}
+                      className={`
+                        flex items-center gap-2 px-3 py-2 md:px-4 md:py-3 rounded-xl font-bold text-sm transition-all
+                        ${activeTab === tab.id 
+                          ? 'bg-white text-gray-900 shadow-lg scale-105' 
+                          : 'text-white hover:bg-white/10'}
+                      `}
+                    >
+                      <tab.icon size={18} />
+                      <span className="hidden lg:inline">{tab.label}</span>
+                    </button>
+                  ))}
+                </div>
+
+                <button 
+                  onClick={generatePDF}
+                  disabled={isGeneratingPdf}
+                  className="bg-white/90 hover:bg-white text-agro-green p-3 md:px-4 md:py-3 rounded-xl font-bold shadow-lg transition-all flex items-center gap-2 disabled:opacity-70"
+                >
+                  {isGeneratingPdf ? <Loader2 size={18} className="animate-spin"/> : <Download size={18} />}
+                  <span className="hidden sm:inline">Exportar PDF</span>
+                </button>
             </div>
          </div>
          {/* Decorative Circles */}

@@ -1,5 +1,7 @@
-import React from 'react';
+
+import React, { useEffect, useState } from 'react';
 import { LayoutDashboard, PlusCircle, Settings, LogOut, User, ChevronRight } from 'lucide-react';
+import { supabase } from '../services/supabaseClient';
 
 interface SidebarProps {
   activeTab: string;
@@ -9,6 +11,25 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileMenuOpen, setIsMobileMenuOpen }) => {
+  const [userEmail, setUserEmail] = useState<string>('Produtor');
+
+  useEffect(() => {
+    if (supabase) {
+      supabase.auth.getUser().then(({ data }) => {
+        if (data.user?.email) {
+          setUserEmail(data.user.email.split('@')[0]);
+        }
+      });
+    }
+  }, []);
+
+  const handleLogout = async () => {
+    if (supabase) {
+      await supabase.auth.signOut();
+      window.location.reload();
+    }
+  };
+
   const menuItems = [
     { id: 'dashboard', label: 'Painel Geral', icon: LayoutDashboard },
     { id: 'new-crop', label: 'Nova Lavoura', icon: PlusCircle },
@@ -82,15 +103,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMob
         {/* Footer / User Profile */}
         <div className="p-4 m-4 bg-white/5 rounded-2xl border border-white/10">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-full bg-agro-yellow flex items-center justify-center text-agro-brown font-bold text-lg">
-              PR
+            <div className="w-10 h-10 rounded-full bg-agro-yellow flex items-center justify-center text-agro-brown font-bold text-lg capitalize">
+              {userEmail.charAt(0)}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-white truncate">Produtor Rural</p>
-              <p className="text-xs text-gray-400 truncate">Plano Premium</p>
+              <p className="text-sm font-bold text-white truncate capitalize">{userEmail}</p>
+              <p className="text-xs text-gray-400 truncate">Produtor Ativo</p>
             </div>
           </div>
-          <button className="flex items-center justify-center w-full py-2.5 rounded-lg border border-white/20 text-sm font-medium text-gray-300 hover:bg-white/10 hover:text-white transition-colors">
+          <button 
+            onClick={handleLogout}
+            className="flex items-center justify-center w-full py-2.5 rounded-lg border border-white/20 text-sm font-medium text-gray-300 hover:bg-white/10 hover:text-white transition-colors"
+          >
             <LogOut size={16} className="mr-2" />
             Sair do App
           </button>

@@ -1,13 +1,18 @@
+
 import React, { useState, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './components/Dashboard';
 import { NewCropForm } from './components/NewCropForm';
 import { CropDetails } from './components/CropDetails';
+import { Login } from './components/Login';
 import { CropData } from './types';
 import { Menu, Loader2, WifiOff } from 'lucide-react';
 import { supabase } from './services/supabaseClient';
 
 const App: React.FC = () => {
+  const [session, setSession] = useState<any>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedCrop, setSelectedCrop] = useState<CropData | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -15,22 +20,36 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Load from Supabase
+  // Check Auth
   useEffect(() => {
-    fetchCrops();
+    if(supabase) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        setSession(session);
+        setAuthLoading(false);
+      });
+
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        setSession(session);
+      });
+
+      return () => subscription.unsubscribe();
+    } else {
+        setAuthLoading(false); // No supabase, let it pass (or handle as error)
+    }
   }, []);
+
+  // Load Data when session exists
+  useEffect(() => {
+    if (session) {
+      fetchCrops();
+    }
+  }, [session]);
 
   const fetchCrops = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      if (!supabase) {
-        // Fallback to local storage if supabase isn't configured yet
-        const saved = localStorage.getItem('maos-do-campo-crops');
-        if (saved) setCrops(JSON.parse(saved));
-        setIsLoading(false);
-        return;
-      }
+      if (!supabase) throw new Error("Supabase não iniciado");
 
       const { data, error } = await supabase
         .from('crops')
@@ -40,19 +59,18 @@ const App: React.FC = () => {
       if (error) throw error;
 
       // Map Supabase rows back to CropData structure
-      // We stored the whole object in the 'content' column
       const loadedCrops = data.map(row => ({
         ...row.content,
-        // Ensure ID matches the row ID if needed, though we store ID inside content too
+        id: row.id // Ensure ID consistency
       }));
 
       setCrops(loadedCrops);
     } catch (e: any) {
       console.error("Erro ao carregar dados:", e);
-      setError("Não foi possível conectar ao banco de dados.");
-      // Fallback local em caso de erro
+      // Fallback local em caso de erro ou offline, mas apenas se já tiver logado antes
       const saved = localStorage.getItem('maos-do-campo-crops');
       if (saved) setCrops(JSON.parse(saved));
+      else if(supabase) setError("Sem conexão com internet.");
     } finally {
       setIsLoading(false);
     }
@@ -68,12 +86,16 @@ const App: React.FC = () => {
     localStorage.setItem('maos-do-campo-crops', JSON.stringify(updatedList));
 
     // Save to Supabase
-    if (supabase) {
+    if (supabase && session) {
       try {
         const { error } = await supabase
           .from('crops')
           .insert([
-            { id: newCrop.id, content: newCrop }
+            { 
+              id: newCrop.id, 
+              content: newCrop,
+              user_id: session.user.id 
+            }
           ]);
         
         if (error) throw error;
@@ -94,7 +116,7 @@ const App: React.FC = () => {
     localStorage.setItem('maos-do-campo-crops', JSON.stringify(newCrops));
 
     // Update in Supabase
-    if (supabase) {
+    if (supabase && session) {
        try {
         const { error } = await supabase
           .from('crops')
@@ -155,23 +177,19 @@ const App: React.FC = () => {
                   {supabase ? 'Conectado à Nuvem (Supabase)' : 'Modo Offline (Local)'}
                </span>
             </div>
-
-            <p className="text-gray-500 mb-6">Seus dados estão sendo sincronizados com o banco de dados seguro.</p>
             
+            <p className="text-gray-500 mb-6">Conta conectada: <strong>{session?.user?.email}</strong></p>
+
             <button 
               onClick={async () => {
-                if(confirm("Tem certeza que deseja apagar todos os dados? Isso apagará do banco de dados também.")) {
-                  setCrops([]);
-                  localStorage.removeItem('maos-do-campo-crops');
-                  if (supabase) {
-                    await supabase.from('crops').delete().neq('id', '0'); // Delete all
-                  }
-                  window.location.reload();
+                if(confirm("Deseja mesmo sair?")) {
+                    await supabase?.auth.signOut();
+                    window.location.reload();
                 }
               }}
-              className="mt-2 text-red-500 hover:text-red-700 font-medium border border-red-200 px-4 py-2 rounded-lg hover:bg-red-50"
+              className="text-red-500 hover:text-red-700 font-medium border border-red-200 px-4 py-2 rounded-lg hover:bg-red-50"
             >
-              Resetar Todos os Dados
+              Desconectar Conta
             </button>
           </div>
         );
@@ -179,6 +197,18 @@ const App: React.FC = () => {
         return <Dashboard crops={crops} onSelectCrop={setSelectedCrop} onNewCrop={() => setActiveTab('new-crop')} />;
     }
   };
+
+  if (authLoading) {
+     return (
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+             <Loader2 size={40} className="animate-spin text-agro-green" />
+        </div>
+     )
+  }
+
+  if (!session && supabase) {
+    return <Login />;
+  }
 
   return (
     <div className="flex min-h-screen bg-[#F8F9FA] text-gray-800 font-sans">
@@ -203,7 +233,7 @@ const App: React.FC = () => {
         {error && !isLoading && (
            <div className="mb-4 bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded-xl flex items-center gap-3">
               <WifiOff size={20} />
-              <span>{error} - Usando dados locais temporariamente.</span>
+              <span>{error}</span>
            </div>
         )}
 
