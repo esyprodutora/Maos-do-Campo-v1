@@ -6,7 +6,7 @@ import { NewCropForm } from './components/NewCropForm';
 import { CropDetails } from './components/CropDetails';
 import { Login } from './components/Login';
 import { CropData } from './types';
-import { Menu, Loader2, WifiOff } from 'lucide-react';
+import { Menu, Loader2, WifiOff, RefreshCw } from 'lucide-react';
 import { supabase } from './services/supabaseClient';
 
 const App: React.FC = () => {
@@ -17,7 +17,7 @@ const App: React.FC = () => {
   const [selectedCrop, setSelectedCrop] = useState<CropData | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [crops, setCrops] = useState<CropData[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false); // Changed default to false to prevent initial block
   const [error, setError] = useState<string | null>(null);
 
   // Check Auth
@@ -34,7 +34,7 @@ const App: React.FC = () => {
 
       return () => subscription.unsubscribe();
     } else {
-        setAuthLoading(false); // No supabase, let it pass (or handle as error)
+        setAuthLoading(false); 
     }
   }, []);
 
@@ -48,29 +48,54 @@ const App: React.FC = () => {
   const fetchCrops = async () => {
     setIsLoading(true);
     setError(null);
+
+    // 1. Load from LocalStorage IMMEDIATELY (Stale-while-revalidate)
+    const localData = localStorage.getItem('maos-do-campo-crops');
+    if (localData) {
+      try {
+        setCrops(JSON.parse(localData));
+      } catch (e) {
+        console.error("Erro ao ler cache local", e);
+      }
+    }
+
+    // 2. Try to fetch from Supabase with a Timeout
     try {
       if (!supabase) throw new Error("Supabase não iniciado");
 
-      const { data, error } = await supabase
+      // Timeout promise to prevent infinite loading
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error("Timeout")), 5000)
+      );
+
+      const dbPromise = supabase
         .from('crops')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      // Race: Database vs 5s Timer
+      const result: any = await Promise.race([dbPromise, timeoutPromise]);
+
+      if (result.error) throw result.error;
 
       // Map Supabase rows back to CropData structure
-      const loadedCrops = data.map(row => ({
+      const loadedCrops = result.data.map((row: any) => ({
         ...row.content,
-        id: row.id // Ensure ID consistency
+        id: row.id 
       }));
 
       setCrops(loadedCrops);
+      // Update local cache
+      localStorage.setItem('maos-do-campo-crops', JSON.stringify(loadedCrops));
+      
     } catch (e: any) {
-      console.error("Erro ao carregar dados:", e);
-      // Fallback local em caso de erro ou offline, mas apenas se já tiver logado antes
-      const saved = localStorage.getItem('maos-do-campo-crops');
-      if (saved) setCrops(JSON.parse(saved));
-      else if(supabase) setError("Sem conexão com internet.");
+      console.error("Erro de sincronização:", e);
+      // Only set error state if we have NO data to show
+      if (!localData && crops.length === 0) {
+        setError("Não foi possível carregar seus dados. Verifique a conexão.");
+      } else {
+        // Silent fail (toast could go here) - User still sees local data
+      }
     } finally {
       setIsLoading(false);
     }
@@ -101,7 +126,7 @@ const App: React.FC = () => {
         if (error) throw error;
       } catch (e) {
         console.error("Erro ao salvar no Supabase:", e);
-        alert("Aviso: Salvo apenas localmente. Verifique sua conexão.");
+        // We could add a "pending sync" flag here in future
       }
     }
   };
@@ -131,11 +156,27 @@ const App: React.FC = () => {
   };
 
   const renderContent = () => {
-    if (isLoading) {
+    // Show loading only if we have NO data and are fetching
+    if (isLoading && crops.length === 0 && !error) {
       return (
-        <div className="flex flex-col items-center justify-center h-full text-gray-400">
+        <div className="flex flex-col items-center justify-center h-full text-gray-400 animate-pulse">
            <Loader2 size={40} className="animate-spin mb-4 text-agro-green" />
-           <p>Carregando sua fazenda...</p>
+           <p>Sincronizando sua fazenda...</p>
+        </div>
+      );
+    }
+
+    if (error && crops.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full text-gray-500">
+           <WifiOff size={48} className="mb-4 text-gray-300" />
+           <p className="mb-4 text-center max-w-xs">{error}</p>
+           <button 
+             onClick={fetchCrops}
+             className="flex items-center gap-2 px-6 py-3 bg-agro-green text-white rounded-xl font-bold hover:bg-green-700 transition-colors"
+           >
+             <RefreshCw size={20} /> Tentar Novamente
+           </button>
         </div>
       );
     }
@@ -168,7 +209,7 @@ const App: React.FC = () => {
         );
       case 'settings':
         return (
-          <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 text-center">
+          <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 text-center animate-slide-up">
             <h2 className="text-2xl font-bold text-gray-800 mb-4">Configurações</h2>
             
             <div className="flex items-center justify-center gap-2 mb-6 text-sm">
@@ -178,7 +219,7 @@ const App: React.FC = () => {
                </span>
             </div>
             
-            <p className="text-gray-500 mb-6">Conta conectada: <strong>{session?.user?.email}</strong></p>
+            <p className="text-gray-500 mb-6">Conta: <strong>{session?.user?.email}</strong></p>
 
             <button 
               onClick={async () => {
@@ -187,7 +228,7 @@ const App: React.FC = () => {
                     window.location.reload();
                 }
               }}
-              className="text-red-500 hover:text-red-700 font-medium border border-red-200 px-4 py-2 rounded-lg hover:bg-red-50"
+              className="text-red-500 hover:text-red-700 font-medium border border-red-200 px-6 py-3 rounded-xl hover:bg-red-50 transition-colors"
             >
               Desconectar Conta
             </button>
@@ -230,10 +271,11 @@ const App: React.FC = () => {
            </button>
         </div>
 
-        {error && !isLoading && (
-           <div className="mb-4 bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded-xl flex items-center gap-3">
-              <WifiOff size={20} />
-              <span>{error}</span>
+        {/* Offline Warning Banner (if logic fails silently but we are offline) */}
+        {!navigator.onLine && (
+           <div className="mb-4 bg-gray-800 text-white px-4 py-3 rounded-xl flex items-center gap-3 text-sm">
+              <WifiOff size={16} />
+              <span>Você está offline. Alterações serão salvas localmente.</span>
            </div>
         )}
 
