@@ -17,17 +17,20 @@ export const Login: React.FC = () => {
 
   const slides = [
     {
-      image: "https://images.unsplash.com/photo-1625246333195-78d9c38ad449?q=80&w=2670&auto=format&fit=crop",
+      // Imagem: Produtor usando Tablet no meio da lavoura (Tecnologia/Gestão)
+      image: "https://images.unsplash.com/photo-1586771107445-d3ca888129ff?q=80&w=2672&auto=format&fit=crop",
       title: "Gestão Inteligente",
       desc: "Transforme dados da sua lavoura em decisões lucrativas com inteligência artificial."
     },
     {
-      image: "https://images.unsplash.com/photo-1592982537447-6f2a6a0c30b3?q=80&w=2670&auto=format&fit=crop",
+      // Imagem: Campo dourado ao pôr do sol (Resultado/Colheita/Previsão)
+      image: "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?q=80&w=2670&auto=format&fit=crop",
       title: "Previsibilidade Total",
       desc: "Saiba exatamente quanto vai gastar e quando vai colher com nossos algoritmos preditivos."
     },
     {
-      image: "https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?q=80&w=2670&auto=format&fit=crop",
+      // Imagem: Mãos cuidando de uma planta jovem (Cuidado/Assistência)
+      image: "https://images.unsplash.com/photo-1464226184884-fa280b87c399?q=80&w=2670&auto=format&fit=crop",
       title: "Assistente 24h",
       desc: "Tire dúvidas técnicas sobre pragas, solo e manejo a qualquer momento."
     }
