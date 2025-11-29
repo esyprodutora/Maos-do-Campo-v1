@@ -105,10 +105,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNew
            </div>
         </div>
 
-        {/* Quick Stats Grid */}
+        {/* Quick Stats Grid - UPDATE: Increased border contrast (gray-200) and shadow (shadow) */}
         <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
           
-          <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col justify-between hover:shadow-md transition-shadow">
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow border border-gray-200 dark:border-slate-700 flex flex-col justify-between hover:shadow-md transition-shadow">
             <div className="flex justify-between items-start mb-4">
                <div className="p-3 bg-green-50 dark:bg-green-900/30 text-agro-green rounded-2xl">
                  <Sprout size={24} />
@@ -121,7 +121,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNew
             </div>
           </div>
 
-          <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col justify-between hover:shadow-md transition-shadow">
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow border border-gray-200 dark:border-slate-700 flex flex-col justify-between hover:shadow-md transition-shadow">
             <div className="flex justify-between items-start mb-4">
                <div className="p-3 bg-yellow-50 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 rounded-2xl">
                  <DollarSign size={24} />
@@ -135,7 +135,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNew
             </div>
           </div>
 
-          <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col justify-between hover:shadow-md transition-shadow">
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow border border-gray-200 dark:border-slate-700 flex flex-col justify-between hover:shadow-md transition-shadow">
             <div className="flex justify-between items-start mb-4">
                <div className="p-3 bg-orange-50 dark:bg-orange-900/30 text-orange-500 rounded-2xl">
                  <TrendingUp size={24} />
@@ -153,7 +153,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNew
       {/* Main Content Area */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
         
-        {/* Crop Cards List */}
+        {/* Crop Cards List - UPDATE: Increased border contrast and shadow */}
         <div className="xl:col-span-2 space-y-6">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
@@ -182,7 +182,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNew
                   <div 
                     key={crop.id}
                     onClick={() => onSelectCrop(crop)}
-                    className="bg-white dark:bg-slate-800 rounded-3xl p-5 shadow-sm border border-gray-100 dark:border-slate-700 hover:shadow-lg hover:border-green-100 dark:hover:border-green-900/50 transition-all cursor-pointer group relative overflow-hidden"
+                    className="bg-white dark:bg-slate-800 rounded-3xl p-5 shadow border border-gray-200 dark:border-slate-700 hover:shadow-lg hover:border-green-100 dark:hover:border-green-900/50 transition-all cursor-pointer group relative overflow-hidden"
                   >
                     {/* Color Strip */}
                     <div className={`absolute left-0 top-0 bottom-0 w-2 ${styles.bg}`}></div>
@@ -223,9 +223,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNew
           )}
         </div>
 
-        {/* Sidebar Charts */}
+        {/* Sidebar Charts - UPDATE: Increased border contrast and shadow */}
         <div className="space-y-6">
-           <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 p-6">
+           <div className="bg-white dark:bg-slate-800 rounded-3xl shadow border border-gray-200 dark:border-slate-700 p-6">
              <h3 className="font-bold text-gray-800 dark:text-white mb-6">Distribuição de Culturas</h3>
              {cropTypeData.length > 0 ? (
                <div className="relative h-64">
