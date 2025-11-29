@@ -23,10 +23,20 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMob
   }, []);
 
   const handleLogout = async () => {
-    if (supabase) {
-      localStorage.clear();
-      await supabase.auth.signOut();
-      window.location.reload();
+    // 1. Limpa dados locais imediatamente para garantir sensação de saída
+    localStorage.clear();
+    localStorage.removeItem('sb-hzgnvkbwytoyszfmybfq-auth-token'); // Limpeza específica do Supabase se necessário
+
+    // 2. Tenta avisar o servidor (opcional, não pode bloquear a saída)
+    try {
+        if (supabase) {
+            await supabase.auth.signOut();
+        }
+    } catch (error) {
+        console.error("Erro ao desconectar do servidor:", error);
+    } finally {
+        // 3. Força o recarregamento da página para zerar estados e voltar ao Login
+        window.location.reload();
     }
   };
 

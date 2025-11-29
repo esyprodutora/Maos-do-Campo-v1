@@ -257,7 +257,9 @@ const App: React.FC = () => {
               onClick={async () => {
                 if(confirm("Deseja mesmo sair?")) {
                     localStorage.clear();
-                    await supabase?.auth.signOut();
+                    try {
+                      if (supabase) await supabase.auth.signOut();
+                    } catch (e) { console.error(e) }
                     window.location.reload();
                 }
               }}
