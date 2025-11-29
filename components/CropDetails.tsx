@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { CropData, TimelineStage, Material } from '../types';
 import { getAssistantResponse } from '../services/geminiService';
-import { ArrowLeft, Calendar, DollarSign, ListTodo, MessageSquare, Send, CheckCircle, Circle, AlertCircle, Droplets, Ruler, ShoppingBag, Download, Loader2 } from 'lucide-react';
+import { ArrowLeft, Calendar, DollarSign, ListTodo, MessageSquare, Send, CheckCircle, Circle, AlertCircle, Droplets, Ruler, ShoppingBag, Download, Loader2, Edit2, Check } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -20,11 +20,14 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
   ]);
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  
+  // State for Finance Editing
+  const [isEditingPrices, setIsEditingPrices] = useState(false);
 
   // Helper styles based on crop type
   const getTheme = (type: string) => {
     switch(type) {
-      case 'cafe': return { main: 'text-[#A67C52]', bg: 'bg-[#A67C52]', light: 'bg-[#FAF3E0] dark:bg-[#A67C52]/20' }; // Updated to #A67C52
+      case 'cafe': return { main: 'text-[#A67C52]', bg: 'bg-[#A67C52]', light: 'bg-[#FAF3E0] dark:bg-[#A67C52]/20' };
       case 'milho': return { main: 'text-[#E67E22]', bg: 'bg-[#E67E22]', light: 'bg-[#FEF5E7] dark:bg-[#E67E22]/20' };
       case 'soja': return { main: 'text-[#F2C94C]', bg: 'bg-[#F2C94C]', light: 'bg-[#FCF3CF] dark:bg-[#F2C94C]/20' };
       default: return { main: 'text-agro-green', bg: 'bg-agro-green', light: 'bg-green-50 dark:bg-green-900/20' };
@@ -48,6 +51,27 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
       return stage;
     });
     onUpdateCrop({ ...crop, timeline: updatedTimeline });
+  };
+
+  const handleUpdateMaterial = (index: number, field: 'quantity' | 'unitPriceEstimate', value: string) => {
+    const numValue = parseFloat(value);
+    
+    const updatedMaterials = [...crop.materials];
+    const item = { ...updatedMaterials[index] };
+
+    // Se o valor for inválido (vazio/NaN), assume 0 para evitar erros de cálculo, mas permite edição
+    item[field] = isNaN(numValue) ? 0 : numValue;
+
+    updatedMaterials[index] = item;
+
+    // Recalculate Total Estimated Cost
+    const newTotalCost = updatedMaterials.reduce((acc, m) => acc + (m.quantity * m.unitPriceEstimate), 0);
+
+    onUpdateCrop({
+      ...crop,
+      materials: updatedMaterials,
+      estimatedCost: newTotalCost
+    });
   };
 
   const handleChatSubmit = async (e: React.FormEvent) => {
@@ -247,35 +271,91 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
              </div>
              <div className="mt-6 flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-700 rounded-2xl">
                <p className="text-gray-500 dark:text-gray-300 font-medium">Total Estimado</p>
-               <p className="text-2xl font-bold text-gray-800 dark:text-white">
-                 {crop.estimatedCost.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-               </p>
+               <div className="text-right">
+                 <p className="text-2xl font-bold text-gray-800 dark:text-white transition-all duration-300">
+                   {crop.estimatedCost.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                 </p>
+                 {isEditingPrices && <p className="text-xs text-agro-green animate-pulse">Atualizando...</p>}
+               </div>
              </div>
            </div>
 
            {/* Receipt Card */}
            <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col">
-              <h3 className="font-bold text-gray-800 dark:text-white mb-6 text-xl flex items-center gap-2">
-                 <ShoppingBag className="text-agro-green"/> Lista de Compras
-              </h3>
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="font-bold text-gray-800 dark:text-white text-xl flex items-center gap-2">
+                   <ShoppingBag className="text-agro-green"/> Lista de Compras
+                </h3>
+                <button 
+                  onClick={() => setIsEditingPrices(!isEditingPrices)}
+                  className={`p-2 rounded-lg transition-colors flex items-center gap-2 text-sm font-bold ${
+                    isEditingPrices 
+                      ? 'bg-agro-green text-white shadow-lg shadow-green-600/20' 
+                      : 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600'
+                  }`}
+                >
+                  {isEditingPrices ? (
+                    <> <Check size={16}/> Concluir </>
+                  ) : (
+                    <> <Edit2 size={16}/> Editar </>
+                  )}
+                </button>
+              </div>
+
               <div className="flex-1 overflow-y-auto max-h-[400px] pr-2 custom-scrollbar bg-white dark:bg-slate-800">
                 <div className="space-y-3">
                   {crop.materials.map((m, i) => (
-                    <div key={i} className="flex justify-between items-center p-3 border-b border-gray-50 dark:border-slate-700 last:border-0 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-lg transition-colors">
-                      <div>
+                    <div key={i} className="flex justify-between items-center p-3 border-b border-gray-50 dark:border-slate-700 last:border-0 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-lg transition-colors group">
+                      <div className="flex-1">
                         <p className="font-bold text-gray-700 dark:text-gray-200">{m.name}</p>
                         <p className="text-xs text-gray-400 uppercase tracking-wide font-medium">{m.category}</p>
                       </div>
-                      <div className="text-right">
-                         <p className="font-bold text-gray-800 dark:text-white">
-                           {(m.quantity * m.unitPriceEstimate).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                         </p>
-                         <p className="text-xs text-gray-500 dark:text-gray-400">{m.quantity} {m.unit}</p>
+                      <div className="text-right flex flex-col items-end gap-1">
+                         {isEditingPrices ? (
+                           <div className="flex flex-col gap-1 items-end">
+                             <div className="flex items-center gap-1">
+                               <span className="text-xs text-gray-400">R$</span>
+                               <input 
+                                 type="number"
+                                 value={m.unitPriceEstimate}
+                                 onChange={(e) => handleUpdateMaterial(i, 'unitPriceEstimate', e.target.value)}
+                                 className="w-20 p-1 text-right font-bold text-gray-800 dark:text-white bg-white dark:bg-slate-900 border border-agro-green rounded-md focus:ring-2 focus:ring-green-500/20 outline-none text-sm"
+                                 placeholder="Preço"
+                               />
+                             </div>
+                             <div className="flex items-center gap-1">
+                               <input 
+                                 type="number"
+                                 value={m.quantity}
+                                 onChange={(e) => handleUpdateMaterial(i, 'quantity', e.target.value)}
+                                 className="w-16 p-1 text-right text-xs text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-md focus:border-agro-green outline-none"
+                                 placeholder="Qtd"
+                               />
+                               <span className="text-xs text-gray-400">{m.unit}</span>
+                             </div>
+                           </div>
+                         ) : (
+                           <>
+                             <p className="font-bold text-gray-800 dark:text-white">
+                               {(m.quantity * m.unitPriceEstimate).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                             </p>
+                             <p className="text-xs text-gray-500 dark:text-gray-400">
+                               {m.quantity} {m.unit} x {m.unitPriceEstimate.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                             </p>
+                           </>
+                         )}
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
+              
+              {isEditingPrices && (
+                 <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 text-xs rounded-xl flex items-center gap-2 border border-yellow-100 dark:border-yellow-900/30">
+                    <AlertCircle size={16} />
+                    <span>Edite preços e quantidades. O total atualiza automaticamente.</span>
+                 </div>
+              )}
            </div>
         </div>
       </div>
