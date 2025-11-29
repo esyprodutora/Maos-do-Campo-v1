@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../services/supabaseClient';
-import { Loader2, Mail, Lock, AlertCircle, WifiOff } from 'lucide-react';
+import { Loader2, Mail, Lock, ArrowRight, CheckCircle2, Leaf, AlertCircle } from 'lucide-react';
 
 export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -8,11 +8,40 @@ export const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [msg, setMsg] = useState<{type: 'error' | 'success', text: string} | null>(null);
+  
+  // Slider State
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  const slides = [
+    {
+      image: "https://images.unsplash.com/photo-1625246333195-78d9c38ad449?q=80&w=2670&auto=format&fit=crop",
+      title: "Gestão Inteligente",
+      desc: "Transforme dados da sua lavoura em decisões lucrativas com inteligência artificial."
+    },
+    {
+      image: "https://images.unsplash.com/photo-1592982537447-6f2a6a0c30b3?q=80&w=2670&auto=format&fit=crop",
+      title: "Previsibilidade Total",
+      desc: "Saiba exatamente quanto vai gastar e quando vai colher com nossos algoritmos preditivos."
+    },
+    {
+      image: "https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?q=80&w=2670&auto=format&fit=crop",
+      title: "Assistente 24h",
+      desc: "Tire dúvidas técnicas sobre pragas, solo e manejo a qualquer momento."
+    }
+  ];
+
+  // Auto-rotate slides
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % slides.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, []);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     if(!supabase) {
-        setMsg({type: 'error', text: 'Supabase não configurado.'});
+        setMsg({type: 'error', text: 'Erro de conexão com o servidor.'});
         return;
     }
 
@@ -26,8 +55,8 @@ export const Login: React.FC = () => {
           password,
         });
         if (error) throw error;
-        setMsg({ type: 'success', text: 'Cadastro realizado! Verifique seu email ou faça login.' });
-        setMode('signin');
+        setMsg({ type: 'success', text: 'Conta criada! Verifique seu email para confirmar.' });
+        setTimeout(() => setMode('signin'), 3000);
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,
@@ -36,7 +65,10 @@ export const Login: React.FC = () => {
         if (error) throw error;
       }
     } catch (error: any) {
-      setMsg({ type: 'error', text: error.message || 'Ocorreu um erro.' });
+      let errorMessage = 'Ocorreu um erro.';
+      if (error.message.includes('Invalid login')) errorMessage = 'Email ou senha incorretos.';
+      if (error.message.includes('already registered')) errorMessage = 'Este email já está cadastrado.';
+      setMsg({ type: 'error', text: errorMessage });
     } finally {
       setLoading(false);
     }
@@ -57,123 +89,201 @@ export const Login: React.FC = () => {
     }
   }
 
-  // Detect connection issue visually
-  const isSupabaseConfigured = !!supabase;
+  // Check connection
+  const isSupabaseConnected = !!supabase;
 
   return (
-    <div className="min-h-screen relative flex items-center justify-center p-4 overflow-hidden bg-slate-900">
-      {/* Background Image */}
-      <div 
-        className="absolute inset-0 z-0 bg-cover bg-center opacity-60" 
-        style={{backgroundImage: 'url("https://images.unsplash.com/photo-1500382017468-9049fed747ef?ixlib=rb-4.0.3&auto=format&fit=crop&w=2500&q=80")'}}
-      ></div>
-      <div className="absolute inset-0 z-0 bg-gradient-to-b from-black/40 via-black/20 to-black/80"></div>
-
-      <div className="w-full max-w-md bg-white/10 dark:bg-black/40 backdrop-blur-xl rounded-3xl shadow-2xl p-8 animate-slide-up border border-white/20 relative z-10">
-        
-        <div className="mb-8 text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-agro-green rounded-2xl shadow-lg shadow-green-900/40 mb-4">
-            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white">
-                <path d="M7 20h10" />
-                <path d="M10 20c5.5-2.5.8-6.4 3-10" />
-                <path d="M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8z" />
-            </svg>
-            </div>
-            <h1 className="text-3xl font-extrabold text-white tracking-tight">MÃOS DO CAMPO</h1>
-            <p className="text-green-100 font-medium text-sm">Gestão Rural Inteligente</p>
-        </div>
-
-        {/* Warning if Env Vars Missing */}
-        {!isSupabaseConfigured && (
-            <div className="mb-4 bg-red-500/20 border border-red-500/50 p-3 rounded-xl flex items-start gap-3 text-red-100 text-xs">
-                 <AlertCircle size={16} className="mt-0.5 shrink-0" />
-                 <p>Conexão com Banco de Dados falhou. Verifique se as variáveis <code>VITE_SUPABASE_URL</code> estão configuradas no Vercel.</p>
-            </div>
-        )}
-
-        <div className="flex gap-2 mb-6 bg-black/20 p-1.5 rounded-2xl">
-          <button 
-            onClick={() => setMode('signin')}
-            className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${mode === 'signin' ? 'bg-white text-gray-900 shadow-md' : 'text-gray-300 hover:text-white hover:bg-white/5'}`}
+    <div className="min-h-screen flex bg-white dark:bg-slate-900 overflow-hidden font-sans">
+      
+      {/* LEFT SIDE - VISUAL SLIDER (Hidden on mobile, visible lg) */}
+      <div className="hidden lg:flex lg:w-1/2 relative bg-gray-900 text-white overflow-hidden">
+        {slides.map((slide, index) => (
+          <div 
+            key={index}
+            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${index === currentSlide ? 'opacity-100' : 'opacity-0'}`}
           >
-            Entrar
-          </button>
-          <button 
-            onClick={() => setMode('signup')}
-            className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${mode === 'signup' ? 'bg-white text-gray-900 shadow-md' : 'text-gray-300 hover:text-white hover:bg-white/5'}`}
-          >
-            Criar Conta
-          </button>
-        </div>
-
-        {msg && (
-          <div className={`p-4 rounded-xl mb-6 text-sm font-medium border ${msg.type === 'error' ? 'bg-red-500/20 border-red-500/30 text-red-100' : 'bg-green-500/20 border-green-500/30 text-green-100'}`}>
-            {msg.text}
+             {/* Image with overlay */}
+             <div 
+               className="absolute inset-0 bg-cover bg-center transform scale-105 transition-transform duration-[10000ms]"
+               style={{ 
+                 backgroundImage: `url('${slide.image}')`,
+                 transform: index === currentSlide ? 'scale(110)' : 'scale(100)'
+               }}
+             />
+             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/10" />
           </div>
-        )}
+        ))}
 
-        <form onSubmit={handleAuth} className="space-y-4">
-          <div>
-            <div className="relative group">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-agro-green transition-colors" size={20} />
-              <input 
-                type="email" 
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-xl focus:bg-white/10 focus:border-agro-green/50 focus:ring-2 focus:ring-agro-green/50 outline-none transition-all text-white placeholder-gray-500"
-                placeholder="seu@email.com"
-              />
-            </div>
-          </div>
-          
-          <div>
-            <div className="relative group">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-agro-green transition-colors" size={20} />
-              <input 
-                type="password" 
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-xl focus:bg-white/10 focus:border-agro-green/50 focus:ring-2 focus:ring-agro-green/50 outline-none transition-all text-white placeholder-gray-500"
-                placeholder="••••••••"
-                minLength={6}
-              />
-            </div>
-          </div>
+        {/* Content Overlay */}
+        <div className="relative z-10 flex flex-col justify-between w-full p-16">
+           <div className="flex items-center gap-3 animate-fade-in">
+              <div className="bg-white/20 backdrop-blur-md p-2 rounded-lg border border-white/10">
+                <Leaf className="text-agro-green" size={24} fill="currentColor" />
+              </div>
+              <span className="font-bold text-xl tracking-wide">MÃOS DO CAMPO</span>
+           </div>
 
-          <button 
-            type="submit" 
-            disabled={loading}
-            className="w-full py-4 bg-agro-green hover:bg-green-600 text-white font-bold rounded-xl shadow-lg shadow-green-900/20 transition-all active:scale-95 disabled:opacity-70 disabled:active:scale-100 flex items-center justify-center gap-2 mt-2"
-          >
-            {loading ? <Loader2 className="animate-spin" /> : (mode === 'signin' ? 'Acessar App' : 'Confirmar Cadastro')}
-          </button>
-        </form>
+           <div className="space-y-6 max-w-lg">
+              <div className="flex gap-2">
+                 {slides.map((_, idx) => (
+                   <div 
+                     key={idx} 
+                     className={`h-1 rounded-full transition-all duration-300 ${idx === currentSlide ? 'w-8 bg-agro-green' : 'w-2 bg-white/30'}`}
+                   />
+                 ))}
+              </div>
+              
+              <div className="overflow-hidden min-h-[160px]">
+                <h1 key={`t-${currentSlide}`} className="text-5xl font-extrabold leading-tight mb-4 animate-slide-up">
+                  {slides[currentSlide].title}
+                </h1>
+                <p key={`d-${currentSlide}`} className="text-lg text-gray-300 font-light leading-relaxed animate-fade-in">
+                  {slides[currentSlide].desc}
+                </p>
+              </div>
 
-        <div className="mt-8">
-            <div className="relative flex py-2 items-center">
-                <div className="flex-grow border-t border-white/10"></div>
-                <span className="flex-shrink-0 mx-4 text-gray-400 text-xs uppercase tracking-widest font-bold">Ou entre com</span>
-                <div className="flex-grow border-t border-white/10"></div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-3 mt-4">
-                <button onClick={() => handleSocialLogin('google')} className="flex items-center justify-center gap-2 bg-white text-gray-800 font-bold py-3 px-4 rounded-xl hover:bg-gray-50 transition-colors shadow-sm">
-                    <svg className="w-5 h-5" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-                    Google
-                </button>
-                <button onClick={() => handleSocialLogin('apple')} className="flex items-center justify-center gap-2 bg-black text-white font-bold py-3 px-4 rounded-xl hover:bg-gray-900 transition-colors shadow-sm border border-white/20">
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.05 20.28c-.98.95-2.05.88-3.08.38-1.09-.54-2.08-.53-3.2 0-1.39.64-2.1.29-3.05-.66-.99-1.03-2.1-3.66-1.06-6.27.76-1.89 2.53-2.65 4.36-2.48 1.13.11 2.04.64 2.82.64.78 0 1.96-.65 3.03-.59 1.15.06 2.37.54 3.1 1.6-2.88 1.48-2.31 5.39.29 6.64-.26.7-.62 1.41-1.21 2.04h-.01zM13 3.5c.53-.18 1.18-.08 1.76.65.65.81.65 1.83.36 2.5-.59.26-1.39.13-2.01-.63-.67-.84-.54-1.92-.11-2.52z"/></svg>
-                    Apple
-                </button>
-            </div>
+              {/* Trust Badges */}
+              <div className="flex gap-8 pt-8 border-t border-white/10">
+                 <div>
+                    <p className="text-3xl font-bold text-white">10k+</p>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Produtores</p>
+                 </div>
+                 <div>
+                    <p className="text-3xl font-bold text-white">500k</p>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Hectares</p>
+                 </div>
+              </div>
+           </div>
         </div>
       </div>
-      
-      <p className="absolute bottom-4 text-[10px] text-white/30 text-center">
-        &copy; {new Date().getFullYear()} Mãos do Campo Agrotech
-      </p>
+
+      {/* RIGHT SIDE - FORM */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12 relative">
+        {/* Mobile Background (Absolute) */}
+        <div className="lg:hidden absolute inset-0 bg-[url('https://images.unsplash.com/photo-1500382017468-9049fed747ef')] bg-cover bg-center z-0">
+           <div className="absolute inset-0 bg-slate-900/90 backdrop-blur-sm"></div>
+        </div>
+
+        <div className="w-full max-w-md bg-white dark:bg-slate-800 lg:bg-transparent lg:dark:bg-transparent rounded-3xl lg:rounded-none shadow-2xl lg:shadow-none p-8 lg:p-0 relative z-10 animate-fade-in">
+          
+          <div className="mb-8">
+            <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-2">
+              {mode === 'signin' ? 'Bem-vindo de volta' : 'Comece gratuitamente'}
+            </h2>
+            <p className="text-gray-500 dark:text-gray-400">
+              {mode === 'signin' 
+                ? 'Acesse seu painel e gerencie sua produção.' 
+                : 'Crie sua conta em segundos. Sem cartão de crédito.'}
+            </p>
+          </div>
+
+          {!isSupabaseConnected && (
+             <div className="mb-6 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 flex gap-3 items-start">
+               <AlertCircle className="text-red-500 shrink-0" size={20} />
+               <div className="text-sm text-red-600 dark:text-red-300">
+                 <p className="font-bold">Falha na Conexão</p>
+                 <p className="mt-1 opacity-90">Verifique as variáveis <code>VITE_SUPABASE_URL</code> no painel da Vercel.</p>
+               </div>
+             </div>
+          )}
+
+          {/* Social Login */}
+          <div className="grid grid-cols-2 gap-4 mb-8">
+            <button 
+              onClick={() => handleSocialLogin('google')}
+              className="flex items-center justify-center gap-2 py-3 px-4 border border-gray-200 dark:border-slate-600 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200 font-semibold shadow-sm"
+            >
+              <svg className="w-5 h-5" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+              Google
+            </button>
+            <button 
+              onClick={() => handleSocialLogin('apple')}
+              className="flex items-center justify-center gap-2 py-3 px-4 bg-black text-white rounded-xl hover:bg-gray-900 transition-colors font-semibold shadow-sm"
+            >
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.05 20.28c-.98.95-2.05.88-3.08.38-1.09-.54-2.08-.53-3.2 0-1.39.64-2.1.29-3.05-.66-.99-1.03-2.1-3.66-1.06-6.27.76-1.89 2.53-2.65 4.36-2.48 1.13.11 2.04.64 2.82.64.78 0 1.96-.65 3.03-.59 1.15.06 2.37.54 3.1 1.6-2.88 1.48-2.31 5.39.29 6.64-.26.7-.62 1.41-1.21 2.04h-.01zM13 3.5c.53-.18 1.18-.08 1.76.65.65.81.65 1.83.36 2.5-.59.26-1.39.13-2.01-.63-.67-.84-.54-1.92-.11-2.52z"/></svg>
+              Apple
+            </button>
+          </div>
+
+          <div className="relative flex items-center mb-8">
+             <div className="flex-grow border-t border-gray-200 dark:border-slate-700"></div>
+             <span className="flex-shrink-0 mx-4 text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-widest">Ou continue com email</span>
+             <div className="flex-grow border-t border-gray-200 dark:border-slate-700"></div>
+          </div>
+
+          {msg && (
+            <div className={`flex items-center gap-3 p-4 rounded-xl mb-6 text-sm font-medium border ${msg.type === 'error' ? 'bg-red-50 text-red-600 border-red-100 dark:bg-red-900/20 dark:text-red-300 dark:border-red-900/30' : 'bg-green-50 text-green-600 border-green-100'}`}>
+               {msg.type === 'error' ? <Lock size={18}/> : <CheckCircle2 size={18}/>}
+               {msg.text}
+            </div>
+          )}
+
+          <form onSubmit={handleAuth} className="space-y-5">
+            <div className="space-y-1">
+              <label className="text-sm font-bold text-gray-700 dark:text-gray-300 ml-1">Email</label>
+              <div className="relative group">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-agro-green transition-colors" size={20} />
+                <input 
+                  type="email" 
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full pl-12 pr-4 py-4 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-800 focus:border-agro-green focus:ring-4 focus:ring-green-500/10 outline-none transition-all dark:text-white font-medium"
+                  placeholder="nome@exemplo.com"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+               <div className="flex justify-between ml-1">
+                 <label className="text-sm font-bold text-gray-700 dark:text-gray-300">Senha</label>
+                 {mode === 'signin' && (
+                   <a href="#" className="text-xs font-semibold text-agro-green hover:underline">Esqueceu a senha?</a>
+                 )}
+               </div>
+              <div className="relative group">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-agro-green transition-colors" size={20} />
+                <input 
+                  type="password" 
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-12 pr-4 py-4 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-800 focus:border-agro-green focus:ring-4 focus:ring-green-500/10 outline-none transition-all dark:text-white font-medium"
+                  placeholder="••••••••"
+                  minLength={6}
+                />
+              </div>
+            </div>
+
+            <button 
+              type="submit" 
+              disabled={loading}
+              className="w-full py-4 bg-agro-green hover:bg-green-700 text-white font-bold rounded-xl shadow-lg shadow-green-600/20 hover:shadow-green-600/40 transition-all transform active:scale-[0.98] flex items-center justify-center gap-2 mt-4"
+            >
+              {loading ? (
+                <Loader2 className="animate-spin" /> 
+              ) : (
+                <>
+                   {mode === 'signin' ? 'Acessar Plataforma' : 'Criar Conta Grátis'}
+                   <ArrowRight size={20} />
+                </>
+              )}
+            </button>
+          </form>
+
+          <div className="mt-8 text-center">
+             <p className="text-gray-500 dark:text-gray-400 text-sm">
+                {mode === 'signin' ? 'Não tem uma conta?' : 'Já tem cadastro?'}
+                <button 
+                  onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')}
+                  className="ml-2 font-bold text-agro-green hover:underline focus:outline-none"
+                >
+                   {mode === 'signin' ? 'Criar agora' : 'Fazer login'}
+                </button>
+             </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
