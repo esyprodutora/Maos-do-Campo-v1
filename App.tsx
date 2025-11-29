@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './components/Dashboard';
@@ -5,6 +6,7 @@ import { NewCropForm } from './components/NewCropForm';
 import { CropDetails } from './components/CropDetails';
 import { Login } from './components/Login';
 import { Subscription } from './components/Subscription';
+import { Quotes } from './components/Quotes';
 import { CropData } from './types';
 import { Menu, Loader2, WifiOff, RefreshCw, Sun, Moon } from 'lucide-react';
 import { supabase } from './services/supabaseClient';
@@ -225,6 +227,8 @@ const App: React.FC = () => {
             toggleTheme={toggleTheme}
           />
         );
+      case 'quotes':
+        return <Quotes />;
       case 'new-crop':
         return (
           <NewCropForm 

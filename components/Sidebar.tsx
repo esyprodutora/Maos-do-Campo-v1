@@ -1,5 +1,6 @@
+
 import React, { useEffect, useState } from 'react';
-import { LayoutDashboard, PlusCircle, Settings, LogOut, Crown } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, Settings, LogOut, Crown, TrendingUp } from 'lucide-react';
 import { supabase } from '../services/supabaseClient';
 
 interface SidebarProps {
@@ -42,6 +43,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMob
 
   const menuItems = [
     { id: 'dashboard', label: 'Painel Geral', icon: LayoutDashboard },
+    { id: 'quotes', label: 'Cotações', icon: TrendingUp },
     { id: 'new-crop', label: 'Nova Lavoura', icon: PlusCircle },
     { id: 'settings', label: 'Configurações', icon: Settings },
   ];
