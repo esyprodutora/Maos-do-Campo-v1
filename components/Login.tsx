@@ -87,13 +87,13 @@ export const Login: React.FC = () => {
         if (error) throw error;
         setMsg({ type: 'success', text: 'Conta criada! Verifique seu email para confirmar.' });
         
-        // Limpar campos
+        // Limpar campos e voltar para login
         setEmail('');
         setPassword('');
         setFullName('');
         setWhatsapp('');
         
-        // Voltar para login após sucesso
+        // Opcional: Login automático ou esperar confirmação
         setTimeout(() => setMode('signin'), 3000);
       } else {
         const { error } = await supabase.auth.signInWithPassword({
@@ -221,7 +221,7 @@ export const Login: React.FC = () => {
                <AlertCircle className="text-red-500 shrink-0" size={20} />
                <div className="text-sm text-red-600 dark:text-red-300">
                  <p className="font-bold">Falha na Conexão</p>
-                 <p className="mt-1 opacity-90">Verifique as variáveis <code>VITE_SUPABASE_URL</code> no painel da Vercel.</p>
+                 <p className="mt-1 opacity-90">Verifique as variáveis <code>NEXT_PUBLIC_SUPABASE_URL</code> no painel da Vercel.</p>
                </div>
              </div>
           )}
@@ -260,7 +260,7 @@ export const Login: React.FC = () => {
           <form onSubmit={handleAuth} className="space-y-4">
             {mode === 'signup' && (
               <>
-                <div className="space-y-1 animate-slide-up">
+                <div className="space-y-1">
                   <label className="text-sm font-bold text-gray-700 dark:text-gray-300 ml-1">Nome Completo</label>
                   <div className="relative group">
                     <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-agro-green transition-colors" size={20} />
@@ -275,7 +275,7 @@ export const Login: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="space-y-1 animate-slide-up" style={{animationDelay: '0.1s'}}>
+                <div className="space-y-1">
                   <label className="text-sm font-bold text-gray-700 dark:text-gray-300 ml-1">WhatsApp</label>
                   <div className="relative group">
                     <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-agro-green transition-colors" size={20} />
@@ -348,6 +348,7 @@ export const Login: React.FC = () => {
              <p className="text-gray-500 dark:text-gray-400 text-sm">
                 {mode === 'signin' ? 'Não tem uma conta?' : 'Já tem cadastro?'}
                 <button 
+                  type="button"
                   onClick={() => {
                     setMode(mode === 'signin' ? 'signup' : 'signin');
                     setMsg(null);
