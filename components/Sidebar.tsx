@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { LayoutDashboard, PlusCircle, Settings, LogOut } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, Settings, LogOut, Crown } from 'lucide-react';
 import { supabase } from '../services/supabaseClient';
 
 interface SidebarProps {
@@ -100,8 +100,26 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMob
           </nav>
         </div>
 
-        {/* Footer / User Profile */}
-        <div className="p-4 m-4">
+        {/* Premium CTA & User Profile */}
+        <div className="p-4 m-4 space-y-4">
+          
+          {/* Premium Button */}
+          <button 
+            onClick={() => handleNav('subscription')}
+            className="w-full relative overflow-hidden group p-4 rounded-2xl bg-gradient-to-r from-gray-900 to-black border border-yellow-500/30 shadow-lg transition-all hover:scale-[1.02]"
+          >
+            <div className="absolute inset-0 bg-yellow-500/10 group-hover:bg-yellow-500/20 transition-colors"></div>
+            <div className="relative flex items-center gap-3">
+              <div className="p-2 bg-yellow-500/20 rounded-lg text-yellow-400">
+                <Crown size={20} fill="currentColor" />
+              </div>
+              <div className="text-left">
+                <p className="text-white font-bold text-sm leading-tight">Seja Premium</p>
+                <p className="text-yellow-500/80 text-[10px] uppercase font-bold tracking-wider">Desbloqueie Tudo</p>
+              </div>
+            </div>
+          </button>
+
           <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-full bg-agro-yellow flex items-center justify-center text-agro-brown font-bold text-lg capitalize">

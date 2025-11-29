@@ -24,7 +24,7 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
   // Helper styles based on crop type
   const getTheme = (type: string) => {
     switch(type) {
-      case 'cafe': return { main: 'text-[#8E5A2E]', bg: 'bg-[#8E5A2E]', light: 'bg-[#F6EBE0] dark:bg-[#8E5A2E]/20' };
+      case 'cafe': return { main: 'text-[#A67C52]', bg: 'bg-[#A67C52]', light: 'bg-[#FAF3E0] dark:bg-[#A67C52]/20' }; // Updated to #A67C52
       case 'milho': return { main: 'text-[#E67E22]', bg: 'bg-[#E67E22]', light: 'bg-[#FEF5E7] dark:bg-[#E67E22]/20' };
       case 'soja': return { main: 'text-[#F2C94C]', bg: 'bg-[#F2C94C]', light: 'bg-[#FCF3CF] dark:bg-[#F2C94C]/20' };
       default: return { main: 'text-agro-green', bg: 'bg-agro-green', light: 'bg-green-50 dark:bg-green-900/20' };

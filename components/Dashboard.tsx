@@ -19,7 +19,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNew
   const totalCost = crops.reduce((acc, c) => acc + c.estimatedCost, 0);
 
   const cropTypeData = [
-    { name: 'Café', value: crops.filter(c => c.type === 'cafe').length, color: '#8E5A2E' },
+    { name: 'Café', value: crops.filter(c => c.type === 'cafe').length, color: '#A67C52' }, // Updated color
     { name: 'Soja', value: crops.filter(c => c.type === 'soja').length, color: '#F2C94C' },
     { name: 'Milho', value: crops.filter(c => c.type === 'milho').length, color: '#E67E22' },
   ].filter(d => d.value > 0);
@@ -27,7 +27,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNew
   // Helper for crop visuals
   const getCropStyle = (type: string) => {
     switch(type) {
-      case 'cafe': return { bg: 'bg-[#8E5A2E]', text: 'text-[#8E5A2E]', light: 'bg-[#F6EBE0] dark:bg-[#8E5A2E]/20' };
+      case 'cafe': return { bg: 'bg-[#A67C52]', text: 'text-[#A67C52]', light: 'bg-[#FAF3E0] dark:bg-[#A67C52]/20' }; // Updated to #A67C52
       case 'milho': return { bg: 'bg-[#E67E22]', text: 'text-[#E67E22]', light: 'bg-[#FEF5E7] dark:bg-[#E67E22]/20' };
       case 'soja': return { bg: 'bg-[#F2C94C]', text: 'text-[#B7950B] dark:text-[#F2C94C]', light: 'bg-[#FCF3CF] dark:bg-[#F2C94C]/20' };
       default: return { bg: 'bg-agro-green', text: 'text-agro-green', light: 'bg-green-50 dark:bg-green-900/20' };

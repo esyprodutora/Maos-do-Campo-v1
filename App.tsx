@@ -4,6 +4,7 @@ import { Dashboard } from './components/Dashboard';
 import { NewCropForm } from './components/NewCropForm';
 import { CropDetails } from './components/CropDetails';
 import { Login } from './components/Login';
+import { Subscription } from './components/Subscription';
 import { CropData } from './types';
 import { Menu, Loader2, WifiOff, RefreshCw, Sun, Moon } from 'lucide-react';
 import { supabase } from './services/supabaseClient';
@@ -229,6 +230,13 @@ const App: React.FC = () => {
           <NewCropForm 
             onSave={handleSaveCrop}
             onCancel={() => setActiveTab('dashboard')}
+          />
+        );
+      case 'subscription':
+        return (
+          <Subscription 
+            onSubscribe={(id) => alert(`Plano ${id} selecionado! Integração de pagamento em breve.`)}
+            onBack={() => setActiveTab('dashboard')}
           />
         );
       case 'settings':
