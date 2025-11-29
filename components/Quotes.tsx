@@ -1,8 +1,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { getMarketQuotes } from '../services/marketService';
-import { TrendingUp, TrendingDown, RefreshCw, DollarSign, Sprout, ArrowUpRight, ArrowDownRight, Loader2 } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { TrendingUp, TrendingDown, RefreshCw, DollarSign, Loader2 } from 'lucide-react';
+import { AreaChart, Area, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface Quote {
   id: string;

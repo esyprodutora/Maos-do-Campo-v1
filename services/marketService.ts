@@ -13,7 +13,8 @@ const generateHistory = (basePrice: number, days: number = 7) => {
   return Array.from({ length: days }).map((_, i) => {
     const date = new Date();
     date.setDate(date.getDate() - (days - 1 - i));
-    const randomVar = (Math.random() - 0.5) * (basePrice * 0.05); // +/- 2.5%
+    // Variação aleatória suave para parecer um gráfico real
+    const randomVar = (Math.random() - 0.5) * (basePrice * 0.05); 
     return {
       day: date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
       value: basePrice + randomVar
