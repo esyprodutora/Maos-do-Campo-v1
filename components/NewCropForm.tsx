@@ -65,15 +65,15 @@ export const NewCropForm: React.FC<NewCropFormProps> = ({ onSave, onCancel }) =>
     { id: 3, title: "Revisão", icon: CheckCircle2 }
   ];
 
-  // Helper for selection cards
+  // Helper for selection cards - INCREASED CONTRAST
   const SelectionCard = ({ selected, onClick, title, color, icon }: any) => (
     <div 
       onClick={onClick}
       className={`
         relative p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200 flex flex-col items-center justify-center gap-2 text-center h-32
         ${selected 
-          ? `border-${color} bg-${color}/5 dark:bg-${color}/20 shadow-md scale-105` 
-          : 'border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-gray-200 dark:hover:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700'}
+          ? `border-${color} bg-${color}/10 dark:bg-${color}/20 shadow-md scale-105 ring-1 ring-${color}` 
+          : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-gray-300 dark:hover:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700 shadow-sm'}
       `}
     >
       {selected && (
@@ -90,12 +90,12 @@ export const NewCropForm: React.FC<NewCropFormProps> = ({ onSave, onCancel }) =>
 
   return (
     <div className="max-w-3xl mx-auto animate-slide-up">
-      <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-xl shadow-gray-200/50 dark:shadow-black/50 border border-gray-100 dark:border-slate-700 overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-xl shadow-gray-200/50 dark:shadow-black/50 border border-gray-200 dark:border-slate-700 overflow-hidden">
         
         {/* Header Progress */}
-        <div className="bg-gray-50/50 dark:bg-slate-900/50 p-6 border-b border-gray-100 dark:border-slate-700">
+        <div className="bg-gray-50/50 dark:bg-slate-900/50 p-6 border-b border-gray-200 dark:border-slate-700">
            <div className="flex items-center justify-between mb-6">
-             <button onClick={onCancel} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 flex items-center gap-1 font-medium text-sm">
+             <button onClick={onCancel} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 flex items-center gap-1 font-medium text-sm transition-colors">
                <ChevronLeft size={16} /> Cancelar
              </button>
              <span className="text-sm font-bold text-gray-400">Passo {step} de 3</span>
@@ -114,7 +114,7 @@ export const NewCropForm: React.FC<NewCropFormProps> = ({ onSave, onCancel }) =>
                <div key={s.id} className="flex flex-col items-center gap-2 bg-gray-50 dark:bg-slate-900 px-2">
                  <div className={`
                    w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all duration-300 shadow-sm
-                   ${step >= s.id ? 'bg-agro-green text-white scale-110' : 'bg-white dark:bg-slate-800 border-2 border-gray-200 dark:border-slate-600 text-gray-400'}
+                   ${step >= s.id ? 'bg-agro-green text-white scale-110' : 'bg-white dark:bg-slate-800 border-2 border-gray-300 dark:border-slate-600 text-gray-400'}
                  `}>
                    <s.icon size={18} />
                  </div>
@@ -163,7 +163,7 @@ export const NewCropForm: React.FC<NewCropFormProps> = ({ onSave, onCancel }) =>
                     value={formData.name}
                     onChange={e => setFormData({...formData, name: e.target.value})}
                     placeholder="Ex: Talhão da Baixada"
-                    className="w-full p-4 bg-gray-50 dark:bg-slate-900 border-2 border-transparent focus:bg-white dark:focus:bg-slate-800 focus:border-agro-green dark:focus:border-agro-green rounded-xl outline-none transition-all font-medium dark:text-white"
+                    className="w-full p-4 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 focus:border-agro-green dark:focus:border-agro-green focus:ring-4 focus:ring-green-500/10 rounded-xl outline-none transition-all font-medium dark:text-white shadow-sm"
                   />
                 </div>
                 <div>
@@ -174,7 +174,7 @@ export const NewCropForm: React.FC<NewCropFormProps> = ({ onSave, onCancel }) =>
                       value={formData.areaHa}
                       onChange={e => setFormData({...formData, areaHa: e.target.value})}
                       placeholder="0.0"
-                      className="w-full p-4 pl-12 bg-gray-50 dark:bg-slate-900 border-2 border-transparent focus:bg-white dark:focus:bg-slate-800 focus:border-agro-green dark:focus:border-agro-green rounded-xl outline-none transition-all font-medium dark:text-white"
+                      className="w-full p-4 pl-12 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 focus:border-agro-green dark:focus:border-agro-green focus:ring-4 focus:ring-green-500/10 rounded-xl outline-none transition-all font-medium dark:text-white shadow-sm"
                     />
                     <Ruler className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20}/>
                   </div>
@@ -197,10 +197,10 @@ export const NewCropForm: React.FC<NewCropFormProps> = ({ onSave, onCancel }) =>
                     <button
                       key={type}
                       onClick={() => setFormData({...formData, soilType: type as SoilType})}
-                      className={`p-4 rounded-xl border-2 transition-all capitalize font-bold text-center ${
+                      className={`p-4 rounded-xl border-2 transition-all capitalize font-bold text-center shadow-sm ${
                         formData.soilType === type 
-                          ? 'border-agro-green bg-green-50 dark:bg-green-900/30 text-agro-green' 
-                          : 'border-gray-100 dark:border-slate-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-slate-600'
+                          ? 'border-agro-green bg-green-50 dark:bg-green-900/30 text-agro-green ring-1 ring-agro-green' 
+                          : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-slate-600'
                       }`}
                     >
                       {type}
@@ -218,7 +218,7 @@ export const NewCropForm: React.FC<NewCropFormProps> = ({ onSave, onCancel }) =>
                       value={formData.productivityGoal}
                       onChange={e => setFormData({...formData, productivityGoal: e.target.value})}
                       placeholder={formData.type === 'cafe' ? "Ex: 40 sc/ha" : "Ex: 70 sc/ha"}
-                      className="w-full p-4 pl-12 bg-gray-50 dark:bg-slate-900 border-2 border-transparent focus:bg-white dark:focus:bg-slate-800 focus:border-agro-green dark:focus:border-agro-green rounded-xl outline-none transition-all font-medium dark:text-white"
+                      className="w-full p-4 pl-12 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 focus:border-agro-green dark:focus:border-agro-green focus:ring-4 focus:ring-green-500/10 rounded-xl outline-none transition-all font-medium dark:text-white shadow-sm"
                     />
                     <BarChart3 className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20}/>
                   </div>
@@ -232,7 +232,7 @@ export const NewCropForm: React.FC<NewCropFormProps> = ({ onSave, onCancel }) =>
                       value={formData.spacing}
                       onChange={e => setFormData({...formData, spacing: e.target.value})}
                       placeholder="Ex: 0.5m"
-                      className="w-full p-4 pl-12 bg-gray-50 dark:bg-slate-900 border-2 border-transparent focus:bg-white dark:focus:bg-slate-800 focus:border-agro-green dark:focus:border-agro-green rounded-xl outline-none transition-all font-medium dark:text-white"
+                      className="w-full p-4 pl-12 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 focus:border-agro-green dark:focus:border-agro-green focus:ring-4 focus:ring-green-500/10 rounded-xl outline-none transition-all font-medium dark:text-white shadow-sm"
                     />
                      <Ruler className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20}/>
                   </div>
@@ -254,7 +254,7 @@ export const NewCropForm: React.FC<NewCropFormProps> = ({ onSave, onCancel }) =>
                   </p>
                </div>
 
-               <div className="bg-gray-50 dark:bg-slate-900 rounded-2xl p-6 w-full max-w-sm border border-gray-100 dark:border-slate-700 text-left relative overflow-hidden">
+               <div className="bg-gray-50 dark:bg-slate-900 rounded-2xl p-6 w-full max-w-sm border border-gray-200 dark:border-slate-700 text-left relative overflow-hidden shadow-sm">
                   <div className="absolute top-0 left-0 w-2 h-full bg-agro-green"></div>
                   <div className="space-y-3">
                      <div className="flex justify-between border-b border-gray-200 dark:border-slate-700 pb-2">
@@ -276,7 +276,7 @@ export const NewCropForm: React.FC<NewCropFormProps> = ({ onSave, onCancel }) =>
         </div>
 
         {/* Footer Actions */}
-        <div className="p-6 border-t border-gray-100 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-900/50 flex justify-between items-center">
+        <div className="p-6 border-t border-gray-200 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-900/50 flex justify-between items-center">
           {step > 1 && (
             <button 
               onClick={() => setStep(step - 1)}
