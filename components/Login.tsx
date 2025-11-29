@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../services/supabaseClient';
-import { Loader2, Mail, Lock, ArrowRight, CheckCircle2, Leaf, AlertCircle } from 'lucide-react';
+import { Loader2, Mail, Lock, ArrowRight, CheckCircle2, Leaf, AlertCircle, User, Phone } from 'lucide-react';
 
 export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [whatsapp, setWhatsapp] = useState('');
+  
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [msg, setMsg] = useState<{type: 'error' | 'success', text: string} | null>(null);
@@ -38,6 +41,21 @@ export const Login: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
+  // Phone Mask Helper
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length > 11) value = value.slice(0, 11);
+    
+    if (value.length > 6) {
+      value = `(${value.slice(0, 2)}) ${value.slice(2, 7)}-${value.slice(7)}`;
+    } else if (value.length > 2) {
+      value = `(${value.slice(0, 2)}) ${value.slice(2)}`;
+    } else if (value.length > 0) {
+      value = `(${value}`;
+    }
+    setWhatsapp(value);
+  };
+
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     if(!supabase) {
@@ -50,12 +68,32 @@ export const Login: React.FC = () => {
 
     try {
       if (mode === 'signup') {
+        // Validação extra
+        if (!fullName || !whatsapp) {
+          throw new Error('Preencha todos os campos para se cadastrar.');
+        }
+
         const { error } = await supabase.auth.signUp({
           email,
           password,
+          options: {
+            data: {
+              full_name: fullName,
+              whatsapp: whatsapp,
+              avatar_url: ''
+            }
+          }
         });
         if (error) throw error;
         setMsg({ type: 'success', text: 'Conta criada! Verifique seu email para confirmar.' });
+        
+        // Limpar campos
+        setEmail('');
+        setPassword('');
+        setFullName('');
+        setWhatsapp('');
+        
+        // Voltar para login após sucesso
         setTimeout(() => setMode('signin'), 3000);
       } else {
         const { error } = await supabase.auth.signInWithPassword({
@@ -68,7 +106,8 @@ export const Login: React.FC = () => {
       let errorMessage = 'Ocorreu um erro.';
       if (error.message.includes('Invalid login')) errorMessage = 'Email ou senha incorretos.';
       if (error.message.includes('already registered')) errorMessage = 'Este email já está cadastrado.';
-      setMsg({ type: 'error', text: errorMessage });
+      if (error.message.includes('Password should be')) errorMessage = 'A senha deve ter pelo menos 6 caracteres.';
+      setMsg({ type: 'error', text: errorMessage || error.message });
     } finally {
       setLoading(false);
     }
@@ -158,7 +197,7 @@ export const Login: React.FC = () => {
       </div>
 
       {/* RIGHT SIDE - FORM */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12 relative">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12 relative overflow-y-auto">
         {/* Mobile Background (Absolute) */}
         <div className="lg:hidden absolute inset-0 bg-[url('https://images.unsplash.com/photo-1500382017468-9049fed747ef')] bg-cover bg-center z-0">
            <div className="absolute inset-0 bg-slate-900/90 backdrop-blur-sm"></div>
@@ -166,14 +205,14 @@ export const Login: React.FC = () => {
 
         <div className="w-full max-w-md bg-white dark:bg-slate-800 lg:bg-transparent lg:dark:bg-transparent rounded-3xl lg:rounded-none shadow-2xl lg:shadow-none p-8 lg:p-0 relative z-10 animate-fade-in">
           
-          <div className="mb-8">
+          <div className="mb-6">
             <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-2">
               {mode === 'signin' ? 'Bem-vindo de volta' : 'Comece gratuitamente'}
             </h2>
             <p className="text-gray-500 dark:text-gray-400">
               {mode === 'signin' 
                 ? 'Acesse seu painel e gerencie sua produção.' 
-                : 'Crie sua conta em segundos. Sem cartão de crédito.'}
+                : 'Preencha os dados abaixo para criar sua conta.'}
             </p>
           </div>
 
@@ -187,7 +226,7 @@ export const Login: React.FC = () => {
              </div>
           )}
 
-          {/* Social Login */}
+          {/* Social Login (Only show on Sign In or if desired on Sign Up) */}
           <div className="grid grid-cols-2 gap-4 mb-8">
             <button 
               onClick={() => handleSocialLogin('google')}
@@ -207,7 +246,7 @@ export const Login: React.FC = () => {
 
           <div className="relative flex items-center mb-8">
              <div className="flex-grow border-t border-gray-200 dark:border-slate-700"></div>
-             <span className="flex-shrink-0 mx-4 text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-widest">Ou continue com email</span>
+             <span className="flex-shrink-0 mx-4 text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-widest">Ou com email</span>
              <div className="flex-grow border-t border-gray-200 dark:border-slate-700"></div>
           </div>
 
@@ -218,7 +257,41 @@ export const Login: React.FC = () => {
             </div>
           )}
 
-          <form onSubmit={handleAuth} className="space-y-5">
+          <form onSubmit={handleAuth} className="space-y-4">
+            {mode === 'signup' && (
+              <>
+                <div className="space-y-1 animate-slide-up">
+                  <label className="text-sm font-bold text-gray-700 dark:text-gray-300 ml-1">Nome Completo</label>
+                  <div className="relative group">
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-agro-green transition-colors" size={20} />
+                    <input 
+                      type="text" 
+                      required
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      className="w-full pl-12 pr-4 py-4 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-800 focus:border-agro-green focus:ring-4 focus:ring-green-500/10 outline-none transition-all dark:text-white font-medium"
+                      placeholder="João da Silva"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1 animate-slide-up" style={{animationDelay: '0.1s'}}>
+                  <label className="text-sm font-bold text-gray-700 dark:text-gray-300 ml-1">WhatsApp</label>
+                  <div className="relative group">
+                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-agro-green transition-colors" size={20} />
+                    <input 
+                      type="text" 
+                      required
+                      value={whatsapp}
+                      onChange={handlePhoneChange}
+                      className="w-full pl-12 pr-4 py-4 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-800 focus:border-agro-green focus:ring-4 focus:ring-green-500/10 outline-none transition-all dark:text-white font-medium"
+                      placeholder="(00) 00000-0000"
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+
             <div className="space-y-1">
               <label className="text-sm font-bold text-gray-700 dark:text-gray-300 ml-1">Email</label>
               <div className="relative group">
@@ -271,11 +344,14 @@ export const Login: React.FC = () => {
             </button>
           </form>
 
-          <div className="mt-8 text-center">
+          <div className="mt-6 text-center">
              <p className="text-gray-500 dark:text-gray-400 text-sm">
                 {mode === 'signin' ? 'Não tem uma conta?' : 'Já tem cadastro?'}
                 <button 
-                  onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')}
+                  onClick={() => {
+                    setMode(mode === 'signin' ? 'signup' : 'signin');
+                    setMsg(null);
+                  }}
                   className="ml-2 font-bold text-agro-green hover:underline focus:outline-none"
                 >
                    {mode === 'signin' ? 'Criar agora' : 'Fazer login'}
