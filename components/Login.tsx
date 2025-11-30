@@ -12,25 +12,25 @@ export const Login: React.FC = () => {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [msg, setMsg] = useState<{type: 'error' | 'success', text: string} | null>(null);
   
-  // Slider State (Desktop only)
+  // Slider State
   const [currentSlide, setCurrentSlide] = useState(0);
 
   const slides = [
     {
-      // Imagem: Mãos com terra e broto (Contraste Verde/Marrom Perfeito)
-      image: "https://images.unsplash.com/photo-1464226184884-fa280b87c399?q=80&w=1920&auto=format&fit=crop",
+      // Imagem: Agrônomo com Tablet (Tecnologia/Gestão) - RESTAURADA
+      image: "https://images.unsplash.com/photo-1586771107445-d3ca888129ff?q=80&w=1920&auto=format&fit=crop",
       title: "Gestão Inteligente",
       desc: "Transforme dados da sua lavoura em decisões lucrativas com inteligência artificial."
     },
     {
-      // Imagem: Plantação vista de cima (Textura Verde Viva)
-      image: "https://images.unsplash.com/photo-1592982537447-6f2a6a0c30b3?q=80&w=1920&auto=format&fit=crop",
+      // Imagem: Campo ao pôr do sol (Colheita/Previsibilidade) - RESTAURADA
+      image: "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?q=80&w=1920&auto=format&fit=crop",
       title: "Previsibilidade Total",
       desc: "Saiba exatamente quanto vai gastar e quando vai colher com nossos algoritmos preditivos."
     },
     {
-      // Imagem: Café/Soja em detalhe (Foco na folha)
-      image: "https://images.unsplash.com/photo-1586771107445-d3ca888129ff?q=80&w=1920&auto=format&fit=crop",
+      // Imagem: Mão segurando planta (Cuidado/Assistência) - RESTAURADA
+      image: "https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?q=80&w=1920&auto=format&fit=crop",
       title: "Assistente 24h",
       desc: "Tire dúvidas técnicas sobre pragas, solo e manejo a qualquer momento."
     }
@@ -177,10 +177,10 @@ export const Login: React.FC = () => {
               </div>
               
               <div className="overflow-hidden min-h-[160px]">
-                <h1 className="text-5xl font-extrabold leading-tight mb-4 animate-slide-up">
+                <h1 key={`t-${currentSlide}`} className="text-5xl font-extrabold leading-tight mb-4 animate-slide-up">
                   {slides[currentSlide].title}
                 </h1>
-                <p className="text-lg text-gray-300 font-light leading-relaxed animate-fade-in">
+                <p key={`d-${currentSlide}`} className="text-lg text-gray-300 font-light leading-relaxed animate-fade-in">
                   {slides[currentSlide].desc}
                 </p>
               </div>
@@ -202,11 +202,11 @@ export const Login: React.FC = () => {
       {/* RIGHT SIDE / MOBILE FULL - FORM */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12 relative overflow-y-auto">
         
-        {/* MOBILE BACKGROUND (Visible only on mobile/tablet) - IMAGEM DE FOLHAGEM + TERRA */}
+        {/* MOBILE BACKGROUND (Visible only on mobile/tablet) - IMAGEM DE FOLHAGEM VIVA + TERRA */}
         <div className="lg:hidden absolute inset-0 z-0">
-           {/* Imagem de Plantação Vibrante (Folhagem verde e terra marrom) */}
+           {/* Nova Imagem: Foco em folhagem verde vibrante e terra */}
            <img 
-             src="https://images.unsplash.com/photo-1592982537447-6f2a6a0c30b3?q=80&w=1080&auto=format&fit=crop" 
+             src="https://images.unsplash.com/photo-1625246333195-78d9c38ad449?q=80&w=1080&auto=format&fit=crop" 
              className="w-full h-full object-cover"
              alt="Background"
            />
