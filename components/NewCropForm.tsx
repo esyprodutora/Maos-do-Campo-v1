@@ -1,15 +1,18 @@
-
 import React, { useState } from 'react';
 import { CropType, SoilType, CropData, Coordinates } from '../types';
 import { generateCropPlan } from '../services/geminiService';
 import { Loader2, Sprout, Map, BarChart3, CheckCircle2, ChevronLeft, ChevronRight, Ruler, MapPin, ChevronDown, ChevronUp } from 'lucide-react';
 import { LocationPicker } from './LocationPicker';
+import { supabase } from '../services/supabaseClient'; // Importa Supabase
+import { Session } from '@supabase/supabase-js'; // Importa Session
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
 
 interface NewCropFormProps {
   onSave: (crop: CropData) => void;
   onCancel: () => void;
+  // NOVO: Adicionamos a sessão para ter acesso ao user.id (necessário para a inserção segura)
+  session: Session | null; 
 }
 
 // Configuração visual das 10 culturas
@@ -26,7 +29,7 @@ const CROP_OPTIONS: { id: CropType; label: string; icon: string; color: string; 
   { id: 'mandioca', label: 'Mandioca', icon: '🥔', color: 'bg-amber-800', ring: 'ring-amber-800' },
 ];
 
-export const NewCropForm: React.FC<NewCropFormProps> = ({ onSave, onCancel }) => {
+export const NewCropForm: React.FC<NewCropFormProps> = ({ onSave, onCancel, session }) => {
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [isCropListOpen, setIsCropListOpen] = useState(false); // Inicia fechado
@@ -41,8 +44,40 @@ export const NewCropForm: React.FC<NewCropFormProps> = ({ onSave, onCancel }) =>
     coordinates: undefined as Coordinates | undefined
   });
 
+  // Função de inserção movida para o formulário, mas agora é segura!
+  const insertCropSecurely = async (cropData: CropData) => {
+    if (!session || !session.user || !supabase) {
+      console.error("Erro de autenticação: Sessão ou Supabase ausente.");
+      return null;
+    }
+
+    const cropToSave = {
+      // 1. CHAVE DE SEGURANÇA (CRÍTICO! SEM ISSO, O RLS FALHA)
+      user_id: session.user.id, 
+      
+      // 2. DADOS DA LINHA (Salvando o objeto inteiro como JSONB)
+      id: cropData.id, 
+      content: cropData,
+    };
+    
+    // AQUI ESTÁ A INSERÇÃO SEGURA
+    const { error } = await supabase
+      .from('crops')
+      .insert([cropToSave]);
+
+    if (error) {
+      console.error("Erro ao inserir lavoura com user_id:", error);
+      // Retorna null para sinalizar falha
+      return null; 
+    }
+
+    return cropData;
+  }
+
+
   const handleSubmit = async () => {
     setIsLoading(true);
+    let success = false;
     try {
       if (!formData.type) throw new Error("Selecione uma cultura");
 
@@ -72,11 +107,26 @@ export const NewCropForm: React.FC<NewCropFormProps> = ({ onSave, onCancel }) =>
         aiAdvice: plan.aiAdvice || "Boa sorte com a lavoura!"
       };
 
-      onSave(newCrop);
-    } catch (error) {
-      alert("Erro ao gerar planejamento. Tente novamente.");
+      // 1. Salva a lavoura no banco com o user_id correto
+      const savedCrop = await insertCropSecurely(newCrop);
+      
+      // 2. Chama o onSave para atualizar o estado no componente pai
+      if (savedCrop) {
+          onSave(savedCrop);
+          success = true;
+      }
+      
+    } catch (error: any) {
+      console.error("Erro ao gerar planejamento.", error);
+      // Substitui alert() por log (alerts são bloqueados no ambiente)
+      alert(`Falha ao criar planejamento: ${error.message || 'Erro desconhecido'}`);
     } finally {
-      setIsLoading(false);
+      // Apenas cancela se houve sucesso na inserção/plano
+      if (success) {
+          onCancel();
+      } else {
+          setIsLoading(false);
+      }
     }
   };
 
@@ -95,121 +145,121 @@ export const NewCropForm: React.FC<NewCropFormProps> = ({ onSave, onCancel }) =>
         
         {/* Header Progress */}
         <div className="bg-gray-50/50 dark:bg-slate-900/50 p-6 border-b border-gray-200 dark:border-slate-700">
-           <div className="flex items-center justify-between mb-6">
-             <button onClick={onCancel} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 flex items-center gap-1 font-medium text-sm transition-colors">
-               <ChevronLeft size={16} /> Cancelar
-             </button>
-             <span className="text-sm font-bold text-gray-400">Passo {step} de 4</span>
-           </div>
+          <div className="flex items-center justify-between mb-6">
+            <button onClick={onCancel} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 flex items-center gap-1 font-medium text-sm transition-colors">
+              <ChevronLeft size={16} /> Cancelar
+            </button>
+            <span className="text-sm font-bold text-gray-400">Passo {step} de 4</span>
+          </div>
 
-           <div className="flex justify-between items-center relative px-4">
-             <div className="absolute top-1/2 left-0 w-full h-1 bg-gray-200 dark:bg-slate-700 -z-10 -translate-y-1/2 rounded-full" />
-             <div 
-               className="absolute top-1/2 left-0 h-1 bg-agro-green -z-10 transition-all duration-500 -translate-y-1/2 rounded-full" 
-               style={{ width: `${((step - 1) / (steps.length - 1)) * 100}%` }}
-             />
+          <div className="flex justify-between items-center relative px-4">
+            <div className="absolute top-1/2 left-0 w-full h-1 bg-gray-200 dark:bg-slate-700 -z-10 -translate-y-1/2 rounded-full" />
+            <div 
+              className="absolute top-1/2 left-0 h-1 bg-agro-green -z-10 transition-all duration-500 -translate-y-1/2 rounded-full" 
+              style={{ width: `${((step - 1) / (steps.length - 1)) * 100}%` }}
+            />
 
-             {steps.map((s) => (
-               <div key={s.id} className="flex flex-col items-center gap-2 bg-gray-50 dark:bg-slate-900 px-2">
-                 <div className={`
-                   w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all duration-300 shadow-sm
-                   ${step >= s.id ? 'bg-agro-green text-white scale-110' : 'bg-white dark:bg-slate-800 border-2 border-gray-300 dark:border-slate-600 text-gray-400'}
-                 `}>
-                   <s.icon size={18} />
-                 </div>
-                 <span className={`text-xs font-bold hidden sm:block ${step >= s.id ? 'text-agro-green' : 'text-gray-400'}`}>
-                   {s.title}
-                 </span>
-               </div>
-             ))}
-           </div>
+            {steps.map((s) => (
+              <div key={s.id} className="flex flex-col items-center gap-2 bg-gray-50 dark:bg-slate-900 px-2">
+                <div className={`
+                  w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all duration-300 shadow-sm
+                  ${step >= s.id ? 'bg-agro-green text-white scale-110' : 'bg-white dark:bg-slate-800 border-2 border-gray-300 dark:border-slate-600 text-gray-400'}
+                `}>
+                  <s.icon size={18} />
+                </div>
+                <span className={`text-xs font-bold hidden sm:block ${step >= s.id ? 'text-agro-green' : 'text-gray-400'}`}>
+                  {s.title}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="p-6 md:p-10 min-h-[400px]">
           {step === 1 && (
             <div className="space-y-8 animate-fade-in">
               <div className="text-center">
-                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white">O que vamos plantar?</h2>
-                 <p className="text-gray-500 dark:text-gray-400">Selecione a cultura principal.</p>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">O que vamos plantar?</h2>
+                <p className="text-gray-500 dark:text-gray-400">Selecione a cultura principal.</p>
               </div>
               
               {/* COMPONENTE SELETOR DE CULTURA (Caixa de Seleção Inteligente) */}
               <div className="space-y-2">
-                 <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 ml-1">Cultura Selecionada</label>
-                 
-                 {/* Barra de Seleção (Resumo) */}
-                 <div 
-                   onClick={() => setIsCropListOpen(!isCropListOpen)}
-                   className={`
-                     relative w-full p-4 rounded-2xl border-2 cursor-pointer transition-all duration-300 flex items-center justify-between
-                     bg-white dark:bg-slate-800 shadow-sm hover:shadow-md
-                     ${isCropListOpen 
-                        ? 'border-agro-green ring-2 ring-green-500/10' 
-                        : selectedCropConfig ? 'border-gray-200 dark:border-slate-700' : 'border-gray-300 dark:border-slate-600 border-dashed'}
-                   `}
-                 >
-                    <div className="flex items-center gap-4">
-                        {selectedCropConfig ? (
-                            // Estado: Cultura Selecionada
-                            <>
-                                <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl shadow-sm ${selectedCropConfig.color} text-white`}>
-                                {selectedCropConfig.icon}
-                                </div>
-                                <div className="text-left">
-                                <span className="block font-extrabold text-gray-900 dark:text-white text-lg">{selectedCropConfig.label}</span>
-                                <span className="block text-xs text-gray-500 dark:text-gray-400 font-medium">Toque para alterar</span>
-                                </div>
-                            </>
-                        ) : (
-                            // Estado: Vazio / Placeholder
-                            <>
-                                <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-slate-700 flex items-center justify-center text-gray-400 dark:text-gray-500">
-                                <Sprout size={24} />
-                                </div>
-                                <div className="text-left">
-                                <span className="block font-bold text-gray-500 dark:text-gray-400 text-lg">Selecione sua cultura</span>
-                                <span className="block text-xs text-gray-400 dark:text-gray-500">Toque para abrir a lista</span>
-                                </div>
-                            </>
-                        )}
-                    </div>
-                    <div className="text-gray-400 bg-gray-50 dark:bg-slate-700 p-2 rounded-lg">
-                        {isCropListOpen ? <ChevronUp size={20}/> : <ChevronDown size={20}/>}
-                    </div>
-                 </div>
+                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 ml-1">Cultura Selecionada</label>
+                
+                {/* Barra de Seleção (Resumo) */}
+                <div 
+                  onClick={() => setIsCropListOpen(!isCropListOpen)}
+                  className={`
+                    relative w-full p-4 rounded-2xl border-2 cursor-pointer transition-all duration-300 flex items-center justify-between
+                    bg-white dark:bg-slate-800 shadow-sm hover:shadow-md
+                    ${isCropListOpen 
+                      ? 'border-agro-green ring-2 ring-green-500/10' 
+                      : selectedCropConfig ? 'border-gray-200 dark:border-slate-700' : 'border-gray-300 dark:border-slate-600 border-dashed'}
+                  `}
+                >
+                  <div className="flex items-center gap-4">
+                    {selectedCropConfig ? (
+                        // Estado: Cultura Selecionada
+                        <>
+                          <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl shadow-sm ${selectedCropConfig.color} text-white`}>
+                          {selectedCropConfig.icon}
+                          </div>
+                          <div className="text-left">
+                          <span className="block font-extrabold text-gray-900 dark:text-white text-lg">{selectedCropConfig.label}</span>
+                          <span className="block text-xs text-gray-500 dark:text-gray-400 font-medium">Toque para alterar</span>
+                          </div>
+                        </>
+                    ) : (
+                        // Estado: Vazio / Placeholder
+                        <>
+                          <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-slate-700 flex items-center justify-center text-gray-400 dark:text-gray-500">
+                          <Sprout size={24} />
+                          </div>
+                          <div className="text-left">
+                          <span className="block font-bold text-gray-500 dark:text-gray-400 text-lg">Selecione sua cultura</span>
+                          <span className="block text-xs text-gray-400 dark:text-gray-500">Toque para abrir a lista</span>
+                          </div>
+                        </>
+                    )}
+                  </div>
+                  <div className="text-gray-400 bg-gray-50 dark:bg-slate-700 p-2 rounded-lg">
+                      {isCropListOpen ? <ChevronUp size={20}/> : <ChevronDown size={20}/>}
+                  </div>
+                </div>
 
-                 {/* Grid Expansível (Accordion) */}
-                 <div className={`overflow-hidden transition-all duration-500 ease-in-out ${isCropListOpen ? 'max-h-[600px] opacity-100 mt-4' : 'max-h-0 opacity-0'}`}>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-                        {CROP_OPTIONS.map((crop) => (
-                        <div 
-                            key={crop.id}
-                            onClick={() => {
-                                setFormData({...formData, type: crop.id});
-                                setIsCropListOpen(false); // Fecha automaticamente após seleção (UX Enxuta)
-                            }}
-                            className={`
-                            relative p-3 rounded-xl border cursor-pointer transition-all duration-200 flex flex-col items-center justify-center gap-2 text-center h-32 group
-                            ${formData.type === crop.id 
-                                ? `border-transparent bg-gray-50 dark:bg-slate-700 shadow-inner ring-2 ${crop.ring}` 
-                                : 'border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 hover:border-gray-300'}
-                            `}
-                        >
-                            <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl shadow-sm transition-transform group-hover:scale-110 ${crop.color} text-white`}>
-                                {crop.icon}
-                            </div>
-                            <span className={`font-bold text-sm ${formData.type === crop.id ? 'text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-400'}`}>
-                                {crop.label}
-                            </span>
-                            {formData.type === crop.id && (
-                                <div className="absolute top-2 right-2 text-agro-green">
-                                    <CheckCircle2 size={16} fill="currentColor" className="text-white dark:text-slate-900" />
-                                </div>
-                            )}
+                {/* Grid Expansível (Accordion) */}
+                <div className={`overflow-hidden transition-all duration-500 ease-in-out ${isCropListOpen ? 'max-h-[600px] opacity-100 mt-4' : 'max-h-0 opacity-0'}`}>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                      {CROP_OPTIONS.map((crop) => (
+                      <div 
+                        key={crop.id}
+                        onClick={() => {
+                            setFormData({...formData, type: crop.id});
+                            setIsCropListOpen(false); // Fecha automaticamente após seleção (UX Enxuta)
+                        }}
+                        className={`
+                        relative p-3 rounded-xl border cursor-pointer transition-all duration-200 flex flex-col items-center justify-center gap-2 text-center h-32 group
+                        ${formData.type === crop.id 
+                            ? `border-transparent bg-gray-50 dark:bg-slate-700 shadow-inner ring-2 ${crop.ring}` 
+                            : 'border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 hover:border-gray-300'}
+                        `}
+                      >
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl shadow-sm transition-transform group-hover:scale-110 ${crop.color} text-white`}>
+                            {crop.icon}
                         </div>
-                        ))}
-                    </div>
-                 </div>
+                        <span className={`font-bold text-sm ${formData.type === crop.id ? 'text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-400'}`}>
+                            {crop.label}
+                        </span>
+                        {formData.type === crop.id && (
+                            <div className="absolute top-2 right-2 text-agro-green">
+                                <CheckCircle2 size={16} fill="currentColor" className="text-white dark:text-slate-900" />
+                            </div>
+                        )}
+                      </div>
+                      ))}
+                  </div>
+                </div>
               </div>
 
               {/* Inputs Restantes (Visíveis sempre) */}
@@ -242,7 +292,7 @@ export const NewCropForm: React.FC<NewCropFormProps> = ({ onSave, onCancel }) =>
           )}
 
           {step === 2 && (
-             <div className="space-y-6 animate-fade-in">
+              <div className="space-y-6 animate-fade-in">
                 <div className="text-center">
                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Localização</h2>
                    <p className="text-gray-500 dark:text-gray-400">Marque o centro da lavoura no mapa.</p>
@@ -260,7 +310,7 @@ export const NewCropForm: React.FC<NewCropFormProps> = ({ onSave, onCancel }) =>
                      {formData.coordinates.lat.toFixed(6)}, {formData.coordinates.lng.toFixed(6)}
                   </div>
                 )}
-             </div>
+              </div>
           )}
 
           {step === 3 && (
@@ -314,7 +364,7 @@ export const NewCropForm: React.FC<NewCropFormProps> = ({ onSave, onCancel }) =>
                       placeholder="Ex: 0.5m x 0.5m"
                       className="w-full p-4 pl-12 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 focus:border-agro-green dark:focus:border-agro-green focus:ring-4 focus:ring-green-500/10 rounded-xl outline-none transition-all font-medium dark:text-white shadow-sm"
                     />
-                     <Ruler className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20}/>
+                      <Ruler className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20}/>
                   </div>
                 </div>
               </div>
@@ -324,30 +374,30 @@ export const NewCropForm: React.FC<NewCropFormProps> = ({ onSave, onCancel }) =>
           {step === 4 && (
             <div className="flex flex-col items-center justify-center text-center space-y-6 animate-fade-in">
                <div className={`w-24 h-24 rounded-full flex items-center justify-center mb-2 animate-bounce shadow-lg ${formData.type ? CROP_OPTIONS.find(c => c.id === formData.type)?.color : 'bg-gray-200'}`}>
-                  <span className="text-5xl">{formData.type ? CROP_OPTIONS.find(c => c.id === formData.type)?.icon : <Sprout />}</span>
+                 <span className="text-5xl">{formData.type ? CROP_OPTIONS.find(c => c.id === formData.type)?.icon : <Sprout />}</span>
                </div>
                
                <div>
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Tudo pronto!</h2>
-                  <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto mt-2">
-                    Nossa IA vai gerar o plano para sua lavoura de <strong>{formData.type ? CROP_OPTIONS.find(c => c.id === formData.type)?.label : '...'}</strong>.
-                  </p>
+                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Tudo pronto!</h2>
+                 <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto mt-2">
+                   Nossa IA vai gerar o plano para sua lavoura de <strong>{formData.type ? CROP_OPTIONS.find(c => c.id === formData.type)?.label : '...'}</strong>.
+                 </p>
                </div>
 
                <div className="bg-gray-50 dark:bg-slate-900 rounded-2xl p-6 w-full max-w-sm border border-gray-200 dark:border-slate-700 text-left relative overflow-hidden shadow-sm">
                   <div className={`absolute top-0 left-0 w-2 h-full ${formData.type ? CROP_OPTIONS.find(c => c.id === formData.type)?.color : 'bg-gray-400'}`}></div>
                   <div className="space-y-3">
                      <div className="flex justify-between border-b border-gray-200 dark:border-slate-700 pb-2">
-                       <span className="text-gray-500 dark:text-gray-400">Lavoura</span>
-                       <span className="font-bold dark:text-white">{formData.name}</span>
+                        <span className="text-gray-500 dark:text-gray-400">Lavoura</span>
+                        <span className="font-bold dark:text-white">{formData.name}</span>
                      </div>
                      <div className="flex justify-between border-b border-gray-200 dark:border-slate-700 pb-2">
-                       <span className="text-gray-500 dark:text-gray-400">Cultura</span>
-                       <span className="font-bold capitalize dark:text-white">{formData.type ? CROP_OPTIONS.find(c => c.id === formData.type)?.label : '-'}</span>
+                        <span className="text-gray-500 dark:text-gray-400">Cultura</span>
+                        <span className="font-bold capitalize dark:text-white">{formData.type ? CROP_OPTIONS.find(c => c.id === formData.type)?.label : '-'}</span>
                      </div>
                      <div className="flex justify-between">
-                       <span className="text-gray-500 dark:text-gray-400">Área</span>
-                       <span className="font-bold dark:text-white">{formData.areaHa} ha</span>
+                        <span className="text-gray-500 dark:text-gray-400">Área</span>
+                        <span className="font-bold dark:text-white">{formData.areaHa} ha</span>
                      </div>
                      {formData.coordinates && (
                          <div className="flex justify-between border-t border-gray-200 dark:border-slate-700 pt-2">
@@ -358,7 +408,7 @@ export const NewCropForm: React.FC<NewCropFormProps> = ({ onSave, onCancel }) =>
                         </div>
                      )}
                   </div>
-               </div>
+                </div>
             </div>
           )}
         </div>
@@ -394,7 +444,7 @@ export const NewCropForm: React.FC<NewCropFormProps> = ({ onSave, onCancel }) =>
                 Continuar <ChevronRight size={18} className="ml-2"/>
               </button>
             ) : (
-               <button 
+                <button 
                 onClick={handleSubmit}
                 disabled={isLoading}
                 className="px-10 py-4 bg-agro-green text-white font-bold rounded-xl shadow-lg shadow-green-600/30 hover:bg-green-700 transition-all transform hover:scale-105 flex items-center disabled:opacity-70 disabled:cursor-not-allowed"
