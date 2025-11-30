@@ -17,16 +17,19 @@ export const Login: React.FC = () => {
 
   const slides = [
     {
+      // Imagem: Agrônomo com Tablet (Tecnologia/Gestão) - RESTAURADA
       image: "https://images.unsplash.com/photo-1586771107445-d3ca888129ff?q=80&w=1920&auto=format&fit=crop",
       title: "Gestão Inteligente",
       desc: "Transforme dados da sua lavoura em decisões lucrativas com inteligência artificial."
     },
     {
+      // Imagem: Campo ao pôr do sol (Colheita/Previsibilidade) - RESTAURADA
       image: "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?q=80&w=1920&auto=format&fit=crop",
       title: "Previsibilidade Total",
       desc: "Saiba exatamente quanto vai gastar e quando vai colher com nossos algoritmos preditivos."
     },
     {
+      // Imagem: Mão segurando planta (Cuidado/Assistência) - RESTAURADA
       image: "https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?q=80&w=1920&auto=format&fit=crop",
       title: "Assistente 24h",
       desc: "Tire dúvidas técnicas sobre pragas, solo e manejo a qualquer momento."
@@ -174,10 +177,10 @@ export const Login: React.FC = () => {
               </div>
               
               <div className="overflow-hidden min-h-[160px]">
-                <h1 key={`t-${currentSlide}`} className="text-5xl font-extrabold leading-tight mb-4 animate-slide-up">
+                <h1 className="text-5xl font-extrabold leading-tight mb-4 animate-slide-up">
                   {slides[currentSlide].title}
                 </h1>
-                <p key={`d-${currentSlide}`} className="text-lg text-gray-300 font-light leading-relaxed animate-fade-in">
+                <p className="text-lg text-gray-300 font-light leading-relaxed animate-fade-in">
                   {slides[currentSlide].desc}
                 </p>
               </div>
@@ -201,7 +204,7 @@ export const Login: React.FC = () => {
         
         {/* MOBILE BACKGROUND (Visible only on mobile/tablet) - IMAGEM DE FOLHAGEM VIVA + TERRA */}
         <div className="lg:hidden absolute inset-0 z-0">
-           {/* Imagem de Plantação Vibrante (Folhagem verde e terra marrom) */}
+           {/* Nova Imagem: Foco em folhagem verde vibrante e terra */}
            <img 
              src="https://images.unsplash.com/photo-1625246333195-78d9c38ad449?q=80&w=1080&auto=format&fit=crop" 
              className="w-full h-full object-cover"
@@ -219,9 +222,9 @@ export const Login: React.FC = () => {
         `}>
           
           <div className="mb-8 text-center lg:text-left">
-            {/* Mobile Logo & Name */}
+            {/* Mobile Logo - ATUALIZADA PARA MATCH COM DESKTOP */}
             <div className="lg:hidden flex flex-col items-center mb-6">
-               <div className="bg-white/20 backdrop-blur-md p-3 rounded-2xl border border-white/30 shadow-lg mb-3">
+               <div className="bg-gradient-to-br from-agro-green to-emerald-600 p-3 rounded-2xl shadow-lg shadow-green-900/20 mb-3">
                   <Leaf className="text-white" size={32} fill="currentColor" />
                </div>
                <h1 className="font-extrabold text-2xl text-white tracking-wide drop-shadow-md">MÃOS DO CAMPO</h1>
