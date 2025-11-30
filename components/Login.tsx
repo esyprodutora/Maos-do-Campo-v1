@@ -110,12 +110,14 @@ export const Login: React.FC = () => {
     } catch (error: any) {
       console.error("Auth Error:", error);
       
-      let displayMsg = error.message;
+      let displayMsg = error.message || 'Ocorreu um erro desconhecido.';
 
-      if (error.message.includes('Invalid login')) displayMsg = 'Email ou senha incorretos.';
-      else if (error.message.includes('already registered')) displayMsg = 'Este email já está cadastrado.';
-      else if (error.message.includes('Password should be')) displayMsg = 'A senha deve ter pelo menos 6 caracteres.';
-      else if (error.message.includes('Database error')) displayMsg = 'Erro no banco de dados (Verifique se a tabela profiles possui a coluna whatsapp).';
+      if (error.message && error.message.includes('Invalid login')) displayMsg = 'Email ou senha incorretos.';
+      else if (error.message && error.message.includes('already registered')) displayMsg = 'Este email já está cadastrado.';
+      else if (error.message && error.message.includes('Password should be')) displayMsg = 'A senha deve ter pelo menos 6 caracteres.';
+      else if (error.message && (error.message.includes('Database error') || error.message.includes('column'))) {
+          displayMsg = 'Erro de Banco de Dados: Verifique se as colunas (whatsapp/full_name) existem na tabela profiles.';
+      }
       
       setMsg({ type: 'error', text: displayMsg });
     } finally {

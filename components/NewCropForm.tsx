@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { CropType, SoilType, CropData, Coordinates } from '../types';
 import { generateCropPlan } from '../services/geminiService';
-import { Loader2, Sprout, Map, BarChart3, CheckCircle2, ChevronLeft, ChevronRight, Ruler, MapPin } from 'lucide-react';
+import { Loader2, Sprout, Map, BarChart3, CheckCircle2, ChevronLeft, ChevronRight, Ruler, MapPin, ChevronDown, ChevronUp } from 'lucide-react';
 import { LocationPicker } from './LocationPicker';
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
@@ -12,22 +12,23 @@ interface NewCropFormProps {
 }
 
 // Configuração visual das 10 culturas
-const CROP_OPTIONS: { id: CropType; label: string; icon: string; color: string }[] = [
-  { id: 'soja', label: 'Soja', icon: '🌱', color: 'bg-yellow-500' },
-  { id: 'milho', label: 'Milho', icon: '🌽', color: 'bg-orange-500' },
-  { id: 'cafe', label: 'Café', icon: '☕', color: 'bg-[#A67C52]' },
-  { id: 'cana', label: 'Cana', icon: '🎋', color: 'bg-green-600' },
-  { id: 'algodao', label: 'Algodão', icon: '☁️', color: 'bg-slate-400' },
-  { id: 'arroz', label: 'Arroz', icon: '🌾', color: 'bg-yellow-200' },
-  { id: 'feijao', label: 'Feijão', icon: '🫘', color: 'bg-red-800' },
-  { id: 'trigo', label: 'Trigo', icon: '🥖', color: 'bg-amber-300' },
-  { id: 'laranja', label: 'Laranja', icon: '🍊', color: 'bg-orange-600' },
-  { id: 'mandioca', label: 'Mandioca', icon: '🥔', color: 'bg-amber-800' },
+const CROP_OPTIONS: { id: CropType; label: string; icon: string; color: string; ring: string }[] = [
+  { id: 'soja', label: 'Soja', icon: '🌱', color: 'bg-yellow-500', ring: 'ring-yellow-500' },
+  { id: 'milho', label: 'Milho', icon: '🌽', color: 'bg-orange-500', ring: 'ring-orange-500' },
+  { id: 'cafe', label: 'Café', icon: '☕', color: 'bg-[#A67C52]', ring: 'ring-[#A67C52]' },
+  { id: 'cana', label: 'Cana', icon: '🎋', color: 'bg-green-600', ring: 'ring-green-600' },
+  { id: 'algodao', label: 'Algodão', icon: '☁️', color: 'bg-slate-400', ring: 'ring-slate-400' },
+  { id: 'arroz', label: 'Arroz', icon: '🌾', color: 'bg-yellow-400', ring: 'ring-yellow-400' },
+  { id: 'feijao', label: 'Feijão', icon: '🫘', color: 'bg-red-800', ring: 'ring-red-800' },
+  { id: 'trigo', label: 'Trigo', icon: '🥖', color: 'bg-amber-300', ring: 'ring-amber-300' },
+  { id: 'laranja', label: 'Laranja', icon: '🍊', color: 'bg-orange-600', ring: 'ring-orange-600' },
+  { id: 'mandioca', label: 'Mandioca', icon: '🥔', color: 'bg-amber-800', ring: 'ring-amber-800' },
 ];
 
 export const NewCropForm: React.FC<NewCropFormProps> = ({ onSave, onCancel }) => {
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+  const [isCropListOpen, setIsCropListOpen] = useState(true); // Controla a visibilidade do grid
   
   const [formData, setFormData] = useState({
     name: '',
@@ -83,6 +84,8 @@ export const NewCropForm: React.FC<NewCropFormProps> = ({ onSave, onCancel }) =>
     { id: 4, title: "Revisão", icon: CheckCircle2 }
   ];
 
+  const selectedCropConfig = CROP_OPTIONS.find(c => c.id === formData.type);
+
   return (
     <div className="max-w-4xl mx-auto animate-slide-up pb-20">
       <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-xl shadow-gray-200/50 dark:shadow-black/50 border border-gray-200 dark:border-slate-700 overflow-hidden">
@@ -127,37 +130,71 @@ export const NewCropForm: React.FC<NewCropFormProps> = ({ onSave, onCancel }) =>
                  <p className="text-gray-500 dark:text-gray-400">Selecione a cultura principal.</p>
               </div>
               
-              {/* Grid de Culturas */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-                 {CROP_OPTIONS.map((crop) => (
-                   <div 
-                     key={crop.id}
-                     onClick={() => setFormData({...formData, type: crop.id})}
-                     className={`
-                       relative p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200 flex flex-col items-center justify-center gap-3 text-center h-32 group
-                       ${formData.type === crop.id 
-                         ? 'border-agro-green bg-green-50 dark:bg-green-900/20 shadow-md ring-1 ring-agro-green' 
-                         : 'border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-gray-300 dark:hover:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700 hover:shadow-md'}
-                     `}
-                   >
-                     {formData.type === crop.id && (
-                        <div className="absolute top-2 right-2 text-agro-green">
-                           <CheckCircle2 size={18} fill="currentColor" className="text-white dark:text-slate-900" />
+              {/* COMPONENTE SELETOR DE CULTURA (Caixa de Seleção Inteligente) */}
+              <div className="space-y-2">
+                 <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 ml-1">Cultura Selecionada</label>
+                 
+                 {/* Barra de Seleção (Resumo) */}
+                 <div 
+                   onClick={() => setIsCropListOpen(!isCropListOpen)}
+                   className={`
+                     relative w-full p-4 rounded-2xl border-2 cursor-pointer transition-all duration-300 flex items-center justify-between
+                     bg-white dark:bg-slate-800 shadow-sm hover:shadow-md
+                     ${isCropListOpen ? 'border-agro-green ring-2 ring-green-500/10' : 'border-gray-200 dark:border-slate-700'}
+                   `}
+                 >
+                    <div className="flex items-center gap-4">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xl shadow-sm ${selectedCropConfig?.color} text-white`}>
+                           {selectedCropConfig?.icon}
                         </div>
-                     )}
-                     <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl shadow-sm ${crop.color} text-white`}>
-                       {crop.icon}
-                     </div>
-                     <span className={`font-bold text-sm ${formData.type === crop.id ? 'text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-400'}`}>
-                       {crop.label}
-                     </span>
-                   </div>
-                 ))}
+                        <div className="text-left">
+                           <span className="block font-extrabold text-gray-900 dark:text-white text-lg">{selectedCropConfig?.label}</span>
+                           <span className="block text-xs text-gray-500 dark:text-gray-400">Clique para alterar</span>
+                        </div>
+                    </div>
+                    <div className="text-gray-400">
+                        {isCropListOpen ? <ChevronUp size={24}/> : <ChevronDown size={24}/>}
+                    </div>
+                 </div>
+
+                 {/* Grid Expansível (Accordion) */}
+                 <div className={`overflow-hidden transition-all duration-500 ease-in-out ${isCropListOpen ? 'max-h-[600px] opacity-100 mt-4' : 'max-h-0 opacity-0'}`}>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                        {CROP_OPTIONS.map((crop) => (
+                        <div 
+                            key={crop.id}
+                            onClick={() => {
+                                setFormData({...formData, type: crop.id});
+                                setIsCropListOpen(false); // Fecha automaticamente após seleção (UX Enxuta)
+                            }}
+                            className={`
+                            relative p-3 rounded-xl border cursor-pointer transition-all duration-200 flex flex-col items-center justify-center gap-2 text-center h-28 group
+                            ${formData.type === crop.id 
+                                ? `border-transparent bg-gray-50 dark:bg-slate-700 shadow-inner ring-2 ${crop.ring}` 
+                                : 'border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 hover:border-gray-300'}
+                            `}
+                        >
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xl shadow-sm transition-transform group-hover:scale-110 ${crop.color} text-white`}>
+                                {crop.icon}
+                            </div>
+                            <span className={`font-bold text-xs ${formData.type === crop.id ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'}`}>
+                                {crop.label}
+                            </span>
+                            {formData.type === crop.id && (
+                                <div className="absolute top-2 right-2 text-agro-green">
+                                    <CheckCircle2 size={14} fill="currentColor" className="text-white dark:text-slate-900" />
+                                </div>
+                            )}
+                        </div>
+                        ))}
+                    </div>
+                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-100 dark:border-slate-700">
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Nome do Talhão / Lavoura</label>
+              {/* Inputs Restantes (Visíveis sempre) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-gray-100 dark:border-slate-700">
+                <div className="animate-slide-up" style={{animationDelay: '0.1s'}}>
+                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Nome do Talhão</label>
                   <input 
                     type="text" 
                     value={formData.name}
@@ -166,8 +203,8 @@ export const NewCropForm: React.FC<NewCropFormProps> = ({ onSave, onCancel }) =>
                     className="w-full p-4 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 focus:border-agro-green dark:focus:border-agro-green focus:ring-4 focus:ring-green-500/10 rounded-xl outline-none transition-all font-medium dark:text-white shadow-sm"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Área Total (Hectares)</label>
+                <div className="animate-slide-up" style={{animationDelay: '0.2s'}}>
+                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Área (Hectares)</label>
                   <div className="relative">
                     <input 
                       type="number" 
