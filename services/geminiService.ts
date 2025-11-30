@@ -1,3 +1,4 @@
+// @ts-ignore
 import { GoogleGenAI, Type } from "@google/genai";
 import { CropData, CropType, SoilType } from "../types";
 

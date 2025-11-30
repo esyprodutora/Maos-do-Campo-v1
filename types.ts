@@ -1,6 +1,21 @@
-export type CropType = 'cafe' | 'milho' | 'soja';
+export type CropType = 
+  | 'soja' 
+  | 'milho' 
+  | 'cafe' 
+  | 'cana' 
+  | 'algodao' 
+  | 'arroz' 
+  | 'feijao' 
+  | 'trigo' 
+  | 'laranja' 
+  | 'mandioca';
 
-export type SoilType = 'arenoso' | 'argiloso' | 'misto';
+export type SoilType = 'arenoso' | 'argiloso' | 'misto' | 'humifero' | 'calcario';
+
+export interface Coordinates {
+  lat: number;
+  lng: number;
+}
 
 export interface Material {
   name: string;
@@ -25,6 +40,7 @@ export interface CropData {
   type: CropType;
   areaHa: number;
   soilType: SoilType;
+  coordinates?: Coordinates;
   productivityGoal: string; // e.g. "60 sc/ha"
   spacing: string;
   datePlanted: string;

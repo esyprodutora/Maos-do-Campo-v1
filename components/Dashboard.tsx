@@ -18,18 +18,47 @@ export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNew
   const totalArea = crops.reduce((acc, c) => acc + c.areaHa, 0);
   const totalCost = crops.reduce((acc, c) => acc + c.estimatedCost, 0);
 
-  const cropTypeData = [
-    { name: 'Café', value: crops.filter(c => c.type === 'cafe').length, color: '#A67C52' }, // Updated color
-    { name: 'Soja', value: crops.filter(c => c.type === 'soja').length, color: '#F2C94C' },
-    { name: 'Milho', value: crops.filter(c => c.type === 'milho').length, color: '#E67E22' },
-  ].filter(d => d.value > 0);
+  // Define colors helper first
+  const getCropColor = (type: string) => {
+    switch(type) {
+      case 'cafe': return '#A67C52';
+      case 'milho': return '#F97316'; // Orange-500
+      case 'soja': return '#EAB308'; // Yellow-500
+      case 'cana': return '#16A34A'; // Green-600
+      case 'algodao': return '#94A3B8'; // Slate-400
+      case 'arroz': return '#FDE047'; // Yellow-300
+      case 'feijao': return '#991B1B'; // Red-800
+      case 'trigo': return '#FBBF24'; // Amber-400
+      case 'laranja': return '#EA580C'; // Orange-600
+      case 'mandioca': return '#92400E'; // Amber-800
+      default: return '#27AE60';
+    }
+  };
+
+  const cropTypeData = Object.entries(
+    crops.reduce((acc, crop) => {
+      acc[crop.type] = (acc[crop.type] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>)
+  ).map(([name, value]) => ({
+    name: name.charAt(0).toUpperCase() + name.slice(1),
+    value,
+    color: getCropColor(name)
+  }));
 
   // Helper for crop visuals
   const getCropStyle = (type: string) => {
     switch(type) {
-      case 'cafe': return { bg: 'bg-[#A67C52]', text: 'text-[#A67C52]', light: 'bg-[#FAF3E0] dark:bg-[#A67C52]/20' }; // Updated to #A67C52
-      case 'milho': return { bg: 'bg-[#E67E22]', text: 'text-[#E67E22]', light: 'bg-[#FEF5E7] dark:bg-[#E67E22]/20' };
-      case 'soja': return { bg: 'bg-[#F2C94C]', text: 'text-[#B7950B] dark:text-[#F2C94C]', light: 'bg-[#FCF3CF] dark:bg-[#F2C94C]/20' };
+      case 'cafe': return { bg: 'bg-[#A67C52]', text: 'text-[#A67C52]', light: 'bg-[#FAF3E0] dark:bg-[#A67C52]/20' };
+      case 'milho': return { bg: 'bg-orange-500', text: 'text-orange-500', light: 'bg-orange-50 dark:bg-orange-500/20' };
+      case 'soja': return { bg: 'bg-yellow-500', text: 'text-yellow-600 dark:text-yellow-400', light: 'bg-yellow-50 dark:bg-yellow-500/20' };
+      case 'cana': return { bg: 'bg-green-600', text: 'text-green-600', light: 'bg-green-100 dark:bg-green-600/20' };
+      case 'algodao': return { bg: 'bg-slate-400', text: 'text-slate-500 dark:text-slate-300', light: 'bg-slate-100 dark:bg-slate-400/20' };
+      case 'arroz': return { bg: 'bg-yellow-300', text: 'text-yellow-600', light: 'bg-yellow-50 dark:bg-yellow-300/20' };
+      case 'feijao': return { bg: 'bg-red-800', text: 'text-red-800 dark:text-red-400', light: 'bg-red-50 dark:bg-red-800/20' };
+      case 'trigo': return { bg: 'bg-amber-400', text: 'text-amber-600', light: 'bg-amber-50 dark:bg-amber-400/20' };
+      case 'laranja': return { bg: 'bg-orange-600', text: 'text-orange-600', light: 'bg-orange-100 dark:bg-orange-600/20' };
+      case 'mandioca': return { bg: 'bg-amber-800', text: 'text-amber-800 dark:text-amber-500', light: 'bg-amber-100 dark:bg-amber-800/20' };
       default: return { bg: 'bg-agro-green', text: 'text-agro-green', light: 'bg-green-50 dark:bg-green-900/20' };
     }
   };
@@ -44,12 +73,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNew
         </div>
         
         <div className="flex items-center gap-3 w-full md:w-auto">
-            {/* Theme Toggle Button - HIDDEN ON MOBILE because it's in the App header */}
             <button 
                 onClick={toggleTheme}
                 className="hidden md:block p-3.5 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-500 dark:text-gray-400 hover:text-agro-yellow hover:border-agro-yellow dark:hover:text-yellow-400 transition-all shadow-sm"
-                aria-label="Alternar Tema"
-                title={theme === 'light' ? 'Ativar Modo Escuro' : 'Ativar Modo Claro'}
             >
                 {theme === 'dark' ? <Sun size={24} /> : <Moon size={24} />}
             </button>
@@ -105,9 +131,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNew
            </div>
         </div>
 
-        {/* Quick Stats Grid - UPDATE: Increased border contrast (gray-200) and shadow (shadow) */}
+        {/* Quick Stats Grid */}
         <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
-          
           <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow border border-gray-200 dark:border-slate-700 flex flex-col justify-between hover:shadow-md transition-shadow">
             <div className="flex justify-between items-start mb-4">
                <div className="p-3 bg-green-50 dark:bg-green-900/30 text-agro-green rounded-2xl">
@@ -146,14 +171,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNew
               <h3 className="text-3xl font-extrabold text-gray-900 dark:text-white mt-1">{totalArea} <span className="text-lg text-gray-400 dark:text-gray-500 font-normal">ha</span></h3>
             </div>
           </div>
-
         </div>
       </div>
 
       {/* Main Content Area */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
         
-        {/* Crop Cards List - UPDATE: Increased border contrast and shadow */}
+        {/* Crop Cards List */}
         <div className="xl:col-span-2 space-y-6">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
@@ -223,7 +247,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNew
           )}
         </div>
 
-        {/* Sidebar Charts - UPDATE: Increased border contrast and shadow */}
+        {/* Sidebar Charts */}
         <div className="space-y-6">
            <div className="bg-white dark:bg-slate-800 rounded-3xl shadow border border-gray-200 dark:border-slate-700 p-6">
              <h3 className="font-bold text-gray-800 dark:text-white mb-6">Distribuição de Culturas</h3>

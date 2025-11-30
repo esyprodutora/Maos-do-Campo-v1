@@ -17,20 +17,20 @@ export const Login: React.FC = () => {
 
   const slides = [
     {
-      // Imagem: Produtor usando Tablet no meio da lavoura (Tecnologia/Gestão)
-      image: "https://images.unsplash.com/photo-1586771107445-d3ca888129ff?q=80&w=2672&auto=format&fit=crop",
+      // Imagem: Agrônomo com Tablet (Tecnologia/Gestão)
+      image: "https://images.unsplash.com/photo-1586771107445-d3ca888129ff?q=80&w=1920&auto=format&fit=crop",
       title: "Gestão Inteligente",
       desc: "Transforme dados da sua lavoura em decisões lucrativas com inteligência artificial."
     },
     {
-      // Imagem: Campo dourado ao pôr do sol (Resultado/Colheita/Previsão)
-      image: "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?q=80&w=2670&auto=format&fit=crop",
+      // Imagem: Campo ao pôr do sol (Colheita/Previsibilidade)
+      image: "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?q=80&w=1920&auto=format&fit=crop",
       title: "Previsibilidade Total",
       desc: "Saiba exatamente quanto vai gastar e quando vai colher com nossos algoritmos preditivos."
     },
     {
-      // Imagem: Mãos cuidando de uma planta jovem (Cuidado/Assistência)
-      image: "https://images.unsplash.com/photo-1464226184884-fa280b87c399?q=80&w=2670&auto=format&fit=crop",
+      // Imagem: Mão segurando planta (Cuidado/Assistência)
+      image: "https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?q=80&w=1920&auto=format&fit=crop",
       title: "Assistente 24h",
       desc: "Tire dúvidas técnicas sobre pragas, solo e manejo a qualquer momento."
     }
@@ -106,11 +106,16 @@ export const Login: React.FC = () => {
         if (error) throw error;
       }
     } catch (error: any) {
-      let errorMessage = 'Ocorreu um erro.';
-      if (error.message.includes('Invalid login')) errorMessage = 'Email ou senha incorretos.';
-      if (error.message.includes('already registered')) errorMessage = 'Este email já está cadastrado.';
-      if (error.message.includes('Password should be')) errorMessage = 'A senha deve ter pelo menos 6 caracteres.';
-      setMsg({ type: 'error', text: errorMessage || error.message });
+      console.error("Auth Error:", error);
+      
+      let displayMsg = error.message;
+
+      if (error.message.includes('Invalid login')) displayMsg = 'Email ou senha incorretos.';
+      else if (error.message.includes('already registered')) displayMsg = 'Este email já está cadastrado.';
+      else if (error.message.includes('Password should be')) displayMsg = 'A senha deve ter pelo menos 6 caracteres.';
+      else if (error.message.includes('Database error')) displayMsg = 'Erro no banco de dados (Verifique se a tabela profiles possui a coluna whatsapp).';
+      
+      setMsg({ type: 'error', text: displayMsg });
     } finally {
       setLoading(false);
     }
@@ -144,14 +149,13 @@ export const Login: React.FC = () => {
             key={index}
             className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${index === currentSlide ? 'opacity-100' : 'opacity-0'}`}
           >
-             {/* Image with overlay */}
-             <div 
-               className="absolute inset-0 bg-cover bg-center transform scale-105 transition-transform duration-[10000ms]"
-               style={{ 
-                 backgroundImage: `url('${slide.image}')`,
-                 transform: index === currentSlide ? 'scale(110)' : 'scale(100)'
-               }}
+             {/* Actual Image Tag for reliability */}
+             <img 
+               src={slide.image} 
+               alt={slide.title}
+               className={`absolute inset-0 w-full h-full object-cover transition-transform duration-[10000ms] ${index === currentSlide ? 'scale-110' : 'scale-100'}`}
              />
+             {/* Gradient Overlay */}
              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/10" />
           </div>
         ))}
@@ -201,8 +205,14 @@ export const Login: React.FC = () => {
 
       {/* RIGHT SIDE - FORM */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12 relative overflow-y-auto">
-        {/* Mobile Background (Absolute) */}
-        <div className="lg:hidden absolute inset-0 bg-[url('https://images.unsplash.com/photo-1500382017468-9049fed747ef')] bg-cover bg-center z-0">
+        
+        {/* Mobile Background (IMG tag for better loading) */}
+        <div className="lg:hidden absolute inset-0 z-0">
+           <img 
+             src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=1080&auto=format&fit=crop" 
+             className="w-full h-full object-cover"
+             alt="Background"
+           />
            <div className="absolute inset-0 bg-slate-900/90 backdrop-blur-sm"></div>
         </div>
 
@@ -229,7 +239,7 @@ export const Login: React.FC = () => {
              </div>
           )}
 
-          {/* Social Login (Only show on Sign In or if desired on Sign Up) */}
+          {/* Social Login */}
           <div className="grid grid-cols-2 gap-4 mb-8">
             <button 
               onClick={() => handleSocialLogin('google')}

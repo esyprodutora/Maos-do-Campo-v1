@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { CropData, TimelineStage, Material } from '../types';
 import { getAssistantResponse } from '../services/geminiService';
-import { ArrowLeft, Calendar, DollarSign, ListTodo, MessageSquare, Send, CheckCircle, Circle, AlertCircle, Droplets, Ruler, ShoppingBag, Download, Loader2, Edit2, Check } from 'lucide-react';
+import { ArrowLeft, Calendar, DollarSign, ListTodo, MessageSquare, Send, CheckCircle, Circle, AlertCircle, Droplets, Ruler, ShoppingBag, Download, Loader2, Edit2, Check, MapPin, Navigation } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -21,15 +21,25 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   
+  // @ts-ignore
+  const mapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+  
   // State for Finance Editing
   const [isEditingPrices, setIsEditingPrices] = useState(false);
 
-  // Helper styles based on crop type
+  // Helper styles based on crop type - Expanded for 10 crops
   const getTheme = (type: string) => {
     switch(type) {
       case 'cafe': return { main: 'text-[#A67C52]', bg: 'bg-[#A67C52]', light: 'bg-[#FAF3E0] dark:bg-[#A67C52]/20' };
-      case 'milho': return { main: 'text-[#E67E22]', bg: 'bg-[#E67E22]', light: 'bg-[#FEF5E7] dark:bg-[#E67E22]/20' };
-      case 'soja': return { main: 'text-[#F2C94C]', bg: 'bg-[#F2C94C]', light: 'bg-[#FCF3CF] dark:bg-[#F2C94C]/20' };
+      case 'milho': return { main: 'text-orange-500', bg: 'bg-orange-500', light: 'bg-orange-50 dark:bg-orange-500/20' };
+      case 'soja': return { main: 'text-yellow-500', bg: 'bg-yellow-500', light: 'bg-yellow-50 dark:bg-yellow-500/20' };
+      case 'cana': return { main: 'text-green-600', bg: 'bg-green-600', light: 'bg-green-100 dark:bg-green-600/20' };
+      case 'algodao': return { main: 'text-slate-500 dark:text-slate-300', bg: 'bg-slate-500', light: 'bg-slate-100 dark:bg-slate-500/20' };
+      case 'arroz': return { main: 'text-yellow-600', bg: 'bg-yellow-400', light: 'bg-yellow-50 dark:bg-yellow-400/20' };
+      case 'feijao': return { main: 'text-red-700', bg: 'bg-red-700', light: 'bg-red-50 dark:bg-red-700/20' };
+      case 'trigo': return { main: 'text-amber-500', bg: 'bg-amber-500', light: 'bg-amber-50 dark:bg-amber-500/20' };
+      case 'laranja': return { main: 'text-orange-600', bg: 'bg-orange-600', light: 'bg-orange-100 dark:bg-orange-600/20' };
+      case 'mandioca': return { main: 'text-amber-800', bg: 'bg-amber-800', light: 'bg-amber-100 dark:bg-amber-800/20' };
       default: return { main: 'text-agro-green', bg: 'bg-agro-green', light: 'bg-green-50 dark:bg-green-900/20' };
     }
   };
@@ -186,6 +196,8 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
 
   const renderOverview = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-slide-up">
+       
+       {/* Details Card */}
        <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 relative overflow-hidden group">
           <div className={`absolute top-0 right-0 p-10 opacity-5 ${theme.main}`}>
              <Ruler size={100} />
@@ -214,23 +226,60 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
           </div>
        </div>
 
-       <div className={`p-8 rounded-3xl border relative overflow-hidden flex flex-col justify-between ${theme.light} border-${theme.bg}/20`}>
-          <div className="relative z-10">
-            <h3 className={`font-bold text-xl mb-4 flex items-center gap-2 ${theme.main}`}>
-               <AlertCircle size={24}/> Recomendação Técnica
-            </h3>
-            <p className="text-gray-700 dark:text-gray-200 italic leading-relaxed text-lg font-medium">
-              "{crop.aiAdvice}"
-            </p>
-          </div>
-          <div className="mt-8 relative z-10">
-            <p className={`text-xs font-bold uppercase tracking-wider mb-1 ${theme.main}`}>Estimativa de Colheita</p>
-            <p className="text-3xl font-extrabold text-gray-800 dark:text-white">
-              {new Date(crop.estimatedHarvestDate).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
-            </p>
-          </div>
-          {/* Decorative Blob */}
-          <div className={`absolute -bottom-10 -right-10 w-40 h-40 rounded-full ${theme.bg} opacity-10 blur-2xl`}></div>
+       {/* Map / Advice Card Column */}
+       <div className="flex flex-col gap-6">
+            {/* Recommendation Card */}
+           <div className={`p-8 rounded-3xl border relative overflow-hidden flex flex-col justify-between ${theme.light} border-${theme.bg}/20 flex-1`}>
+              <div className="relative z-10">
+                <h3 className={`font-bold text-xl mb-4 flex items-center gap-2 ${theme.main}`}>
+                   <AlertCircle size={24}/> Recomendação Técnica
+                </h3>
+                <p className="text-gray-700 dark:text-gray-200 italic leading-relaxed text-lg font-medium">
+                  "{crop.aiAdvice}"
+                </p>
+              </div>
+              <div className="mt-8 relative z-10">
+                <p className={`text-xs font-bold uppercase tracking-wider mb-1 ${theme.main}`}>Estimativa de Colheita</p>
+                <p className="text-3xl font-extrabold text-gray-800 dark:text-white">
+                  {new Date(crop.estimatedHarvestDate).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+                </p>
+              </div>
+              {/* Decorative Blob */}
+              <div className={`absolute -bottom-10 -right-10 w-40 h-40 rounded-full ${theme.bg} opacity-10 blur-2xl`}></div>
+           </div>
+
+           {/* Mini Map Card */}
+           {crop.coordinates && (
+             <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700">
+                <h3 className="font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+                    <MapPin className="text-agro-green" size={20}/> Localização
+                </h3>
+                <div className="relative w-full h-40 bg-gray-200 dark:bg-slate-700 rounded-xl overflow-hidden mb-4 group cursor-pointer">
+                     <iframe
+                        width="100%"
+                        height="100%"
+                        frameBorder="0"
+                        style={{ border: 0 }}
+                        src={`https://www.google.com/maps/embed/v1/place?key=${mapsApiKey}&q=${crop.coordinates.lat},${crop.coordinates.lng}&maptype=satellite&zoom=15`}
+                        allowFullScreen
+                     ></iframe>
+                     <a 
+                       href={`https://www.google.com/maps/search/?api=1&query=${crop.coordinates.lat},${crop.coordinates.lng}`}
+                       target="_blank"
+                       rel="noreferrer"
+                       className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors"
+                     />
+                </div>
+                <a 
+                   href={`https://www.waze.com/ul?ll=${crop.coordinates.lat},${crop.coordinates.lng}&navigate=yes`}
+                   target="_blank"
+                   rel="noreferrer"
+                   className="flex items-center justify-center gap-2 w-full py-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-bold rounded-xl hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                >
+                   <Navigation size={18} /> Abrir no GPS
+                </a>
+             </div>
+           )}
        </div>
     </div>
   );
@@ -262,7 +311,7 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                       formatter={(value: number) => `R$ ${value.toFixed(2)}`} 
                     />
                    <Bar dataKey="value" radius={[6, 6, 0, 0]}>
-                     {data.map((entry, index) => (
+                     {data.map((_, index) => (
                        <Cell key={`cell-${index}`} fill={['#27AE60', '#F2C94C', '#E74C3C', '#8E44AD'][index % 4]} />
                      ))}
                    </Bar>

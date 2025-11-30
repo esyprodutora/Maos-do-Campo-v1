@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { CropType, SoilType, CropData } from '../types';
+import { CropType, SoilType, CropData, Coordinates } from '../types';
 import { generateCropPlan } from '../services/geminiService';
-import { Loader2, Sprout, Map, BarChart3, CheckCircle2, ChevronLeft, ChevronRight, Calendar, Ruler } from 'lucide-react';
+import { Loader2, Sprout, Map, BarChart3, CheckCircle2, ChevronLeft, ChevronRight, Ruler, MapPin } from 'lucide-react';
+import { LocationPicker } from './LocationPicker';
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
 
@@ -9,6 +10,20 @@ interface NewCropFormProps {
   onSave: (crop: CropData) => void;
   onCancel: () => void;
 }
+
+// Configuração visual das 10 culturas
+const CROP_OPTIONS: { id: CropType; label: string; icon: string; color: string }[] = [
+  { id: 'soja', label: 'Soja', icon: '🌱', color: 'bg-yellow-500' },
+  { id: 'milho', label: 'Milho', icon: '🌽', color: 'bg-orange-500' },
+  { id: 'cafe', label: 'Café', icon: '☕', color: 'bg-[#A67C52]' },
+  { id: 'cana', label: 'Cana', icon: '🎋', color: 'bg-green-600' },
+  { id: 'algodao', label: 'Algodão', icon: '☁️', color: 'bg-slate-400' },
+  { id: 'arroz', label: 'Arroz', icon: '🌾', color: 'bg-yellow-200' },
+  { id: 'feijao', label: 'Feijão', icon: '🫘', color: 'bg-red-800' },
+  { id: 'trigo', label: 'Trigo', icon: '🥖', color: 'bg-amber-300' },
+  { id: 'laranja', label: 'Laranja', icon: '🍊', color: 'bg-orange-600' },
+  { id: 'mandioca', label: 'Mandioca', icon: '🥔', color: 'bg-amber-800' },
+];
 
 export const NewCropForm: React.FC<NewCropFormProps> = ({ onSave, onCancel }) => {
   const [step, setStep] = useState(1);
@@ -20,7 +35,8 @@ export const NewCropForm: React.FC<NewCropFormProps> = ({ onSave, onCancel }) =>
     areaHa: '' as any,
     soilType: 'misto' as SoilType,
     productivityGoal: '',
-    spacing: ''
+    spacing: '',
+    coordinates: undefined as Coordinates | undefined
   });
 
   const handleSubmit = async () => {
@@ -43,6 +59,7 @@ export const NewCropForm: React.FC<NewCropFormProps> = ({ onSave, onCancel }) =>
         soilType: formData.soilType,
         productivityGoal: formData.productivityGoal,
         spacing: formData.spacing,
+        coordinates: formData.coordinates,
         datePlanted: new Date().toISOString(),
         estimatedCost: plan.estimatedCost || 0,
         estimatedHarvestDate: plan.estimatedHarvestDate || new Date().toISOString(),
@@ -60,36 +77,14 @@ export const NewCropForm: React.FC<NewCropFormProps> = ({ onSave, onCancel }) =>
   };
 
   const steps = [
-    { id: 1, title: "Dados Básicos", icon: Sprout },
-    { id: 2, title: "Solo e Meta", icon: Map },
-    { id: 3, title: "Revisão", icon: CheckCircle2 }
+    { id: 1, title: "Cultura", icon: Sprout },
+    { id: 2, title: "Local", icon: MapPin },
+    { id: 3, title: "Solo", icon: BarChart3 },
+    { id: 4, title: "Revisão", icon: CheckCircle2 }
   ];
 
-  // Helper for selection cards - INCREASED CONTRAST
-  const SelectionCard = ({ selected, onClick, title, color, icon }: any) => (
-    <div 
-      onClick={onClick}
-      className={`
-        relative p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200 flex flex-col items-center justify-center gap-2 text-center h-32
-        ${selected 
-          ? `border-${color} bg-${color}/10 dark:bg-${color}/20 shadow-md scale-105 ring-1 ring-${color}` 
-          : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-gray-300 dark:hover:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700 shadow-sm'}
-      `}
-    >
-      {selected && (
-         <div className={`absolute top-2 right-2 text-${color}`}>
-            <CheckCircle2 size={20} fill="currentColor" className="text-white dark:text-slate-900" />
-         </div>
-      )}
-      <div className={`p-3 rounded-full ${selected ? `bg-${color} text-white` : 'bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-gray-400'}`}>
-        {icon}
-      </div>
-      <span className={`font-bold ${selected ? 'text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-400'}`}>{title}</span>
-    </div>
-  );
-
   return (
-    <div className="max-w-3xl mx-auto animate-slide-up">
+    <div className="max-w-4xl mx-auto animate-slide-up pb-20">
       <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-xl shadow-gray-200/50 dark:shadow-black/50 border border-gray-200 dark:border-slate-700 overflow-hidden">
         
         {/* Header Progress */}
@@ -98,13 +93,11 @@ export const NewCropForm: React.FC<NewCropFormProps> = ({ onSave, onCancel }) =>
              <button onClick={onCancel} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 flex items-center gap-1 font-medium text-sm transition-colors">
                <ChevronLeft size={16} /> Cancelar
              </button>
-             <span className="text-sm font-bold text-gray-400">Passo {step} de 3</span>
+             <span className="text-sm font-bold text-gray-400">Passo {step} de 4</span>
            </div>
 
            <div className="flex justify-between items-center relative px-4">
-             {/* Progress Bar Background */}
              <div className="absolute top-1/2 left-0 w-full h-1 bg-gray-200 dark:bg-slate-700 -z-10 -translate-y-1/2 rounded-full" />
-             {/* Progress Bar Active */}
              <div 
                className="absolute top-1/2 left-0 h-1 bg-agro-green -z-10 transition-all duration-500 -translate-y-1/2 rounded-full" 
                style={{ width: `${((step - 1) / (steps.length - 1)) * 100}%` }}
@@ -130,39 +123,46 @@ export const NewCropForm: React.FC<NewCropFormProps> = ({ onSave, onCancel }) =>
           {step === 1 && (
             <div className="space-y-8 animate-fade-in">
               <div className="text-center">
-                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Vamos começar sua lavoura</h2>
-                 <p className="text-gray-500 dark:text-gray-400">Escolha a cultura e defina o nome.</p>
+                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white">O que vamos plantar?</h2>
+                 <p className="text-gray-500 dark:text-gray-400">Selecione a cultura principal.</p>
               </div>
               
-              <div className="grid grid-cols-3 gap-4">
-                 <SelectionCard 
-                   selected={formData.type === 'cafe'} 
-                   onClick={() => setFormData({...formData, type: 'cafe'})} 
-                   title="Café" color="agro-brown" 
-                   icon={<div className="font-bold text-lg">☕</div>}
-                 />
-                 <SelectionCard 
-                   selected={formData.type === 'milho'} 
-                   onClick={() => setFormData({...formData, type: 'milho'})} 
-                   title="Milho" color="orange-500" 
-                   icon={<div className="font-bold text-lg">🌽</div>}
-                 />
-                 <SelectionCard 
-                   selected={formData.type === 'soja'} 
-                   onClick={() => setFormData({...formData, type: 'soja'})} 
-                   title="Soja" color="agro-yellow" 
-                   icon={<div className="font-bold text-lg">🌱</div>}
-                 />
+              {/* Grid de Culturas */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+                 {CROP_OPTIONS.map((crop) => (
+                   <div 
+                     key={crop.id}
+                     onClick={() => setFormData({...formData, type: crop.id})}
+                     className={`
+                       relative p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200 flex flex-col items-center justify-center gap-3 text-center h-32 group
+                       ${formData.type === crop.id 
+                         ? 'border-agro-green bg-green-50 dark:bg-green-900/20 shadow-md ring-1 ring-agro-green' 
+                         : 'border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-gray-300 dark:hover:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700 hover:shadow-md'}
+                     `}
+                   >
+                     {formData.type === crop.id && (
+                        <div className="absolute top-2 right-2 text-agro-green">
+                           <CheckCircle2 size={18} fill="currentColor" className="text-white dark:text-slate-900" />
+                        </div>
+                     )}
+                     <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl shadow-sm ${crop.color} text-white`}>
+                       {crop.icon}
+                     </div>
+                     <span className={`font-bold text-sm ${formData.type === crop.id ? 'text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-400'}`}>
+                       {crop.label}
+                     </span>
+                   </div>
+                 ))}
               </div>
 
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-100 dark:border-slate-700">
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Nome do Talhão / Lavoura</label>
+                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Nome do Talhão</label>
                   <input 
                     type="text" 
                     value={formData.name}
                     onChange={e => setFormData({...formData, name: e.target.value})}
-                    placeholder="Ex: Talhão da Baixada"
+                    placeholder="Ex: Talhão da Serra"
                     className="w-full p-4 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 focus:border-agro-green dark:focus:border-agro-green focus:ring-4 focus:ring-green-500/10 rounded-xl outline-none transition-all font-medium dark:text-white shadow-sm"
                   />
                 </div>
@@ -184,20 +184,42 @@ export const NewCropForm: React.FC<NewCropFormProps> = ({ onSave, onCancel }) =>
           )}
 
           {step === 2 && (
+             <div className="space-y-6 animate-fade-in">
+                <div className="text-center">
+                   <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Localização</h2>
+                   <p className="text-gray-500 dark:text-gray-400">Marque o centro da lavoura no mapa.</p>
+                </div>
+                
+                <LocationPicker 
+                  onLocationSelect={(lat, lng) => setFormData({...formData, coordinates: { lat, lng }})}
+                  initialLat={formData.coordinates?.lat}
+                  initialLng={formData.coordinates?.lng}
+                />
+                
+                {formData.coordinates && (
+                  <div className="bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 p-3 rounded-xl text-center text-sm font-medium border border-green-100 dark:border-green-900/30">
+                     <MapPin size={14} className="inline mr-1"/>
+                     {formData.coordinates.lat.toFixed(6)}, {formData.coordinates.lng.toFixed(6)}
+                  </div>
+                )}
+             </div>
+          )}
+
+          {step === 3 && (
             <div className="space-y-8 animate-fade-in">
               <div className="text-center">
-                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Detalhes Técnicos</h2>
-                 <p className="text-gray-500 dark:text-gray-400">Para um cálculo preciso de insumos.</p>
+                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Dados Agronômicos</h2>
+                 <p className="text-gray-500 dark:text-gray-400">Personalize para a cultura de {CROP_OPTIONS.find(c => c.id === formData.type)?.label}.</p>
               </div>
 
               <div>
                 <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 text-center">Tipo de Solo</label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {['arenoso', 'argiloso', 'misto'].map((type) => (
+                <div className="flex flex-wrap justify-center gap-3">
+                  {['arenoso', 'argiloso', 'misto', 'humifero', 'calcario'].map((type) => (
                     <button
                       key={type}
                       onClick={() => setFormData({...formData, soilType: type as SoilType})}
-                      className={`p-4 rounded-xl border-2 transition-all capitalize font-bold text-center shadow-sm ${
+                      className={`px-6 py-3 rounded-xl border-2 transition-all capitalize font-bold text-center shadow-sm ${
                         formData.soilType === type 
                           ? 'border-agro-green bg-green-50 dark:bg-green-900/30 text-agro-green ring-1 ring-agro-green' 
                           : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-slate-600'
@@ -217,7 +239,7 @@ export const NewCropForm: React.FC<NewCropFormProps> = ({ onSave, onCancel }) =>
                       type="text" 
                       value={formData.productivityGoal}
                       onChange={e => setFormData({...formData, productivityGoal: e.target.value})}
-                      placeholder={formData.type === 'cafe' ? "Ex: 40 sc/ha" : "Ex: 70 sc/ha"}
+                      placeholder="Ex: 60 sc/ha ou 80 ton/ha"
                       className="w-full p-4 pl-12 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 focus:border-agro-green dark:focus:border-agro-green focus:ring-4 focus:ring-green-500/10 rounded-xl outline-none transition-all font-medium dark:text-white shadow-sm"
                     />
                     <BarChart3 className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20}/>
@@ -231,7 +253,7 @@ export const NewCropForm: React.FC<NewCropFormProps> = ({ onSave, onCancel }) =>
                       type="text" 
                       value={formData.spacing}
                       onChange={e => setFormData({...formData, spacing: e.target.value})}
-                      placeholder="Ex: 0.5m"
+                      placeholder="Ex: 0.5m x 0.5m"
                       className="w-full p-4 pl-12 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 focus:border-agro-green dark:focus:border-agro-green focus:ring-4 focus:ring-green-500/10 rounded-xl outline-none transition-all font-medium dark:text-white shadow-sm"
                     />
                      <Ruler className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20}/>
@@ -241,21 +263,21 @@ export const NewCropForm: React.FC<NewCropFormProps> = ({ onSave, onCancel }) =>
             </div>
           )}
 
-          {step === 3 && (
+          {step === 4 && (
             <div className="flex flex-col items-center justify-center text-center space-y-6 animate-fade-in">
-               <div className="w-24 h-24 bg-green-50 dark:bg-green-900/20 rounded-full flex items-center justify-center mb-2 animate-bounce">
-                  <Sprout size={48} className="text-agro-green" />
+               <div className={`w-24 h-24 rounded-full flex items-center justify-center mb-2 animate-bounce shadow-lg ${CROP_OPTIONS.find(c => c.id === formData.type)?.color}`}>
+                  <span className="text-5xl">{CROP_OPTIONS.find(c => c.id === formData.type)?.icon}</span>
                </div>
                
                <div>
                   <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Tudo pronto!</h2>
                   <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto mt-2">
-                    Nossa IA vai gerar um plano completo de custos, insumos e cronograma para sua lavoura.
+                    Nossa IA vai gerar o plano para sua lavoura de <strong>{CROP_OPTIONS.find(c => c.id === formData.type)?.label}</strong>.
                   </p>
                </div>
 
                <div className="bg-gray-50 dark:bg-slate-900 rounded-2xl p-6 w-full max-w-sm border border-gray-200 dark:border-slate-700 text-left relative overflow-hidden shadow-sm">
-                  <div className="absolute top-0 left-0 w-2 h-full bg-agro-green"></div>
+                  <div className={`absolute top-0 left-0 w-2 h-full ${CROP_OPTIONS.find(c => c.id === formData.type)?.color}`}></div>
                   <div className="space-y-3">
                      <div className="flex justify-between border-b border-gray-200 dark:border-slate-700 pb-2">
                        <span className="text-gray-500 dark:text-gray-400">Lavoura</span>
@@ -263,12 +285,20 @@ export const NewCropForm: React.FC<NewCropFormProps> = ({ onSave, onCancel }) =>
                      </div>
                      <div className="flex justify-between border-b border-gray-200 dark:border-slate-700 pb-2">
                        <span className="text-gray-500 dark:text-gray-400">Cultura</span>
-                       <span className="font-bold capitalize dark:text-white">{formData.type}</span>
+                       <span className="font-bold capitalize dark:text-white">{CROP_OPTIONS.find(c => c.id === formData.type)?.label}</span>
                      </div>
                      <div className="flex justify-between">
                        <span className="text-gray-500 dark:text-gray-400">Área</span>
                        <span className="font-bold dark:text-white">{formData.areaHa} ha</span>
                      </div>
+                     {formData.coordinates && (
+                         <div className="flex justify-between border-t border-gray-200 dark:border-slate-700 pt-2">
+                            <span className="text-gray-500 dark:text-gray-400">Local</span>
+                            <span className="font-bold dark:text-white flex items-center gap-1 text-xs">
+                                <MapPin size={12}/> {formData.coordinates.lat.toFixed(4)}, {formData.coordinates.lng.toFixed(4)}
+                            </span>
+                        </div>
+                     )}
                   </div>
                </div>
             </div>
@@ -288,10 +318,14 @@ export const NewCropForm: React.FC<NewCropFormProps> = ({ onSave, onCancel }) =>
           )}
           
           <div className="ml-auto">
-            {step < 3 ? (
+            {step < 4 ? (
               <button 
                 onClick={() => {
-                  if(step === 1 && (!formData.name || !formData.areaHa)) return alert("Preencha os campos");
+                  if(step === 1 && (!formData.name || !formData.areaHa)) return alert("Preencha os campos obrigatórios");
+                  if(step === 2 && !formData.coordinates) {
+                      const confirmSkip = confirm("Deseja continuar sem selecionar a localização exata?");
+                      if(!confirmSkip) return;
+                  }
                   setStep(step + 1);
                 }}
                 className="px-8 py-3 bg-agro-dark dark:bg-slate-900 text-white font-bold rounded-xl shadow-lg hover:bg-gray-800 dark:hover:bg-black transition-colors flex items-center"
@@ -306,7 +340,7 @@ export const NewCropForm: React.FC<NewCropFormProps> = ({ onSave, onCancel }) =>
               >
                 {isLoading ? (
                   <>
-                    <Loader2 size={20} className="mr-2 animate-spin" /> Processando...
+                    <Loader2 size={20} className="mr-2 animate-spin" /> Gerando...
                   </>
                 ) : (
                   'Gerar Planejamento'
