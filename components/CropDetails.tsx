@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { CropData, TimelineStage, Material } from '../types';
 import { getAssistantResponse } from '../services/geminiService';
-import { ArrowLeft, Calendar, DollarSign, ListTodo, MessageSquare, Send, CheckCircle, Circle, AlertCircle, Droplets, Ruler, ShoppingBag, Download, Loader2, Edit2, Check, MapPin, Navigation } from 'lucide-react';
+import { ArrowLeft, Calendar, DollarSign, ListTodo, MessageSquare, Send, CheckCircle, Circle, AlertCircle, Droplets, Ruler, ShoppingBag, Download, Loader2, Edit2, Check, MapPin, Navigation, Trash2, Plus } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -22,11 +22,19 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   
-  // Use the safe key from config
+  // Use safe key
   const mapsApiKey = GOOGLE_MAPS_API_KEY;
   
   // State for Finance Editing
   const [isEditingPrices, setIsEditingPrices] = useState(false);
+  const [isAddingItem, setIsAddingItem] = useState(false);
+  const [newItem, setNewItem] = useState<Material>({
+    name: '',
+    quantity: 0,
+    unit: 'un',
+    unitPriceEstimate: 0,
+    category: 'outros'
+  });
 
   // Helper styles based on crop type
   const getTheme = (type: string) => {
@@ -66,7 +74,6 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
 
   const handleUpdateMaterial = (index: number, field: 'quantity' | 'unitPriceEstimate', value: string) => {
     const numValue = parseFloat(value);
-    
     const updatedMaterials = [...(crop.materials || [])];
     if (!updatedMaterials[index]) return;
 
@@ -74,7 +81,6 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
     item[field] = isNaN(numValue) ? 0 : numValue;
     updatedMaterials[index] = item;
 
-    // Recalculate Total Estimated Cost
     const newTotalCost = updatedMaterials.reduce((acc, m) => acc + (m.quantity * m.unitPriceEstimate), 0);
 
     onUpdateCrop({
@@ -82,6 +88,43 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
       materials: updatedMaterials,
       estimatedCost: newTotalCost
     });
+  };
+
+  const handleRemoveItem = (index: number) => {
+    if(!confirm("Deseja excluir este item?")) return;
+    
+    const updatedMaterials = [...(crop.materials || [])];
+    updatedMaterials.splice(index, 1);
+    
+    const newTotalCost = updatedMaterials.reduce((acc, m) => acc + (m.quantity * m.unitPriceEstimate), 0);
+    
+    onUpdateCrop({
+      ...crop,
+      materials: updatedMaterials,
+      estimatedCost: newTotalCost
+    });
+  };
+
+  const handleAddItem = () => {
+    if (!newItem.name) return alert("Preencha o nome do item");
+    
+    const updatedMaterials = [...(crop.materials || []), newItem];
+    const newTotalCost = updatedMaterials.reduce((acc, m) => acc + (m.quantity * m.unitPriceEstimate), 0);
+    
+    onUpdateCrop({
+      ...crop,
+      materials: updatedMaterials,
+      estimatedCost: newTotalCost
+    });
+    
+    setNewItem({
+      name: '',
+      quantity: 0,
+      unit: 'un',
+      unitPriceEstimate: 0,
+      category: 'outros'
+    });
+    setIsAddingItem(false);
   };
 
   const handleChatSubmit = async (e: React.FormEvent) => {
@@ -104,8 +147,6 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
   const generatePDF = () => {
     setIsGeneratingPdf(true);
     const doc = new jsPDF();
-
-    // Header
     doc.setFillColor(39, 174, 96);
     doc.rect(0, 0, 210, 30, 'F');
     doc.setTextColor(255, 255, 255);
@@ -195,16 +236,23 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                 <h3 className="font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
                     <MapPin className="text-agro-green" size={20}/> Localização
                 </h3>
-                <div className="relative w-full h-40 bg-gray-200 dark:bg-slate-700 rounded-xl overflow-hidden mb-4 group cursor-pointer">
-                     <iframe
-                        width="100%"
-                        height="100%"
-                        frameBorder="0"
-                        style={{ border: 0 }}
-                        src={`https://www.google.com/maps/embed/v1/place?key=${mapsApiKey}&q=${crop.coordinates.lat},${crop.coordinates.lng}&maptype=satellite&zoom=15`}
-                        allowFullScreen
-                     ></iframe>
-                </div>
+                {mapsApiKey ? (
+                    <div className="relative w-full h-40 bg-gray-200 dark:bg-slate-700 rounded-xl overflow-hidden mb-4 group cursor-pointer">
+                        <iframe
+                            width="100%"
+                            height="100%"
+                            frameBorder="0"
+                            style={{ border: 0 }}
+                            src={`https://www.google.com/maps/embed/v1/place?key=${mapsApiKey}&q=${crop.coordinates.lat},${crop.coordinates.lng}&maptype=satellite&zoom=15`}
+                            allowFullScreen
+                        ></iframe>
+                    </div>
+                ) : (
+                    <div className="w-full h-40 bg-gray-100 dark:bg-slate-700 rounded-xl mb-4 flex items-center justify-center flex-col text-gray-400 p-4 text-center">
+                        <MapPin size={32} className="mb-2 opacity-50"/>
+                        <p className="text-xs font-medium">Mapa indisponível</p>
+                    </div>
+                )}
                 <a 
                    href={`https://www.waze.com/ul?ll=${crop.coordinates.lat},${crop.coordinates.lng}&navigate=yes`}
                    target="_blank"
@@ -221,16 +269,6 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
 
   const renderFinance = () => {
     const materials = crop.materials || [];
-    
-    if (materials.length === 0) {
-      return (
-        <div className="flex flex-col items-center justify-center h-64 bg-white dark:bg-slate-800 rounded-3xl border border-dashed border-gray-300 dark:border-slate-600 text-gray-400 animate-slide-up">
-          <ShoppingBag size={48} className="mb-4 opacity-50" />
-          <p>Nenhum custo estimado ainda.</p>
-        </div>
-      );
-    }
-
     const data = materials.map(m => ({
         name: m.category,
         value: (m.quantity || 0) * (m.unitPriceEstimate || 0)
@@ -279,21 +317,84 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                 <h3 className="font-bold text-gray-800 dark:text-white text-xl flex items-center gap-2">
                    <ShoppingBag className="text-agro-green"/> Lista de Compras
                 </h3>
-                <button 
-                  onClick={() => setIsEditingPrices(!isEditingPrices)}
-                  className={`p-2 rounded-lg transition-colors flex items-center gap-2 text-sm font-bold ${
-                    isEditingPrices 
-                      ? 'bg-agro-green text-white shadow-lg shadow-green-600/20' 
-                      : 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600'
-                  }`}
-                >
-                  {isEditingPrices ? (
-                    <> <Check size={16}/> Concluir </>
-                  ) : (
-                    <> <Edit2 size={16}/> Editar </>
-                  )}
-                </button>
+                <div className="flex gap-2">
+                    {isEditingPrices && (
+                        <button 
+                            onClick={() => setIsAddingItem(!isAddingItem)}
+                            className="p-2 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                            title="Adicionar Item"
+                        >
+                            <Plus size={16} />
+                        </button>
+                    )}
+                    <button 
+                    onClick={() => setIsEditingPrices(!isEditingPrices)}
+                    className={`p-2 rounded-lg transition-colors flex items-center gap-2 text-sm font-bold ${
+                        isEditingPrices 
+                        ? 'bg-agro-green text-white shadow-lg shadow-green-600/20' 
+                        : 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600'
+                    }`}
+                    >
+                    {isEditingPrices ? (
+                        <> <Check size={16}/> Concluir </>
+                    ) : (
+                        <> <Edit2 size={16}/> Editar </>
+                    )}
+                    </button>
+                </div>
               </div>
+
+              {isAddingItem && (
+                  <div className="mb-4 p-4 bg-gray-50 dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-700 animate-fade-in">
+                      <h4 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">Novo Item</h4>
+                      <div className="grid grid-cols-2 gap-3 mb-3">
+                          <input 
+                              type="text" 
+                              placeholder="Nome"
+                              className="p-2 rounded-lg border dark:border-slate-600 dark:bg-slate-800 text-sm outline-none focus:border-agro-green"
+                              value={newItem.name}
+                              onChange={e => setNewItem({...newItem, name: e.target.value})}
+                          />
+                          <select 
+                            className="p-2 rounded-lg border dark:border-slate-600 dark:bg-slate-800 text-sm outline-none focus:border-agro-green"
+                            value={newItem.category}
+                            onChange={e => setNewItem({...newItem, category: e.target.value as any})}
+                          >
+                              <option value="outros">Outros</option>
+                              <option value="fertilizante">Fertilizante</option>
+                              <option value="defensivo">Defensivo</option>
+                              <option value="semente">Semente</option>
+                          </select>
+                          <div className="flex gap-2">
+                            <input 
+                                type="number" 
+                                placeholder="Qtd"
+                                className="w-full p-2 rounded-lg border dark:border-slate-600 dark:bg-slate-800 text-sm outline-none focus:border-agro-green"
+                                value={newItem.quantity || ''}
+                                onChange={e => setNewItem({...newItem, quantity: parseFloat(e.target.value)})}
+                            />
+                             <input 
+                                type="text" 
+                                placeholder="Un"
+                                className="w-16 p-2 rounded-lg border dark:border-slate-600 dark:bg-slate-800 text-sm outline-none focus:border-agro-green"
+                                value={newItem.unit}
+                                onChange={e => setNewItem({...newItem, unit: e.target.value})}
+                            />
+                          </div>
+                          <input 
+                              type="number" 
+                              placeholder="Preço Unit."
+                              className="p-2 rounded-lg border dark:border-slate-600 dark:bg-slate-800 text-sm outline-none focus:border-agro-green"
+                              value={newItem.unitPriceEstimate || ''}
+                              onChange={e => setNewItem({...newItem, unitPriceEstimate: parseFloat(e.target.value)})}
+                          />
+                      </div>
+                      <div className="flex gap-2">
+                          <button onClick={handleAddItem} className="flex-1 py-2 bg-agro-green text-white rounded-lg text-sm font-bold hover:bg-green-700">Adicionar</button>
+                          <button onClick={() => setIsAddingItem(false)} className="px-4 py-2 bg-gray-200 dark:bg-slate-700 text-gray-600 dark:text-gray-300 rounded-lg text-sm font-bold">Cancelar</button>
+                      </div>
+                  </div>
+              )}
 
               <div className="flex-1 overflow-y-auto max-h-[400px] pr-2 custom-scrollbar bg-white dark:bg-slate-800">
                 <div className="space-y-3">
@@ -315,8 +416,15 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                                  className="w-20 p-1 text-right font-bold text-gray-800 dark:text-white bg-white dark:bg-slate-900 border border-agro-green rounded-md focus:ring-2 focus:ring-green-500/20 outline-none text-sm"
                                  placeholder="Preço"
                                />
+                               <button 
+                                 onClick={() => handleRemoveItem(i)}
+                                 className="ml-2 p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                                 title="Excluir"
+                               >
+                                   <Trash2 size={14} />
+                               </button>
                              </div>
-                             <div className="flex items-center gap-1">
+                             <div className="flex items-center gap-1 pr-8">
                                <input 
                                  type="number"
                                  value={m.quantity}
