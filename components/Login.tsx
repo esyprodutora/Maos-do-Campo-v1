@@ -108,8 +108,10 @@ export const Login: React.FC = () => {
       if (error.message.includes('Invalid login')) displayMsg = 'Email ou senha incorretos.';
       else if (error.message.includes('already registered')) displayMsg = 'Este email já está cadastrado.';
       else if (error.message.includes('Password should be')) displayMsg = 'A senha deve ter pelo menos 6 caracteres.';
-      else if (error.message.includes('Database error') || error.message.includes('column')) {
+      // Detecção de erro 500 do Supabase (Database error saving new user)
+      else if (error.message.includes('Database error') || error.status === 500) {
           displayMsg = 'ERRO NO SUPABASE: Coluna ausente. Rode o SQL fornecido no chat para corrigir a tabela profiles.';
+          console.error('SQL SUGERIDO: ALTER TABLE profiles ADD COLUMN IF NOT EXISTS whatsapp text;');
       }
       
       setMsg({ type: 'error', text: displayMsg });
@@ -226,7 +228,6 @@ export const Login: React.FC = () => {
              </div>
           )}
 
-          {/* Social Login */}
           <div className="grid grid-cols-2 gap-4 mb-8">
             <button 
               onClick={() => handleSocialLogin('google')}
