@@ -1,11 +1,43 @@
 import { createClient } from '@supabase/supabase-js';
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../config/env';
+
+// Helper function to safely get environment variables without crashing
+const getEnvVar = (key: string, viteKey: string): string => {
+  let value = '';
+  
+  // 1. Try import.meta.env (Vite standard)
+  try {
+    // @ts-ignore
+    if (typeof import.meta !== 'undefined' && import.meta.env) {
+      // @ts-ignore
+      value = import.meta.env[viteKey] || '';
+    }
+  } catch (e) {
+    // Ignore error if import.meta is not defined
+  }
+
+  // 2. Try process.env (Node/Next.js/Webpack standard)
+  if (!value) {
+    try {
+      if (typeof process !== 'undefined' && process.env) {
+        value = process.env[key] || process.env[viteKey] || '';
+      }
+    } catch (e) {
+      // Ignore error if process is not defined
+    }
+  }
+
+  return value;
+};
+
+// Get credentials safely
+const supabaseUrl = getEnvVar('NEXT_PUBLIC_SUPABASE_URL', 'VITE_SUPABASE_URL');
+const supabaseKey = getEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY', 'VITE_SUPABASE_ANON_KEY');
 
 let supabase: any = null;
 
-if (SUPABASE_URL && SUPABASE_ANON_KEY) {
+if (supabaseUrl && supabaseKey) {
   try {
-    supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    supabase = createClient(supabaseUrl, supabaseKey);
   } catch (e) {
     console.error("Failed to initialize Supabase client:", e);
   }
@@ -14,14 +46,3 @@ if (SUPABASE_URL && SUPABASE_ANON_KEY) {
 }
 
 export { supabase };
-
-export async function getCurrentUser() {
-  const { data, error } = await supabase.auth.getUser();
-
-  if (error || !data.user) {
-    throw new Error('Usuário não autenticado');
-  }
-
-  return data.user;
-}
-
