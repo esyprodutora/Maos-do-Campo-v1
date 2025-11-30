@@ -9,9 +9,10 @@ import { Quotes } from './components/Quotes';
 import { CropData } from './types';
 import { Menu, Loader2, WifiOff, RefreshCw, Sun, Moon } from 'lucide-react';
 import { supabase } from './services/supabaseClient';
+import type { Session } from '@supabase/supabase-js';
 
 const App: React.FC = () => {
-  const [session, setSession] = useState<any>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
 
   // Theme State
@@ -41,24 +42,26 @@ const App: React.FC = () => {
   }, [theme]);
 
   const toggleTheme = () => {
-    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
   };
 
   // Check Auth
   useEffect(() => {
-    if(supabase) {
+    if (supabase) {
       supabase.auth.getSession().then(({ data: { session } }) => {
         setSession(session);
         setAuthLoading(false);
       });
 
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange((_event, session) => {
         setSession(session);
       });
 
       return () => subscription.unsubscribe();
     } else {
-        setAuthLoading(false); 
+      setAuthLoading(false);
     }
   }, []);
 
@@ -70,30 +73,38 @@ const App: React.FC = () => {
       // Limpa dados de tela se o usuário deslogar/sair
       setCrops([]);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session]);
 
   const fetchCrops = async () => {
     setIsLoading(true);
     setError(null);
 
-    // REMOVIDO: 1. Load from LocalStorage IMMEDIATELY.
-    // O RLS deve ser a única fonte de verdade.
-    const localData = null; // Força o skip do cache local
+    if (!supabase) {
+      setError('Supabase não iniciado.');
+      setIsLoading(false);
+      return;
+    }
+
+    if (!session || !session.user) {
+      setError('Usuário não autenticado.');
+      setIsLoading(false);
+      return;
+    }
 
     // 2. Try to fetch from Supabase with a Timeout
     try {
-      if (!supabase) throw new Error("Supabase não iniciado");
-
       // Timeout promise to prevent infinite loading
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error("Timeout")), 5000)
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Timeout')), 5000)
       );
 
-      // CRÍTICO: RLS filtra o resultado aqui com base no session.user.id
+      // Agora filtrando explicitamente pelo dono (user_id)
       const dbPromise = supabase
         .from('crops')
-        .select('id, content') // Buscando apenas o ID e o JSONB content
-        .order('id', { ascending: false }); // Usando ID para ordem rápida
+        .select('id, content')
+        .eq('user_id', session.user.id) // 🔴 Só lavouras do usuário logado
+        .order('id', { ascending: false });
 
       // Race: Database vs 5s Timer
       const result: any = await Promise.race([dbPromise, timeoutPromise]);
@@ -101,58 +112,46 @@ const App: React.FC = () => {
       if (result.error) throw result.error;
 
       // Map Supabase rows back to CropData structure
-      const loadedCrops = result.data.map((row: any) => ({
+      const loadedCrops: CropData[] = result.data.map((row: any) => ({
         ...row.content,
-        id: row.id 
+        id: row.id,
       }));
 
       setCrops(loadedCrops);
-      // REMOVIDO: Update local cache
-      
     } catch (e: any) {
-      console.error("Erro de sincronização:", e);
-      // Se a falha for por timeout ou RLS (session.user.id),
-      // não há dados locais para mostrar (pois removemos a carga do localData acima).
-      setError("Não foi possível carregar seus dados. Verifique a conexão.");
+      console.error('Erro de sincronização:', e);
+      setError('Não foi possível carregar seus dados. Verifique a conexão.');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleSaveCrop = async (newCrop: CropData) => {
-    // A lavoura agora é salva no banco dentro do NewCropForm, mas o App ainda
-    // precisa da função para atualizar a lista na tela.
-
-    // 1. Otimiza o UI: Atualiza a lista localmente
+    // A lavoura é salva no banco dentro do NewCropForm,
+    // aqui só atualizamos a lista na tela.
     const updatedList = [newCrop, ...crops];
     setCrops(updatedList);
     setActiveTab('dashboard');
-    
-    // REMOVIDO: Save to LocalStorage
-    
-    // NOTA: A inserção no Supabase foi movida para o NewCropForm.tsx
-    // (para usar o 'session' e o 'user_id' lá dentro).
   };
 
   const handleUpdateCrop = async (updatedCrop: CropData) => {
     // Optimistic UI update
-    const newCrops = crops.map(c => c.id === updatedCrop.id ? updatedCrop : c);
+    const newCrops = crops.map((c) => (c.id === updatedCrop.id ? updatedCrop : c));
     setCrops(newCrops);
     setSelectedCrop(updatedCrop);
-    
-    // REMOVIDO: Save to LocalStorage (backup)
 
     // Update in Supabase
-    if (supabase && session) {
-        try {
+    if (supabase && session && session.user) {
+      try {
         const { error } = await supabase
           .from('crops')
           .update({ content: updatedCrop })
-          .eq('id', updatedCrop.id);
-        
+          .eq('id', updatedCrop.id)
+          .eq('user_id', session.user.id); // 🔴 garante que só atualiza se for do usuário
+
         if (error) throw error;
       } catch (e) {
-        console.error("Erro ao atualizar no Supabase:", e);
+        console.error('Erro ao atualizar no Supabase:', e);
       }
     }
   };
@@ -173,7 +172,7 @@ const App: React.FC = () => {
         <div className="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400">
           <WifiOff size={48} className="mb-4 text-gray-300 dark:text-gray-600" />
           <p className="mb-4 text-center max-w-xs">{error}</p>
-          <button 
+          <button
             onClick={fetchCrops}
             className="flex items-center gap-2 px-6 py-3 bg-agro-green text-white rounded-xl font-bold hover:bg-green-700 transition-colors"
           >
@@ -185,8 +184,8 @@ const App: React.FC = () => {
 
     if (selectedCrop) {
       return (
-        <CropDetails 
-          crop={selectedCrop} 
+        <CropDetails
+          crop={selectedCrop}
           onBack={() => setSelectedCrop(null)}
           onUpdateCrop={handleUpdateCrop}
         />
@@ -196,9 +195,9 @@ const App: React.FC = () => {
     switch (activeTab) {
       case 'dashboard':
         return (
-          <Dashboard 
-            crops={crops} 
-            onSelectCrop={setSelectedCrop} 
+          <Dashboard
+            crops={crops}
+            onSelectCrop={setSelectedCrop}
             onNewCrop={() => setActiveTab('new-crop')}
             theme={theme}
             toggleTheme={toggleTheme}
@@ -208,41 +207,52 @@ const App: React.FC = () => {
         return <Quotes />;
       case 'new-crop':
         return (
-          <NewCropForm 
+          <NewCropForm
             onSave={handleSaveCrop}
             onCancel={() => setActiveTab('dashboard')}
-            session={session} {/* Passa a sessão para o formulário para garantir a segurança */}
+            session={session} // passa a sessão pro formulário
           />
         );
       case 'subscription':
         return (
-          <Subscription 
-            onSubscribe={(id) => alert(`Plano ${id} selecionado! Integração de pagamento em breve.`)}
+          <Subscription
+            onSubscribe={(id) =>
+              alert(`Plano ${id} selecionado! Integração de pagamento em breve.`)
+            }
             onBack={() => setActiveTab('dashboard')}
           />
         );
       case 'settings':
         return (
           <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 text-center animate-slide-up">
-            <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">Configurações</h2>
-            
+            <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">
+              Configurações
+            </h2>
+
             <div className="flex items-center justify-center gap-2 mb-6 text-sm">
-              <div className={`w-3 h-3 rounded-full ${supabase ? 'bg-green-500' : 'bg-red-500'}`}></div>
+              <div
+                className={`w-3 h-3 rounded-full ${
+                  supabase ? 'bg-green-500' : 'bg-red-500'
+                }`}
+              ></div>
               <span className="text-gray-600 dark:text-gray-300">
-                 {supabase ? 'Conectado à Nuvem (Supabase)' : 'Modo Offline (Local)'}
+                {supabase ? 'Conectado à Nuvem (Supabase)' : 'Modo Offline (Local)'}
               </span>
             </div>
-            
-            <p className="text-gray-500 dark:text-gray-400 mb-6">Conta: <strong>{session?.user?.email}</strong></p>
 
-            <button 
+            <p className="text-gray-500 dark:text-gray-400 mb-6">
+              Conta: <strong>{session?.user?.email}</strong>
+            </p>
+
+            <button
               onClick={async () => {
-                // Substituído window.confirm por um modal simples
-                if(confirm("Deseja mesmo sair?")) {
+                if (confirm('Deseja mesmo sair?')) {
                   localStorage.clear();
                   try {
                     if (supabase) await supabase.auth.signOut();
-                  } catch (e) { console.error(e) }
+                  } catch (e) {
+                    console.error(e);
+                  }
                   window.location.reload();
                 }
               }}
@@ -253,16 +263,24 @@ const App: React.FC = () => {
           </div>
         );
       default:
-        return <Dashboard crops={crops} onSelectCrop={setSelectedCrop} onNewCrop={() => setActiveTab('new-crop')} theme={theme} toggleTheme={toggleTheme} />;
+        return (
+          <Dashboard
+            crops={crops}
+            onSelectCrop={setSelectedCrop}
+            onNewCrop={() => setActiveTab('new-crop')}
+            theme={theme}
+            toggleTheme={toggleTheme}
+          />
+        );
     }
   };
 
   if (authLoading) {
-      return (
-        <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center">
-          <Loader2 size={40} className="animate-spin text-agro-green" />
-        </div>
-      )
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center">
+        <Loader2 size={40} className="animate-spin text-agro-green" />
+      </div>
+    );
   }
 
   if (!session && supabase) {
@@ -271,9 +289,12 @@ const App: React.FC = () => {
 
   return (
     <div className="flex min-h-screen bg-[#F8F9FA] dark:bg-slate-900 text-gray-800 dark:text-gray-100 font-sans transition-colors duration-300">
-      <Sidebar 
-        activeTab={activeTab} 
-        setActiveTab={(tab) => { setActiveTab(tab); setSelectedCrop(null); }}
+      <Sidebar
+        activeTab={activeTab}
+        setActiveTab={(tab) => {
+          setActiveTab(tab);
+          setSelectedCrop(null);
+        }}
         isMobileMenuOpen={isMobileMenuOpen}
         setIsMobileMenuOpen={setIsMobileMenuOpen}
       />
@@ -285,14 +306,17 @@ const App: React.FC = () => {
             <span className="font-bold text-agro-green text-lg">MÃOS DO CAMPO</span>
           </div>
           <div className="flex items-center gap-3">
-            <button 
+            <button
               onClick={toggleTheme}
               className="p-2 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-100 dark:border-slate-700 text-gray-600 dark:text-gray-300 active:scale-95 transition-transform"
             >
               {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
             </button>
-            
-            <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-100 dark:border-slate-700">
+
+            <button
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="p-2 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-100 dark:border-slate-700"
+            >
               <Menu size={24} className="text-gray-600 dark:text-gray-300" />
             </button>
           </div>
@@ -300,10 +324,10 @@ const App: React.FC = () => {
 
         {/* Offline Warning Banner */}
         {!navigator.onLine && (
-            <div className="mb-4 bg-gray-800 dark:bg-black border border-gray-700 text-white px-4 py-3 rounded-xl flex items-center gap-3 text-sm">
-              <WifiOff size={16} />
-              <span>Você está offline. Alterações serão salvas localmente.</span>
-            </div>
+          <div className="mb-4 bg-gray-800 dark:bg-black border border-gray-700 text-white px-4 py-3 rounded-xl flex items-center gap-3 text-sm">
+            <WifiOff size={16} />
+            <span>Você está offline. Alterações serão salvas localmente.</span>
+          </div>
         )}
 
         {renderContent()}
