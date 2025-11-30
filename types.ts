@@ -30,7 +30,8 @@ export interface TimelineStage {
   title: string;
   description: string;
   status: 'pendente' | 'em_andamento' | 'concluido';
-  dateEstimate: string;
+  dateEstimate: string; // Start Date
+  endDate?: string;     // End Date (New)
   tasks: { id: string; text: string; done: boolean }[];
 }
 
@@ -41,7 +42,7 @@ export interface CropData {
   areaHa: number;
   soilType: SoilType;
   coordinates?: Coordinates;
-  productivityGoal: string; // e.g. "60 sc/ha"
+  productivityGoal: string; 
   spacing: string;
   datePlanted: string;
   
