@@ -17,26 +17,22 @@ export const Login: React.FC = () => {
 
   const slides = [
     {
-      // Imagem: Agrônomo com Tablet (Tecnologia/Gestão)
       image: "https://images.unsplash.com/photo-1586771107445-d3ca888129ff?q=80&w=1920&auto=format&fit=crop",
       title: "Gestão Inteligente",
       desc: "Transforme dados da sua lavoura em decisões lucrativas com inteligência artificial."
     },
     {
-      // Imagem: Campo ao pôr do sol (Colheita/Previsibilidade)
       image: "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?q=80&w=1920&auto=format&fit=crop",
       title: "Previsibilidade Total",
       desc: "Saiba exatamente quanto vai gastar e quando vai colher com nossos algoritmos preditivos."
     },
     {
-      // Imagem: Mão segurando planta (Cuidado/Assistência)
       image: "https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?q=80&w=1920&auto=format&fit=crop",
       title: "Assistente 24h",
       desc: "Tire dúvidas técnicas sobre pragas, solo e manejo a qualquer momento."
     }
   ];
 
-  // Auto-rotate slides
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % slides.length);
@@ -44,7 +40,6 @@ export const Login: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // Phone Mask Helper
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value.replace(/\D/g, '');
     if (value.length > 11) value = value.slice(0, 11);
@@ -71,7 +66,6 @@ export const Login: React.FC = () => {
 
     try {
       if (mode === 'signup') {
-        // Validação extra
         if (!fullName || !whatsapp) {
           throw new Error('Preencha todos os campos para se cadastrar.');
         }
@@ -90,7 +84,6 @@ export const Login: React.FC = () => {
         if (error) throw error;
         setMsg({ type: 'success', text: 'Conta criada! Verifique seu email para confirmar.' });
         
-        // Limpar campos
         setTimeout(() => {
             setEmail('');
             setPassword('');
@@ -112,11 +105,11 @@ export const Login: React.FC = () => {
       
       let displayMsg = error.message || 'Ocorreu um erro desconhecido.';
 
-      if (error.message && error.message.includes('Invalid login')) displayMsg = 'Email ou senha incorretos.';
-      else if (error.message && error.message.includes('already registered')) displayMsg = 'Este email já está cadastrado.';
-      else if (error.message && error.message.includes('Password should be')) displayMsg = 'A senha deve ter pelo menos 6 caracteres.';
-      else if (error.message && (error.message.includes('Database error') || error.message.includes('column'))) {
-          displayMsg = 'Erro de Banco de Dados: Verifique se as colunas (whatsapp/full_name) existem na tabela profiles.';
+      if (error.message.includes('Invalid login')) displayMsg = 'Email ou senha incorretos.';
+      else if (error.message.includes('already registered')) displayMsg = 'Este email já está cadastrado.';
+      else if (error.message.includes('Password should be')) displayMsg = 'A senha deve ter pelo menos 6 caracteres.';
+      else if (error.message.includes('Database error') || error.message.includes('column')) {
+          displayMsg = 'ERRO NO SUPABASE: Coluna ausente. Rode o SQL fornecido no chat para corrigir a tabela profiles.';
       }
       
       setMsg({ type: 'error', text: displayMsg });
@@ -140,31 +133,25 @@ export const Login: React.FC = () => {
     }
   }
 
-  // Check connection
   const isSupabaseConnected = !!supabase;
 
   return (
     <div className="min-h-screen flex bg-white dark:bg-slate-900 overflow-hidden font-sans">
-      
-      {/* LEFT SIDE - VISUAL SLIDER (Hidden on mobile, visible lg) */}
       <div className="hidden lg:flex lg:w-1/2 relative bg-gray-900 text-white overflow-hidden">
         {slides.map((slide, index) => (
           <div 
             key={index}
             className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${index === currentSlide ? 'opacity-100' : 'opacity-0'}`}
           >
-             {/* Actual Image Tag for reliability */}
              <img 
                src={slide.image} 
                alt={slide.title}
                className={`absolute inset-0 w-full h-full object-cover transition-transform duration-[10000ms] ${index === currentSlide ? 'scale-110' : 'scale-100'}`}
              />
-             {/* Gradient Overlay */}
              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/10" />
           </div>
         ))}
 
-        {/* Content Overlay */}
         <div className="relative z-10 flex flex-col justify-between w-full p-16">
            <div className="flex items-center gap-3 animate-fade-in">
               <div className="bg-white/20 backdrop-blur-md p-2 rounded-lg border border-white/10">
@@ -184,15 +171,14 @@ export const Login: React.FC = () => {
               </div>
               
               <div className="overflow-hidden min-h-[160px]">
-                <h1 key={`t-${currentSlide}`} className="text-5xl font-extrabold leading-tight mb-4 animate-slide-up">
+                <h1 className="text-5xl font-extrabold leading-tight mb-4 animate-slide-up">
                   {slides[currentSlide].title}
                 </h1>
-                <p key={`d-${currentSlide}`} className="text-lg text-gray-300 font-light leading-relaxed animate-fade-in">
+                <p className="text-lg text-gray-300 font-light leading-relaxed animate-fade-in">
                   {slides[currentSlide].desc}
                 </p>
               </div>
 
-              {/* Trust Badges */}
               <div className="flex gap-8 pt-8 border-t border-white/10">
                  <div>
                     <p className="text-3xl font-bold text-white">10k+</p>
@@ -207,10 +193,7 @@ export const Login: React.FC = () => {
         </div>
       </div>
 
-      {/* RIGHT SIDE - FORM */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12 relative overflow-y-auto">
-        
-        {/* Mobile Background (IMG tag for better loading) */}
         <div className="lg:hidden absolute inset-0 z-0">
            <img 
              src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=1080&auto=format&fit=crop" 
