@@ -14,3 +14,14 @@ if (SUPABASE_URL && SUPABASE_ANON_KEY) {
 }
 
 export { supabase };
+
+export async function getCurrentUser() {
+  const { data, error } = await supabase.auth.getUser();
+
+  if (error || !data.user) {
+    throw new Error('Usuário não autenticado');
+  }
+
+  return data.user;
+}
+
