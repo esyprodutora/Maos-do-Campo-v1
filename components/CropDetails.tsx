@@ -22,15 +22,19 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   
-  // Safely get API key
+  // Safely get API key for Maps Embed with Fallback
   let mapsApiKey = '';
   try {
     // @ts-ignore
     if (typeof import.meta !== 'undefined' && import.meta.env) {
       // @ts-ignore
-      mapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+      mapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || import.meta.env.VITE_API_KEY || '';
     }
   } catch (e) {}
+
+  if (!mapsApiKey && typeof process !== 'undefined' && process.env) {
+      mapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || process.env.API_KEY || '';
+  }
   
   // State for Finance Editing
   const [isEditingPrices, setIsEditingPrices] = useState(false);

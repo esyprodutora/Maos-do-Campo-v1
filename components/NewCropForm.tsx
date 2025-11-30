@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { CropType, SoilType, CropData, Coordinates } from '../types';
 import { generateCropPlan } from '../services/geminiService';

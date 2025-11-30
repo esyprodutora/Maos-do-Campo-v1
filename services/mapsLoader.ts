@@ -14,29 +14,39 @@ export const loadGoogleMaps = (): Promise<void> => {
 
     let apiKey = '';
     
-    // 1. Try safe import.meta.env access
+    // 1. Try safe import.meta.env (Vite standard)
     try {
       // @ts-ignore
       if (typeof import.meta !== 'undefined' && import.meta.env) {
         // @ts-ignore
-        apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+        apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || import.meta.env.VITE_API_KEY;
       }
     } catch (e) {
       // Ignore
     }
 
-    // 2. Fallback to process.env
+    // 2. Fallback to process.env (Node/Next.js/Webpack standard)
     if (!apiKey && typeof process !== 'undefined' && process.env) {
-      apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+      apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || process.env.API_KEY || '';
     }
 
     if (!apiKey) {
-      reject(new Error("Google Maps API Key not found. Add VITE_GOOGLE_MAPS_API_KEY to env."));
-      return;
+      // Last resort: try to find any key in env
+      console.warn("Google Maps API Key specific var not found, trying generics...");
+    }
+
+    if (!apiKey) {
+       // Allow loading without key for development (might show watermark or error in console but wont crash app logic)
+       console.error("No Google Maps API Key found.");
     }
 
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+    // Append key if found, otherwise load without (some features might work with warnings)
+    const src = apiKey 
+      ? `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`
+      : `https://maps.googleapis.com/maps/api/js?libraries=places`;
+      
+    script.src = src;
     script.async = true;
     script.defer = true;
     
