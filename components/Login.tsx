@@ -91,13 +91,15 @@ export const Login: React.FC = () => {
         setMsg({ type: 'success', text: 'Conta criada! Verifique seu email para confirmar.' });
         
         // Limpar campos
-        setEmail('');
-        setPassword('');
-        setFullName('');
-        setWhatsapp('');
-        
-        // Voltar para login após sucesso
-        setTimeout(() => setMode('signin'), 3000);
+        setTimeout(() => {
+            setEmail('');
+            setPassword('');
+            setFullName('');
+            setWhatsapp('');
+            setMode('signin');
+            setMsg(null);
+        }, 3000);
+
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,

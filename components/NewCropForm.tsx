@@ -157,7 +157,7 @@ export const NewCropForm: React.FC<NewCropFormProps> = ({ onSave, onCancel }) =>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-100 dark:border-slate-700">
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Nome do Talhão</label>
+                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Nome do Talhão / Lavoura</label>
                   <input 
                     type="text" 
                     value={formData.name}
