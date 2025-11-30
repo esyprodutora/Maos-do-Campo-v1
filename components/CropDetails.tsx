@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { CropData, TimelineStage, Material } from '../types';
 import { getAssistantResponse } from '../services/geminiService';
@@ -29,7 +28,7 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
   // State for Finance Editing
   const [isEditingPrices, setIsEditingPrices] = useState(false);
 
-  // Helper styles based on crop type - Expanded for 10 crops
+  // Helper styles based on crop type
   const getTheme = (type: string) => {
     switch(type) {
       case 'cafe': return { main: 'text-[#A67C52]', bg: 'bg-[#A67C52]', light: 'bg-[#FAF3E0] dark:bg-[#A67C52]/20' };
@@ -48,7 +47,7 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
   const theme = getTheme(crop.type);
 
   const toggleTask = (stageId: string, taskId: string) => {
-    const updatedTimeline = crop.timeline.map(stage => {
+    const updatedTimeline = (crop.timeline || []).map(stage => {
       if (stage.id === stageId) {
         const updatedTasks = stage.tasks.map(task => 
           task.id === taskId ? { ...task, done: !task.done } : task
@@ -68,12 +67,11 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
   const handleUpdateMaterial = (index: number, field: 'quantity' | 'unitPriceEstimate', value: string) => {
     const numValue = parseFloat(value);
     
-    const updatedMaterials = [...crop.materials];
+    const updatedMaterials = [...(crop.materials || [])];
+    if (!updatedMaterials[index]) return;
+
     const item = { ...updatedMaterials[index] };
-
-    // Se o valor for inválido (vazio/NaN), assume 0 para evitar erros de cálculo, mas permite edição
     item[field] = isNaN(numValue) ? 0 : numValue;
-
     updatedMaterials[index] = item;
 
     // Recalculate Total Estimated Cost
@@ -95,7 +93,8 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
     setChatHistory(prev => [...prev, { role: 'user', text: userMsg }]);
     setIsChatLoading(true);
 
-    const context = `Lavoura: ${crop.name}, Cultura: ${crop.type}, Fase atual: ${crop.timeline.find(t => t.status === 'em_andamento')?.title || 'Planejamento'}`;
+    const timelineStatus = crop.timeline?.find(t => t.status === 'em_andamento')?.title || 'Planejamento';
+    const context = `Lavoura: ${crop.name}, Cultura: ${crop.type}, Fase atual: ${timelineStatus}`;
     const response = await getAssistantResponse(userMsg, context);
 
     setChatHistory(prev => [...prev, { role: 'ai', text: response }]);
@@ -107,7 +106,7 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
     const doc = new jsPDF();
 
     // Header
-    doc.setFillColor(39, 174, 96); // Agro Green
+    doc.setFillColor(39, 174, 96);
     doc.rect(0, 0, 210, 30, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(22);
@@ -116,27 +115,12 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
     doc.setFontSize(10);
     doc.text('Relatório de Planejamento de Safra', 105, 22, { align: 'center' });
 
-    // Info Section
     doc.setTextColor(40, 40, 40);
     doc.setFontSize(14);
     doc.text(`Lavoura: ${crop.name}`, 14, 45);
     
-    doc.setFontSize(10);
-    doc.setTextColor(100, 100, 100);
-    doc.text(`Cultura: ${crop.type.toUpperCase()}`, 14, 52);
-    doc.text(`Área: ${crop.areaHa} ha`, 60, 52);
-    doc.text(`Solo: ${crop.soilType}`, 100, 52);
-    doc.text(`Espaçamento: ${crop.spacing}`, 140, 52);
-
-    doc.text(`Data Relatório: ${new Date().toLocaleDateString('pt-BR')}`, 14, 58);
-    doc.text(`Previsão Colheita: ${new Date(crop.estimatedHarvestDate).toLocaleDateString('pt-BR')}`, 100, 58);
-
-    // Financial Table
-    doc.setFontSize(12);
-    doc.setTextColor(39, 174, 96);
-    doc.text('Resumo Financeiro e Materiais', 14, 70);
-
-    const tableData = crop.materials.map(m => [
+    const materials = crop.materials || [];
+    const tableData = materials.map(m => [
       m.name,
       m.category,
       `${m.quantity} ${m.unit}`,
@@ -150,47 +134,8 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
       body: tableData,
       theme: 'grid',
       headStyles: { fillColor: [39, 174, 96] },
-      foot: [['', '', '', 'TOTAL ESTIMADO:', `R$ ${crop.estimatedCost.toLocaleString('pt-BR')}`]],
-      showFoot: 'lastPage'
+      foot: [['', '', '', 'TOTAL ESTIMADO:', `R$ ${(crop.estimatedCost || 0).toLocaleString('pt-BR')}`]],
     });
-
-    // Timeline Section
-    const finalY = (doc as any).lastAutoTable.finalY + 15;
-    doc.setFontSize(12);
-    doc.setTextColor(39, 174, 96);
-    doc.text('Cronograma de Atividades', 14, finalY);
-
-    let currentY = finalY + 10;
-    
-    crop.timeline.forEach((stage, index) => {
-      // Check for page break
-      if (currentY > 270) {
-        doc.addPage();
-        currentY = 20;
-      }
-      
-      doc.setFontSize(10);
-      doc.setTextColor(0, 0, 0);
-      doc.setFont('helvetica', 'bold');
-      doc.text(`${index + 1}. ${stage.title} (${stage.dateEstimate})`, 14, currentY);
-      
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(80, 80, 80);
-      
-      const descLines = doc.splitTextToSize(stage.description, 180);
-      doc.text(descLines, 14, currentY + 5);
-      
-      currentY += 15 + (descLines.length * 4);
-    });
-
-    // Footer
-    const pageCount = (doc as any).internal.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-        doc.setPage(i);
-        doc.setFontSize(8);
-        doc.setTextColor(150, 150, 150);
-        doc.text(`Página ${i} de ${pageCount}`, 195, 290, { align: 'right' });
-    }
 
     doc.save(`plano_${crop.name.replace(/\s+/g, '_').toLowerCase()}.pdf`);
     setIsGeneratingPdf(false);
@@ -198,8 +143,6 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
 
   const renderOverview = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-slide-up">
-       
-       {/* Details Card */}
        <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 relative overflow-hidden group">
           <div className={`absolute top-0 right-0 p-10 opacity-5 ${theme.main}`}>
              <Ruler size={100} />
@@ -228,16 +171,14 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
           </div>
        </div>
 
-       {/* Map / Advice Card Column */}
        <div className="flex flex-col gap-6">
-            {/* Recommendation Card */}
            <div className={`p-8 rounded-3xl border relative overflow-hidden flex flex-col justify-between ${theme.light} border-${theme.bg}/20 flex-1`}>
               <div className="relative z-10">
                 <h3 className={`font-bold text-xl mb-4 flex items-center gap-2 ${theme.main}`}>
                    <AlertCircle size={24}/> Recomendação Técnica
                 </h3>
                 <p className="text-gray-700 dark:text-gray-200 italic leading-relaxed text-lg font-medium">
-                  "{crop.aiAdvice}"
+                  "{crop.aiAdvice || 'Siga as boas práticas agronômicas.'}"
                 </p>
               </div>
               <div className="mt-8 relative z-10">
@@ -246,11 +187,9 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                   {new Date(crop.estimatedHarvestDate).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
                 </p>
               </div>
-              {/* Decorative Blob */}
               <div className={`absolute -bottom-10 -right-10 w-40 h-40 rounded-full ${theme.bg} opacity-10 blur-2xl`}></div>
            </div>
 
-           {/* Mini Map Card */}
            {crop.coordinates && (
              <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700">
                 <h3 className="font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
@@ -265,12 +204,6 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                         src={`https://www.google.com/maps/embed/v1/place?key=${mapsApiKey}&q=${crop.coordinates.lat},${crop.coordinates.lng}&maptype=satellite&zoom=15`}
                         allowFullScreen
                      ></iframe>
-                     <a 
-                       href={`https://www.google.com/maps/search/?api=1&query=${crop.coordinates.lat},${crop.coordinates.lng}`}
-                       target="_blank"
-                       rel="noreferrer"
-                       className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors"
-                     />
                 </div>
                 <a 
                    href={`https://www.waze.com/ul?ll=${crop.coordinates.lat},${crop.coordinates.lng}&navigate=yes`}
@@ -287,9 +220,20 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
   );
 
   const renderFinance = () => {
-    const data = crop.materials.map(m => ({
+    const materials = crop.materials || [];
+    
+    if (materials.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center h-64 bg-white dark:bg-slate-800 rounded-3xl border border-dashed border-gray-300 dark:border-slate-600 text-gray-400 animate-slide-up">
+          <ShoppingBag size={48} className="mb-4 opacity-50" />
+          <p>Nenhum custo estimado ainda.</p>
+        </div>
+      );
+    }
+
+    const data = materials.map(m => ({
         name: m.category,
-        value: m.quantity * m.unitPriceEstimate
+        value: (m.quantity || 0) * (m.unitPriceEstimate || 0)
     })).reduce((acc: any[], curr) => {
         const found = acc.find(a => a.name === curr.name);
         if (found) found.value += curr.value;
@@ -300,7 +244,6 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
     return (
       <div className="space-y-6 animate-slide-up">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-           {/* Chart Card */}
            <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700">
              <h3 className="font-bold text-gray-800 dark:text-white mb-6 text-xl">Distribuição de Custos</h3>
              <div className="h-64 w-full">
@@ -324,14 +267,13 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                <p className="text-gray-500 dark:text-gray-300 font-medium">Total Estimado</p>
                <div className="text-right">
                  <p className="text-2xl font-bold text-gray-800 dark:text-white transition-all duration-300">
-                   {crop.estimatedCost.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                   {(crop.estimatedCost || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                  </p>
                  {isEditingPrices && <p className="text-xs text-agro-green animate-pulse">Atualizando...</p>}
                </div>
              </div>
            </div>
 
-           {/* Receipt Card */}
            <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="font-bold text-gray-800 dark:text-white text-xl flex items-center gap-2">
@@ -355,7 +297,7 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
 
               <div className="flex-1 overflow-y-auto max-h-[400px] pr-2 custom-scrollbar bg-white dark:bg-slate-800">
                 <div className="space-y-3">
-                  {crop.materials.map((m, i) => (
+                  {materials.map((m, i) => (
                     <div key={i} className="flex justify-between items-center p-3 border-b border-gray-50 dark:border-slate-700 last:border-0 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-lg transition-colors group">
                       <div className="flex-1">
                         <p className="font-bold text-gray-700 dark:text-gray-200">{m.name}</p>
@@ -388,7 +330,7 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                          ) : (
                            <>
                              <p className="font-bold text-gray-800 dark:text-white">
-                               {(m.quantity * m.unitPriceEstimate).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                               {((m.quantity || 0) * (m.unitPriceEstimate || 0)).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                              </p>
                              <p className="text-xs text-gray-500 dark:text-gray-400">
                                {m.quantity} {m.unit} x {m.unitPriceEstimate.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
@@ -400,134 +342,82 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                   ))}
                 </div>
               </div>
-              
-              {isEditingPrices && (
-                 <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 text-xs rounded-xl flex items-center gap-2 border border-yellow-100 dark:border-yellow-900/30">
-                    <AlertCircle size={16} />
-                    <span>Edite preços e quantidades. O total atualiza automaticamente.</span>
-                 </div>
-              )}
            </div>
         </div>
       </div>
     );
   };
 
-  const renderTimeline = () => (
-    <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 animate-slide-up">
-      <h3 className="font-bold text-xl text-gray-800 dark:text-white mb-8 pl-4">Linha do Tempo</h3>
-      <div className="relative pl-8 border-l-2 border-gray-100 dark:border-slate-700 ml-4 space-y-10">
-        {crop.timeline.map((stage, index) => (
-          <div key={stage.id} className="relative group">
-             {/* Timeline Dot */}
-             <div className={`
-               absolute -left-[43px] top-0 w-8 h-8 rounded-full border-4 border-white dark:border-slate-800 shadow-md flex items-center justify-center
-               ${stage.status === 'concluido' ? 'bg-agro-green' : stage.status === 'em_andamento' ? 'bg-agro-yellow' : 'bg-gray-200 dark:bg-slate-600'}
-             `}>
-               {stage.status === 'concluido' && <CheckCircle size={14} className="text-white"/>}
-               {stage.status === 'em_andamento' && <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>}
-             </div>
-             
-             {/* Content */}
-             <div className={`
-                p-6 rounded-2xl border transition-all duration-300
-                ${stage.status === 'em_andamento' ? 'bg-white dark:bg-slate-800 border-agro-yellow shadow-lg ring-1 ring-agro-yellow/20' : 'bg-gray-50/50 dark:bg-slate-900 border-gray-100 dark:border-slate-700'}
-             `}>
-               <div className="flex justify-between items-start mb-3">
-                 <h4 className={`text-lg font-bold ${stage.status === 'em_andamento' ? 'text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-300'}`}>{stage.title}</h4>
-                 <span className="text-xs font-bold font-mono bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 px-3 py-1 rounded-full text-gray-500 dark:text-gray-300 shadow-sm">
-                   {stage.dateEstimate}
-                 </span>
-               </div>
-               <p className="text-gray-500 dark:text-gray-400 mb-5 leading-relaxed">{stage.description}</p>
-               
-               <div className="grid gap-3">
-                 {stage.tasks.map(task => (
-                   <div key={task.id} 
-                        onClick={() => toggleTask(stage.id, task.id)}
-                        className={`
-                          flex items-center gap-4 p-3 rounded-xl cursor-pointer transition-all border
-                          ${task.done 
-                            ? 'bg-green-50 dark:bg-green-900/20 border-green-100 dark:border-green-900/30' 
-                            : 'bg-white dark:bg-slate-800 border-gray-100 dark:border-slate-700 hover:border-agro-green hover:shadow-md'}
-                        `}>
-                     <div className={`
-                        w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors flex-shrink-0
-                        ${task.done ? 'bg-agro-green border-agro-green' : 'border-gray-300 dark:border-slate-500'}
-                     `}>
-                        {task.done && <CheckCircle size={14} className="text-white"/>}
-                     </div>
-                     <span className={`text-sm font-medium ${task.done ? 'text-gray-400 dark:text-gray-500 line-through' : 'text-gray-700 dark:text-gray-200'}`}>
-                       {task.text}
-                     </span>
-                   </div>
-                 ))}
-               </div>
-             </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+  const renderTimeline = () => {
+    const timeline = crop.timeline || [];
+    
+    if (timeline.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center h-64 bg-white dark:bg-slate-800 rounded-3xl border border-dashed border-gray-300 dark:border-slate-600 text-gray-400 animate-slide-up">
+          <Calendar size={48} className="mb-4 opacity-50" />
+          <p>Nenhum cronograma gerado.</p>
+        </div>
+      );
+    }
 
-  const renderAssistant = () => (
-    <div className="flex flex-col h-[650px] bg-white dark:bg-slate-800 rounded-3xl shadow-lg border border-gray-100 dark:border-slate-700 overflow-hidden animate-slide-up">
-       <div className="bg-agro-green p-6 text-white flex items-center gap-4">
-         <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-sm">
-            <MessageSquare size={28} />
-         </div>
-         <div>
-           <h3 className="font-bold text-lg">Assistente Rural IA</h3>
-           <p className="text-sm text-green-100 opacity-90">Especialista em {crop.type}</p>
-         </div>
-       </div>
-
-       <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-50/50 dark:bg-slate-900/50">
-          {chatHistory.map((msg, idx) => (
-            <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-               <div className={`
-                 max-w-[85%] p-5 rounded-2xl text-sm leading-relaxed shadow-sm
-                 ${msg.role === 'user' 
-                    ? 'bg-agro-green text-white rounded-tr-sm' 
-                    : 'bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 rounded-tl-sm border border-gray-100 dark:border-slate-600'}
-               `}>
-                 {msg.text}
-               </div>
+    return (
+      <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 animate-slide-up">
+        <h3 className="font-bold text-xl text-gray-800 dark:text-white mb-8 pl-4">Linha do Tempo</h3>
+        <div className="relative pl-8 border-l-2 border-gray-100 dark:border-slate-700 ml-4 space-y-10">
+          {timeline.map((stage) => (
+            <div key={stage.id} className="relative group">
+              <div className={`
+                absolute -left-[43px] top-0 w-8 h-8 rounded-full border-4 border-white dark:border-slate-800 shadow-md flex items-center justify-center
+                ${stage.status === 'concluido' ? 'bg-agro-green' : stage.status === 'em_andamento' ? 'bg-agro-yellow' : 'bg-gray-200 dark:bg-slate-600'}
+              `}>
+                {stage.status === 'concluido' && <CheckCircle size={14} className="text-white"/>}
+                {stage.status === 'em_andamento' && <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>}
+              </div>
+              
+              <div className={`
+                  p-6 rounded-2xl border transition-all duration-300
+                  ${stage.status === 'em_andamento' ? 'bg-white dark:bg-slate-800 border-agro-yellow shadow-lg ring-1 ring-agro-yellow/20' : 'bg-gray-50/50 dark:bg-slate-900 border-gray-100 dark:border-slate-700'}
+              `}>
+                <div className="flex justify-between items-start mb-3">
+                  <h4 className={`text-lg font-bold ${stage.status === 'em_andamento' ? 'text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-300'}`}>{stage.title}</h4>
+                  <span className="text-xs font-bold font-mono bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 px-3 py-1 rounded-full text-gray-500 dark:text-gray-300 shadow-sm">
+                    {stage.dateEstimate}
+                  </span>
+                </div>
+                <p className="text-gray-500 dark:text-gray-400 mb-5 leading-relaxed">{stage.description}</p>
+                
+                <div className="grid gap-3">
+                  {stage.tasks.map(task => (
+                    <div key={task.id} 
+                          onClick={() => toggleTask(stage.id, task.id)}
+                          className={`
+                            flex items-center gap-4 p-3 rounded-xl cursor-pointer transition-all border
+                            ${task.done 
+                              ? 'bg-green-50 dark:bg-green-900/20 border-green-100 dark:border-green-900/30' 
+                              : 'bg-white dark:bg-slate-800 border-gray-100 dark:border-slate-700 hover:border-agro-green hover:shadow-md'}
+                          `}>
+                      <div className={`
+                          w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors flex-shrink-0
+                          ${task.done ? 'bg-agro-green border-agro-green' : 'border-gray-300 dark:border-slate-500'}
+                      `}>
+                          {task.done && <CheckCircle size={14} className="text-white"/>}
+                      </div>
+                      <span className={`text-sm font-medium ${task.done ? 'text-gray-400 dark:text-gray-500 line-through' : 'text-gray-700 dark:text-gray-200'}`}>
+                        {task.text}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           ))}
-          {isChatLoading && (
-            <div className="flex justify-start">
-               <div className="bg-white dark:bg-slate-700 p-4 rounded-2xl rounded-tl-sm shadow-sm flex gap-2 border border-gray-100 dark:border-slate-600">
-                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-75"></div>
-                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-150"></div>
-               </div>
-            </div>
-          )}
-       </div>
-
-       <form onSubmit={handleChatSubmit} className="p-4 bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-slate-700 flex gap-3">
-         <input 
-           type="text" 
-           value={chatInput}
-           onChange={(e) => setChatInput(e.target.value)}
-           placeholder="Digite sua dúvida..."
-           className="flex-1 p-4 bg-gray-50 dark:bg-slate-900 border border-transparent focus:bg-white dark:focus:bg-slate-800 focus:border-agro-green rounded-xl outline-none transition-all font-medium dark:text-white"
-         />
-         <button 
-           type="submit" 
-           disabled={!chatInput.trim() || isChatLoading}
-           className="bg-agro-green text-white p-4 rounded-xl hover:bg-green-700 disabled:opacity-50 transition-transform active:scale-95 shadow-lg shadow-green-600/20"
-         >
-           <Send size={20} />
-         </button>
-       </form>
-    </div>
-  );
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-6 pb-20">
-      {/* Hero Header */}
       <div className={`rounded-3xl p-6 md:p-10 text-white shadow-xl ${theme.bg} relative overflow-hidden transition-all duration-500`}>
          <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div className="flex items-center gap-4">
@@ -578,12 +468,8 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                 </button>
             </div>
          </div>
-         {/* Decorative Circles */}
-         <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
-         <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-48 h-48 bg-black/10 rounded-full blur-2xl"></div>
       </div>
 
-      {/* Content Area */}
       <div className="min-h-[500px]">
         {activeTab === 'overview' && renderOverview()}
         {activeTab === 'finance' && renderFinance()}
