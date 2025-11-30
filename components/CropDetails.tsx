@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { CropData, TimelineStage, Material } from '../types';
 import { getAssistantResponse } from '../services/geminiService';
@@ -21,8 +22,15 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   
-  // @ts-ignore
-  const mapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+  // Safely get API key
+  let mapsApiKey = '';
+  try {
+    // @ts-ignore
+    if (typeof import.meta !== 'undefined' && import.meta.env) {
+      // @ts-ignore
+      mapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+    }
+  } catch (e) {}
   
   // State for Finance Editing
   const [isEditingPrices, setIsEditingPrices] = useState(false);

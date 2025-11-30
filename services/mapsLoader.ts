@@ -1,3 +1,4 @@
+
 // Singleton to load Google Maps script only once
 let googleMapsPromise: Promise<void> | null = null;
 
@@ -11,8 +12,23 @@ export const loadGoogleMaps = (): Promise<void> => {
       return;
     }
 
-    // @ts-ignore
-    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || (typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY : '');
+    let apiKey = '';
+    
+    // 1. Try safe import.meta.env access
+    try {
+      // @ts-ignore
+      if (typeof import.meta !== 'undefined' && import.meta.env) {
+        // @ts-ignore
+        apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+      }
+    } catch (e) {
+      // Ignore
+    }
+
+    // 2. Fallback to process.env
+    if (!apiKey && typeof process !== 'undefined' && process.env) {
+      apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+    }
 
     if (!apiKey) {
       reject(new Error("Google Maps API Key not found. Add VITE_GOOGLE_MAPS_API_KEY to env."));
