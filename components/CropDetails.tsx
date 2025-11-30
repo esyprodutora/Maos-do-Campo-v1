@@ -256,6 +256,7 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                     <div className="w-full h-40 bg-gray-100 dark:bg-slate-700 rounded-xl mb-4 flex items-center justify-center flex-col text-gray-400 p-4 text-center">
                         <MapPin size={32} className="mb-2 opacity-50"/>
                         <p className="text-xs font-medium">Mapa indisponível</p>
+                        <p className="text-[10px] opacity-70">Chave de API não configurada</p>
                     </div>
                 )}
                 <a 
@@ -271,173 +272,6 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
        </div>
     </div>
   );
-
-  const renderTimeline = () => {
-    const timeline = crop.timeline || [];
-    
-    if (timeline.length === 0 && !isEditingTimeline) {
-      return (
-        <div className="flex flex-col items-center justify-center h-64 bg-white dark:bg-slate-800 rounded-3xl border border-dashed border-gray-300 dark:border-slate-600 text-gray-400 animate-slide-up">
-          <Calendar size={48} className="mb-4 opacity-50" />
-          <p>Nenhum cronograma gerado.</p>
-          <button onClick={() => setIsEditingTimeline(true)} className="mt-4 text-agro-green font-bold hover:underline">Criar cronograma</button>
-        </div>
-      );
-    }
-
-    return (
-      <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 animate-slide-up">
-        <div className="flex items-center justify-between mb-8">
-           <h3 className="font-bold text-xl text-gray-800 dark:text-white pl-4">Linha do Tempo</h3>
-           <button 
-              onClick={() => setIsEditingTimeline(!isEditingTimeline)}
-              className={`p-2 rounded-lg transition-colors flex items-center gap-2 text-sm font-bold ${
-                isEditingTimeline 
-                  ? 'bg-agro-green text-white shadow-lg shadow-green-600/20' 
-                  : 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600'
-              }`}
-            >
-              {isEditingTimeline ? (
-                <> <Check size={16}/> Concluir </>
-              ) : (
-                <> <Edit2 size={16}/> Editar </>
-              )}
-            </button>
-        </div>
-
-        <div className="relative pl-8 border-l-2 border-gray-100 dark:border-slate-700 ml-4 space-y-10">
-          {timeline.map((stage, index) => (
-            <div key={stage.id} className="relative group">
-              {/* Timeline Dot / Delete Button */}
-              <div className={`
-                absolute -left-[43px] top-0 w-8 h-8 rounded-full border-4 border-white dark:border-slate-800 shadow-md flex items-center justify-center transition-colors z-10
-                ${isEditingTimeline ? 'bg-red-100 cursor-pointer hover:bg-red-500 border-red-50' : stage.status === 'concluido' ? 'bg-agro-green' : stage.status === 'em_andamento' ? 'bg-agro-yellow' : 'bg-gray-200 dark:bg-slate-600'}
-              `}
-                onClick={() => isEditingTimeline && handleRemoveStage(index)}
-              >
-                {isEditingTimeline ? (
-                   <Trash2 size={14} className="text-red-500 group-hover:text-white" />
-                ) : (
-                   <>
-                     {stage.status === 'concluido' && <CheckCircle size={14} className="text-white"/>}
-                     {stage.status === 'em_andamento' && <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>}
-                   </>
-                )}
-              </div>
-              
-              {/* Card Content */}
-              <div className={`
-                  p-6 rounded-2xl border transition-all duration-300
-                  ${!isEditingTimeline && stage.status === 'em_andamento' ? 'bg-white dark:bg-slate-800 border-agro-yellow shadow-lg ring-1 ring-agro-yellow/20' : 'bg-gray-50/50 dark:bg-slate-900 border-gray-100 dark:border-slate-700'}
-              `}>
-                {isEditingTimeline ? (
-                    <div className="space-y-3">
-                       {/* Edit Mode Inputs */}
-                       <input 
-                         type="text" 
-                         value={stage.title}
-                         onChange={(e) => handleUpdateStage(index, 'title', e.target.value)}
-                         className="w-full p-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-lg font-bold text-gray-900 dark:text-white"
-                         placeholder="Nome da Etapa"
-                       />
-                       <textarea 
-                         value={stage.description}
-                         onChange={(e) => handleUpdateStage(index, 'description', e.target.value)}
-                         className="w-full p-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-lg text-sm text-gray-600 dark:text-gray-300 h-20 resize-none"
-                         placeholder="Descrição"
-                       />
-                       <div className="flex gap-2">
-                          <div className="flex-1">
-                             <label className="text-xs font-bold text-gray-400">Início</label>
-                             <input 
-                               type="text" // Simple text for simplicity in MVP, can be date
-                               value={stage.dateEstimate}
-                               onChange={(e) => handleUpdateStage(index, 'dateEstimate', e.target.value)}
-                               className="w-full p-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-lg text-sm"
-                             />
-                          </div>
-                          <div className="flex-1">
-                             <label className="text-xs font-bold text-gray-400">Fim (Opcional)</label>
-                             <input 
-                               type="text" 
-                               value={stage.endDate || ''}
-                               onChange={(e) => handleUpdateStage(index, 'endDate', e.target.value)}
-                               className="w-full p-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-lg text-sm"
-                               placeholder="dd/mm/aaaa"
-                             />
-                          </div>
-                          <div className="flex-1">
-                             <label className="text-xs font-bold text-gray-400">Status</label>
-                             <select 
-                               value={stage.status}
-                               onChange={(e) => handleUpdateStage(index, 'status', e.target.value)}
-                               className="w-full p-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-lg text-sm"
-                             >
-                                <option value="pendente">Pendente</option>
-                                <option value="em_andamento">Andamento</option>
-                                <option value="concluido">Concluído</option>
-                             </select>
-                          </div>
-                       </div>
-                    </div>
-                ) : (
-                    /* View Mode */
-                    <>
-                        <div className="flex justify-between items-start mb-3">
-                            <h4 className={`text-lg font-bold ${stage.status === 'em_andamento' ? 'text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-300'}`}>{stage.title}</h4>
-                            <div className="flex flex-col items-end gap-1">
-                                <span className="text-xs font-bold font-mono bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 px-3 py-1 rounded-full text-gray-500 dark:text-gray-300 shadow-sm flex items-center gap-1">
-                                    <Calendar size={10} /> {stage.dateEstimate}
-                                </span>
-                                {stage.endDate && (
-                                    <span className="text-[10px] font-mono text-gray-400 dark:text-gray-500 flex items-center gap-1">
-                                        até {stage.endDate}
-                                    </span>
-                                )}
-                            </div>
-                        </div>
-                        <p className="text-gray-500 dark:text-gray-400 mb-5 leading-relaxed">{stage.description}</p>
-                        
-                        <div className="grid gap-3">
-                        {stage.tasks.map(task => (
-                            <div key={task.id} 
-                                onClick={() => toggleTask(stage.id, task.id)}
-                                className={`
-                                flex items-center gap-4 p-3 rounded-xl cursor-pointer transition-all border
-                                ${task.done 
-                                    ? 'bg-green-50 dark:bg-green-900/20 border-green-100 dark:border-green-900/30' 
-                                    : 'bg-white dark:bg-slate-800 border-gray-100 dark:border-slate-700 hover:border-agro-green hover:shadow-md'}
-                                `}>
-                            <div className={`
-                                w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors flex-shrink-0
-                                ${task.done ? 'bg-agro-green border-agro-green' : 'border-gray-300 dark:border-slate-500'}
-                            `}>
-                                {task.done && <CheckCircle size={14} className="text-white"/>}
-                            </div>
-                            <span className={`text-sm font-medium ${task.done ? 'text-gray-400 dark:text-gray-500 line-through' : 'text-gray-700 dark:text-gray-200'}`}>
-                                {task.text}
-                            </span>
-                            </div>
-                        ))}
-                        </div>
-                    </>
-                )}
-              </div>
-            </div>
-          ))}
-
-          {isEditingTimeline && (
-              <button 
-                onClick={handleAddStage}
-                className="w-full py-3 border-2 border-dashed border-agro-green/50 bg-green-50/50 dark:bg-green-900/10 text-agro-green font-bold rounded-xl hover:bg-green-100 dark:hover:bg-green-900/20 transition-colors flex items-center justify-center gap-2"
-              >
-                  <Plus size={18} /> Adicionar Etapa
-              </button>
-          )}
-        </div>
-      </div>
-    );
-  };
 
   const renderFinance = () => {
     const materials = crop.materials || [];
@@ -623,6 +457,173 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                 </div>
               </div>
            </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderTimeline = () => {
+    const timeline = crop.timeline || [];
+    
+    if (timeline.length === 0 && !isEditingTimeline) {
+      return (
+        <div className="flex flex-col items-center justify-center h-64 bg-white dark:bg-slate-800 rounded-3xl border border-dashed border-gray-300 dark:border-slate-600 text-gray-400 animate-slide-up">
+          <Calendar size={48} className="mb-4 opacity-50" />
+          <p>Nenhum cronograma gerado.</p>
+          <button onClick={() => setIsEditingTimeline(true)} className="mt-4 text-agro-green font-bold hover:underline">Criar cronograma</button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 animate-slide-up">
+        <div className="flex items-center justify-between mb-8">
+           <h3 className="font-bold text-xl text-gray-800 dark:text-white pl-4">Linha do Tempo</h3>
+           <button 
+              onClick={() => setIsEditingTimeline(!isEditingTimeline)}
+              className={`p-2 rounded-lg transition-colors flex items-center gap-2 text-sm font-bold ${
+                isEditingTimeline 
+                  ? 'bg-agro-green text-white shadow-lg shadow-green-600/20' 
+                  : 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600'
+              }`}
+            >
+              {isEditingTimeline ? (
+                <> <Check size={16}/> Concluir </>
+              ) : (
+                <> <Edit2 size={16}/> Editar </>
+              )}
+            </button>
+        </div>
+
+        <div className="relative pl-8 border-l-2 border-gray-100 dark:border-slate-700 ml-4 space-y-10">
+          {timeline.map((stage, index) => (
+            <div key={stage.id} className="relative group">
+              {/* Timeline Dot / Delete Button */}
+              <div className={`
+                absolute -left-[43px] top-0 w-8 h-8 rounded-full border-4 border-white dark:border-slate-800 shadow-md flex items-center justify-center transition-colors z-10
+                ${isEditingTimeline ? 'bg-red-100 cursor-pointer hover:bg-red-500 border-red-50' : stage.status === 'concluido' ? 'bg-agro-green' : stage.status === 'em_andamento' ? 'bg-agro-yellow' : 'bg-gray-200 dark:bg-slate-600'}
+              `}
+                onClick={() => isEditingTimeline && handleRemoveStage(index)}
+              >
+                {isEditingTimeline ? (
+                   <Trash2 size={14} className="text-red-500 group-hover:text-white" />
+                ) : (
+                   <>
+                     {stage.status === 'concluido' && <CheckCircle size={14} className="text-white"/>}
+                     {stage.status === 'em_andamento' && <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>}
+                   </>
+                )}
+              </div>
+              
+              {/* Card Content */}
+              <div className={`
+                  p-6 rounded-2xl border transition-all duration-300
+                  ${!isEditingTimeline && stage.status === 'em_andamento' ? 'bg-white dark:bg-slate-800 border-agro-yellow shadow-lg ring-1 ring-agro-yellow/20' : 'bg-gray-50/50 dark:bg-slate-900 border-gray-100 dark:border-slate-700'}
+              `}>
+                {isEditingTimeline ? (
+                    <div className="space-y-3">
+                       {/* Edit Mode Inputs */}
+                       <input 
+                         type="text" 
+                         value={stage.title}
+                         onChange={(e) => handleUpdateStage(index, 'title', e.target.value)}
+                         className="w-full p-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-lg font-bold text-gray-900 dark:text-white"
+                         placeholder="Nome da Etapa"
+                       />
+                       <textarea 
+                         value={stage.description}
+                         onChange={(e) => handleUpdateStage(index, 'description', e.target.value)}
+                         className="w-full p-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-lg text-sm text-gray-600 dark:text-gray-300 h-20 resize-none"
+                         placeholder="Descrição"
+                       />
+                       <div className="flex gap-2">
+                          <div className="flex-1">
+                             <label className="text-xs font-bold text-gray-400">Início</label>
+                             <input 
+                               type="text" // Simple text for simplicity in MVP, can be date
+                               value={stage.dateEstimate}
+                               onChange={(e) => handleUpdateStage(index, 'dateEstimate', e.target.value)}
+                               className="w-full p-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-lg text-sm"
+                             />
+                          </div>
+                          <div className="flex-1">
+                             <label className="text-xs font-bold text-gray-400">Fim (Opcional)</label>
+                             <input 
+                               type="text" 
+                               value={stage.endDate || ''}
+                               onChange={(e) => handleUpdateStage(index, 'endDate', e.target.value)}
+                               className="w-full p-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-lg text-sm"
+                               placeholder="dd/mm/aaaa"
+                             />
+                          </div>
+                          <div className="flex-1">
+                             <label className="text-xs font-bold text-gray-400">Status</label>
+                             <select 
+                               value={stage.status}
+                               onChange={(e) => handleUpdateStage(index, 'status', e.target.value)}
+                               className="w-full p-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-lg text-sm"
+                             >
+                                <option value="pendente">Pendente</option>
+                                <option value="em_andamento">Andamento</option>
+                                <option value="concluido">Concluído</option>
+                             </select>
+                          </div>
+                       </div>
+                    </div>
+                ) : (
+                    /* View Mode */
+                    <>
+                        <div className="flex justify-between items-start mb-3">
+                            <h4 className={`text-lg font-bold ${stage.status === 'em_andamento' ? 'text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-300'}`}>{stage.title}</h4>
+                            <div className="flex flex-col items-end gap-1">
+                                <span className="text-xs font-bold font-mono bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 px-3 py-1 rounded-full text-gray-500 dark:text-gray-300 shadow-sm flex items-center gap-1">
+                                    <Calendar size={10} /> {stage.dateEstimate}
+                                </span>
+                                {stage.endDate && (
+                                    <span className="text-[10px] font-mono text-gray-400 dark:text-gray-500 flex items-center gap-1">
+                                        até {stage.endDate}
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                        <p className="text-gray-500 dark:text-gray-400 mb-5 leading-relaxed">{stage.description}</p>
+                        
+                        <div className="grid gap-3">
+                        {stage.tasks.map(task => (
+                            <div key={task.id} 
+                                onClick={() => toggleTask(stage.id, task.id)}
+                                className={`
+                                flex items-center gap-4 p-3 rounded-xl cursor-pointer transition-all border
+                                ${task.done 
+                                    ? 'bg-green-50 dark:bg-green-900/20 border-green-100 dark:border-green-900/30' 
+                                    : 'bg-white dark:bg-slate-800 border-gray-100 dark:border-slate-700 hover:border-agro-green hover:shadow-md'}
+                                `}>
+                            <div className={`
+                                w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors flex-shrink-0
+                                ${task.done ? 'bg-agro-green border-agro-green' : 'border-gray-300 dark:border-slate-500'}
+                            `}>
+                                {task.done && <CheckCircle size={14} className="text-white"/>}
+                            </div>
+                            <span className={`text-sm font-medium ${task.done ? 'text-gray-400 dark:text-gray-500 line-through' : 'text-gray-700 dark:text-gray-200'}`}>
+                                {task.text}
+                            </span>
+                            </div>
+                        ))}
+                        </div>
+                    </>
+                )}
+              </div>
+            </div>
+          ))}
+
+          {isEditingTimeline && (
+              <button 
+                onClick={handleAddStage}
+                className="w-full py-3 border-2 border-dashed border-agro-green/50 bg-green-50/50 dark:bg-green-900/10 text-agro-green font-bold rounded-xl hover:bg-green-100 dark:hover:bg-green-900/20 transition-colors flex items-center justify-center gap-2"
+              >
+                  <Plus size={18} /> Adicionar Etapa
+              </button>
+          )}
         </div>
       </div>
     );
