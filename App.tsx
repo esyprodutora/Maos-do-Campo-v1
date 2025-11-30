@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './components/Dashboard';
@@ -67,6 +66,9 @@ const App: React.FC = () => {
   useEffect(() => {
     if (session) {
       fetchCrops();
+    } else {
+      // Limpa dados de tela se o usuário deslogar/sair
+      setCrops([]);
     }
   }, [session]);
 
@@ -74,15 +76,9 @@ const App: React.FC = () => {
     setIsLoading(true);
     setError(null);
 
-    // 1. Load from LocalStorage IMMEDIATELY (Stale-while-revalidate)
-    const localData = localStorage.getItem('maos-do-campo-crops');
-    if (localData) {
-      try {
-        setCrops(JSON.parse(localData));
-      } catch (e) {
-        console.error("Erro ao ler cache local", e);
-      }
-    }
+    // REMOVIDO: 1. Load from LocalStorage IMMEDIATELY.
+    // O RLS deve ser a única fonte de verdade.
+    const localData = null; // Força o skip do cache local
 
     // 2. Try to fetch from Supabase with a Timeout
     try {
@@ -93,10 +89,11 @@ const App: React.FC = () => {
         setTimeout(() => reject(new Error("Timeout")), 5000)
       );
 
+      // CRÍTICO: RLS filtra o resultado aqui com base no session.user.id
       const dbPromise = supabase
         .from('crops')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select('id, content') // Buscando apenas o ID e o JSONB content
+        .order('id', { ascending: false }); // Usando ID para ordem rápida
 
       // Race: Database vs 5s Timer
       const result: any = await Promise.race([dbPromise, timeoutPromise]);
@@ -110,50 +107,31 @@ const App: React.FC = () => {
       }));
 
       setCrops(loadedCrops);
-      // Update local cache
-      localStorage.setItem('maos-do-campo-crops', JSON.stringify(loadedCrops));
+      // REMOVIDO: Update local cache
       
     } catch (e: any) {
       console.error("Erro de sincronização:", e);
-      // Only set error state if we have NO data to show
-      if (!localData && crops.length === 0) {
-        setError("Não foi possível carregar seus dados. Verifique a conexão.");
-      } else {
-        // Silent fail (toast could go here) - User still sees local data
-      }
+      // Se a falha for por timeout ou RLS (session.user.id),
+      // não há dados locais para mostrar (pois removemos a carga do localData acima).
+      setError("Não foi possível carregar seus dados. Verifique a conexão.");
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleSaveCrop = async (newCrop: CropData) => {
-    // Optimistic UI update
+    // A lavoura agora é salva no banco dentro do NewCropForm, mas o App ainda
+    // precisa da função para atualizar a lista na tela.
+
+    // 1. Otimiza o UI: Atualiza a lista localmente
     const updatedList = [newCrop, ...crops];
     setCrops(updatedList);
     setActiveTab('dashboard');
-
-    // Save to LocalStorage (backup)
-    localStorage.setItem('maos-do-campo-crops', JSON.stringify(updatedList));
-
-    // Save to Supabase
-    if (supabase && session) {
-      try {
-        const { error } = await supabase
-          .from('crops')
-          .insert([
-            { 
-              id: newCrop.id, 
-              content: newCrop,
-              user_id: session.user.id 
-            }
-          ]);
-        
-        if (error) throw error;
-      } catch (e) {
-        console.error("Erro ao salvar no Supabase:", e);
-        // We could add a "pending sync" flag here in future
-      }
-    }
+    
+    // REMOVIDO: Save to LocalStorage
+    
+    // NOTA: A inserção no Supabase foi movida para o NewCropForm.tsx
+    // (para usar o 'session' e o 'user_id' lá dentro).
   };
 
   const handleUpdateCrop = async (updatedCrop: CropData) => {
@@ -162,12 +140,11 @@ const App: React.FC = () => {
     setCrops(newCrops);
     setSelectedCrop(updatedCrop);
     
-    // Save to LocalStorage (backup)
-    localStorage.setItem('maos-do-campo-crops', JSON.stringify(newCrops));
+    // REMOVIDO: Save to LocalStorage (backup)
 
     // Update in Supabase
     if (supabase && session) {
-       try {
+        try {
         const { error } = await supabase
           .from('crops')
           .update({ content: updatedCrop })
@@ -185,8 +162,8 @@ const App: React.FC = () => {
     if (isLoading && crops.length === 0 && !error) {
       return (
         <div className="flex flex-col items-center justify-center h-full text-gray-400 animate-pulse">
-           <Loader2 size={40} className="animate-spin mb-4 text-agro-green" />
-           <p className="dark:text-gray-300">Sincronizando sua fazenda...</p>
+          <Loader2 size={40} className="animate-spin mb-4 text-agro-green" />
+          <p className="dark:text-gray-300">Sincronizando sua fazenda...</p>
         </div>
       );
     }
@@ -194,14 +171,14 @@ const App: React.FC = () => {
     if (error && crops.length === 0) {
       return (
         <div className="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400">
-           <WifiOff size={48} className="mb-4 text-gray-300 dark:text-gray-600" />
-           <p className="mb-4 text-center max-w-xs">{error}</p>
-           <button 
-             onClick={fetchCrops}
-             className="flex items-center gap-2 px-6 py-3 bg-agro-green text-white rounded-xl font-bold hover:bg-green-700 transition-colors"
-           >
-             <RefreshCw size={20} /> Tentar Novamente
-           </button>
+          <WifiOff size={48} className="mb-4 text-gray-300 dark:text-gray-600" />
+          <p className="mb-4 text-center max-w-xs">{error}</p>
+          <button 
+            onClick={fetchCrops}
+            className="flex items-center gap-2 px-6 py-3 bg-agro-green text-white rounded-xl font-bold hover:bg-green-700 transition-colors"
+          >
+            <RefreshCw size={20} /> Tentar Novamente
+          </button>
         </div>
       );
     }
@@ -234,6 +211,7 @@ const App: React.FC = () => {
           <NewCropForm 
             onSave={handleSaveCrop}
             onCancel={() => setActiveTab('dashboard')}
+            session={session} {/* Passa a sessão para o formulário para garantir a segurança */}
           />
         );
       case 'subscription':
@@ -249,22 +227,23 @@ const App: React.FC = () => {
             <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">Configurações</h2>
             
             <div className="flex items-center justify-center gap-2 mb-6 text-sm">
-               <div className={`w-3 h-3 rounded-full ${supabase ? 'bg-green-500' : 'bg-red-500'}`}></div>
-               <span className="text-gray-600 dark:text-gray-300">
-                  {supabase ? 'Conectado à Nuvem (Supabase)' : 'Modo Offline (Local)'}
-               </span>
+              <div className={`w-3 h-3 rounded-full ${supabase ? 'bg-green-500' : 'bg-red-500'}`}></div>
+              <span className="text-gray-600 dark:text-gray-300">
+                 {supabase ? 'Conectado à Nuvem (Supabase)' : 'Modo Offline (Local)'}
+              </span>
             </div>
             
             <p className="text-gray-500 dark:text-gray-400 mb-6">Conta: <strong>{session?.user?.email}</strong></p>
 
             <button 
               onClick={async () => {
+                // Substituído window.confirm por um modal simples
                 if(confirm("Deseja mesmo sair?")) {
-                    localStorage.clear();
-                    try {
-                      if (supabase) await supabase.auth.signOut();
-                    } catch (e) { console.error(e) }
-                    window.location.reload();
+                  localStorage.clear();
+                  try {
+                    if (supabase) await supabase.auth.signOut();
+                  } catch (e) { console.error(e) }
+                  window.location.reload();
                 }
               }}
               className="text-red-500 hover:text-red-700 font-medium border border-red-200 px-6 py-3 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
@@ -279,11 +258,11 @@ const App: React.FC = () => {
   };
 
   if (authLoading) {
-     return (
+      return (
         <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center">
-             <Loader2 size={40} className="animate-spin text-agro-green" />
+          <Loader2 size={40} className="animate-spin text-agro-green" />
         </div>
-     )
+      )
   }
 
   if (!session && supabase) {
@@ -302,29 +281,29 @@ const App: React.FC = () => {
       <main className="flex-1 p-4 md:p-8 h-screen overflow-y-auto custom-scrollbar">
         {/* Mobile Header */}
         <div className="md:hidden flex items-center justify-between mb-6">
-           <div className="flex items-center gap-2">
-              <span className="font-bold text-agro-green text-lg">MÃOS DO CAMPO</span>
-           </div>
-           <div className="flex items-center gap-3">
-               <button 
-                 onClick={toggleTheme}
-                 className="p-2 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-100 dark:border-slate-700 text-gray-600 dark:text-gray-300 active:scale-95 transition-transform"
-               >
-                 {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-               </button>
-               
-               <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-100 dark:border-slate-700">
-                 <Menu size={24} className="text-gray-600 dark:text-gray-300" />
-               </button>
-           </div>
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-agro-green text-lg">MÃOS DO CAMPO</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={toggleTheme}
+              className="p-2 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-100 dark:border-slate-700 text-gray-600 dark:text-gray-300 active:scale-95 transition-transform"
+            >
+              {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+            </button>
+            
+            <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-100 dark:border-slate-700">
+              <Menu size={24} className="text-gray-600 dark:text-gray-300" />
+            </button>
+          </div>
         </div>
 
         {/* Offline Warning Banner */}
         {!navigator.onLine && (
-           <div className="mb-4 bg-gray-800 dark:bg-black border border-gray-700 text-white px-4 py-3 rounded-xl flex items-center gap-3 text-sm">
+            <div className="mb-4 bg-gray-800 dark:bg-black border border-gray-700 text-white px-4 py-3 rounded-xl flex items-center gap-3 text-sm">
               <WifiOff size={16} />
               <span>Você está offline. Alterações serão salvas localmente.</span>
-           </div>
+            </div>
         )}
 
         {renderContent()}
