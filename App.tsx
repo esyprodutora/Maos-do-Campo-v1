@@ -1,336 +1,125 @@
-
-import React, { useState, useEffect } from 'react';
-import { Sidebar } from './components/Sidebar';
-import { Dashboard } from './components/Dashboard';
+import { useState } from 'react';
 import { NewCropForm } from './components/NewCropForm';
-import { CropDetails } from './components/CropDetails';
-import { Login } from './components/Login';
-import { Subscription } from './components/Subscription';
-import { Quotes } from './components/Quotes';
 import { CropData } from './types';
-import { Menu, Loader2, WifiOff, RefreshCw, Sun, Moon } from 'lucide-react';
-import { supabase } from './services/supabaseClient';
+import { Sprout, Plus, Calendar, DollarSign, MapPin, Leaf } from 'lucide-react';
 
-const App: React.FC = () => {
-  const [session, setSession] = useState<any>(null);
-  const [authLoading, setAuthLoading] = useState(true);
-
-  // Theme State
-  const [theme, setTheme] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('theme') || 'light';
-    }
-    return 'light';
-  });
-
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [selectedCrop, setSelectedCrop] = useState<CropData | null>(null);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+function App() {
+  const [showForm, setShowForm] = useState(false);
   const [crops, setCrops] = useState<CropData[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  // Apply Theme
-  useEffect(() => {
-    const root = window.document.documentElement;
-    if (theme === 'dark') {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
-    localStorage.setItem('theme', theme);
-  }, [theme]);
-
-  const toggleTheme = () => {
-    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  const handleSave = (newCrop: CropData) => {
+    setCrops([newCrop, ...crops]);
+    setShowForm(false);
   };
-
-  // Check Auth
-  useEffect(() => {
-    if(supabase) {
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        setSession(session);
-        setAuthLoading(false);
-      });
-
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-        setSession(session);
-      });
-
-      return () => subscription.unsubscribe();
-    } else {
-        setAuthLoading(false); 
-    }
-  }, []);
-
-  // Load Data when session exists
-  useEffect(() => {
-    if (session) {
-      fetchCrops();
-    }
-  }, [session]);
-
-  const fetchCrops = async () => {
-    setIsLoading(true);
-    setError(null);
-
-    // 1. Load from LocalStorage IMMEDIATELY (Stale-while-revalidate)
-    const localData = localStorage.getItem('maos-do-campo-crops');
-    if (localData) {
-      try {
-        setCrops(JSON.parse(localData));
-      } catch (e) {
-        console.error("Erro ao ler cache local", e);
-      }
-    }
-
-    // 2. Try to fetch from Supabase with a Timeout
-    try {
-      if (!supabase) throw new Error("Supabase não iniciado");
-
-      // Timeout promise to prevent infinite loading
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error("Timeout")), 5000)
-      );
-
-      const dbPromise = supabase
-        .from('crops')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      // Race: Database vs 5s Timer
-      const result: any = await Promise.race([dbPromise, timeoutPromise]);
-
-      if (result.error) throw result.error;
-
-      // Map Supabase rows back to CropData structure
-      const loadedCrops = result.data.map((row: any) => ({
-        ...row.content,
-        id: row.id 
-      }));
-
-      setCrops(loadedCrops);
-      // Update local cache
-      localStorage.setItem('maos-do-campo-crops', JSON.stringify(loadedCrops));
-      
-    } catch (e: any) {
-      console.error("Erro de sincronização:", e);
-      // Only set error state if we have NO data to show
-      if (!localData && crops.length === 0) {
-        setError("Não foi possível carregar seus dados. Verifique a conexão.");
-      } else {
-        // Silent fail (toast could go here) - User still sees local data
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSaveCrop = async (newCrop: CropData) => {
-    // Optimistic UI update
-    const updatedList = [newCrop, ...crops];
-    setCrops(updatedList);
-    setActiveTab('dashboard');
-
-    // Save to LocalStorage (backup)
-    localStorage.setItem('maos-do-campo-crops', JSON.stringify(updatedList));
-
-    // Save to Supabase
-    if (supabase && session) {
-      try {
-        const { error } = await supabase
-          .from('crops')
-          .insert([
-            { 
-              id: newCrop.id, 
-              content: newCrop,
-              user_id: session.user.id 
-            }
-          ]);
-        
-        if (error) throw error;
-      } catch (e) {
-        console.error("Erro ao salvar no Supabase:", e);
-        // We could add a "pending sync" flag here in future
-      }
-    }
-  };
-
-  const handleUpdateCrop = async (updatedCrop: CropData) => {
-    // Optimistic UI update
-    const newCrops = crops.map(c => c.id === updatedCrop.id ? updatedCrop : c);
-    setCrops(newCrops);
-    setSelectedCrop(updatedCrop);
-    
-    // Save to LocalStorage (backup)
-    localStorage.setItem('maos-do-campo-crops', JSON.stringify(newCrops));
-
-    // Update in Supabase
-    if (supabase && session) {
-       try {
-        const { error } = await supabase
-          .from('crops')
-          .update({ content: updatedCrop })
-          .eq('id', updatedCrop.id);
-        
-        if (error) throw error;
-      } catch (e) {
-        console.error("Erro ao atualizar no Supabase:", e);
-      }
-    }
-  };
-
-  const renderContent = () => {
-    // Show loading only if we have NO data and are fetching
-    if (isLoading && crops.length === 0 && !error) {
-      return (
-        <div className="flex flex-col items-center justify-center h-full text-gray-400 animate-pulse">
-           <Loader2 size={40} className="animate-spin mb-4 text-agro-green" />
-           <p className="dark:text-gray-300">Sincronizando sua fazenda...</p>
-        </div>
-      );
-    }
-
-    if (error && crops.length === 0) {
-      return (
-        <div className="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400">
-           <WifiOff size={48} className="mb-4 text-gray-300 dark:text-gray-600" />
-           <p className="mb-4 text-center max-w-xs">{error}</p>
-           <button 
-             onClick={fetchCrops}
-             className="flex items-center gap-2 px-6 py-3 bg-agro-green text-white rounded-xl font-bold hover:bg-green-700 transition-colors"
-           >
-             <RefreshCw size={20} /> Tentar Novamente
-           </button>
-        </div>
-      );
-    }
-
-    if (selectedCrop) {
-      return (
-        <CropDetails 
-          crop={selectedCrop} 
-          onBack={() => setSelectedCrop(null)}
-          onUpdateCrop={handleUpdateCrop}
-        />
-      );
-    }
-
-    switch (activeTab) {
-      case 'dashboard':
-        return (
-          <Dashboard 
-            crops={crops} 
-            onSelectCrop={setSelectedCrop} 
-            onNewCrop={() => setActiveTab('new-crop')}
-            theme={theme}
-            toggleTheme={toggleTheme}
-          />
-        );
-      case 'quotes':
-        return <Quotes />;
-      case 'new-crop':
-        return (
-          <NewCropForm 
-            onSave={handleSaveCrop}
-            onCancel={() => setActiveTab('dashboard')}
-          />
-        );
-      case 'subscription':
-        return (
-          <Subscription 
-            onSubscribe={(id) => alert(`Plano ${id} selecionado! Integração de pagamento em breve.`)}
-            onBack={() => setActiveTab('dashboard')}
-          />
-        );
-      case 'settings':
-        return (
-          <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 text-center animate-slide-up">
-            <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">Configurações</h2>
-            
-            <div className="flex items-center justify-center gap-2 mb-6 text-sm">
-               <div className={`w-3 h-3 rounded-full ${supabase ? 'bg-green-500' : 'bg-red-500'}`}></div>
-               <span className="text-gray-600 dark:text-gray-300">
-                  {supabase ? 'Conectado à Nuvem (Supabase)' : 'Modo Offline (Local)'}
-               </span>
-            </div>
-            
-            <p className="text-gray-500 dark:text-gray-400 mb-6">Conta: <strong>{session?.user?.email}</strong></p>
-
-            <button 
-              onClick={async () => {
-                if(confirm("Deseja mesmo sair?")) {
-                    localStorage.clear();
-                    try {
-                      if (supabase) await supabase.auth.signOut();
-                    } catch (e) { console.error(e) }
-                    window.location.reload();
-                }
-              }}
-              className="text-red-500 hover:text-red-700 font-medium border border-red-200 px-6 py-3 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-            >
-              Desconectar Conta
-            </button>
-          </div>
-        );
-      default:
-        return <Dashboard crops={crops} onSelectCrop={setSelectedCrop} onNewCrop={() => setActiveTab('new-crop')} theme={theme} toggleTheme={toggleTheme} />;
-    }
-  };
-
-  if (authLoading) {
-     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center">
-             <Loader2 size={40} className="animate-spin text-agro-green" />
-        </div>
-     )
-  }
-
-  if (!session && supabase) {
-    return <Login />;
-  }
 
   return (
-    <div className="flex min-h-screen bg-[#F8F9FA] dark:bg-slate-900 text-gray-800 dark:text-gray-100 font-sans transition-colors duration-300">
-      <Sidebar 
-        activeTab={activeTab} 
-        setActiveTab={(tab) => { setActiveTab(tab); setSelectedCrop(null); }}
-        isMobileMenuOpen={isMobileMenuOpen}
-        setIsMobileMenuOpen={setIsMobileMenuOpen}
-      />
-
-      <main className="flex-1 p-4 md:p-8 h-screen overflow-y-auto custom-scrollbar">
-        {/* Mobile Header */}
-        <div className="md:hidden flex items-center justify-between mb-6">
-           <div className="flex items-center gap-2">
-              <span className="font-bold text-agro-green text-lg">MÃOS DO CAMPO</span>
-           </div>
-           <div className="flex items-center gap-3">
-               <button 
-                 onClick={toggleTheme}
-                 className="p-2 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-100 dark:border-slate-700 text-gray-600 dark:text-gray-300 active:scale-95 transition-transform"
-               >
-                 {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-               </button>
-               
-               <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-100 dark:border-slate-700">
-                 <Menu size={24} className="text-gray-600 dark:text-gray-300" />
-               </button>
-           </div>
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-white font-sans">
+      
+      {/* Cabeçalho */}
+      <header className="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 sticky top-0 z-50">
+        <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="bg-agro-green/10 p-2 rounded-lg">
+               <Sprout className="text-agro-green" size={24} />
+            </div>
+            <h1 className="text-xl font-bold tracking-tight">Mãos do Campo</h1>
+          </div>
+          <div className="flex items-center gap-4">
+             <span className="text-sm text-gray-500 hidden sm:block">Olá, Produtor</span>
+             <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
+          </div>
         </div>
+      </header>
 
-        {/* Offline Warning Banner */}
-        {!navigator.onLine && (
-           <div className="mb-4 bg-gray-800 dark:bg-black border border-gray-700 text-white px-4 py-3 rounded-xl flex items-center gap-3 text-sm">
-              <WifiOff size={16} />
-              <span>Você está offline. Alterações serão salvas localmente.</span>
-           </div>
+      <main className="max-w-5xl mx-auto p-4 md:p-8">
+        
+        {showForm ? (
+          /* MODO FORMULÁRIO: Mostra o componente que criámos */
+          <div>
+            <NewCropForm 
+              onSave={handleSave} 
+              onCancel={() => setShowForm(false)} 
+            />
+          </div>
+        ) : (
+          /* MODO LISTA: Mostra as lavouras cadastradas */
+          <div className="space-y-8 animate-fade-in">
+            
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h2 className="text-2xl font-bold">Minhas Lavouras</h2>
+                <p className="text-gray-500 dark:text-gray-400">Gerencie a sua produção e veja o planeamento.</p>
+              </div>
+              <button 
+                onClick={() => setShowForm(true)}
+                className="bg-agro-green hover:bg-green-700 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-green-600/20 flex items-center gap-2 transition-all active:scale-95"
+              >
+                <Plus size={20} /> Nova Lavoura
+              </button>
+            </div>
+
+            {/* Lista de Lavouras */}
+            {crops.length === 0 ? (
+              <div className="text-center py-20 bg-white dark:bg-slate-800 rounded-3xl border-2 border-dashed border-gray-200 dark:border-slate-700">
+                <div className="w-20 h-20 bg-gray-50 dark:bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Leaf className="text-gray-300 dark:text-gray-500" size={40} />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Nenhuma lavoura registada</h3>
+                <p className="text-gray-500 dark:text-gray-400 max-w-xs mx-auto mt-2">
+                  Comece por adicionar o seu primeiro talhão para receber o planeamento da IA.
+                </p>
+                <button 
+                  onClick={() => setShowForm(true)}
+                  className="mt-6 text-agro-green font-bold hover:underline"
+                >
+                  Registar agora
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {crops.map((crop) => (
+                  <div key={crop.id} className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 hover:shadow-md transition-shadow">
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="text-lg font-bold">{crop.name}</h3>
+                          <span className="px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs font-bold rounded-full uppercase">
+                            {crop.type}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 text-gray-500 text-sm">
+                           <MapPin size={14} /> {crop.areaHa} hectares • {crop.soilType}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-3 pt-4 border-t border-gray-100 dark:border-slate-700">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-500 flex items-center gap-2">
+                          <Calendar size={16} /> Colheita Prevista
+                        </span>
+                        <span className="font-medium">
+                          {new Date(crop.estimatedHarvestDate).toLocaleDateString('pt-BR')}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-500 flex items-center gap-2">
+                          <DollarSign size={16} /> Custo Estimado
+                        </span>
+                        <span className="font-medium text-gray-900 dark:text-white">
+                          R$ {crop.estimatedCost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         )}
-
-        {renderContent()}
       </main>
     </div>
   );
-};
+}
 
 export default App;
