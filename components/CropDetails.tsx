@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { CropData, TimelineStage, Material } from '../types';
 import { getAssistantResponse } from '../services/geminiService';
-// Adicionando imports e componente Reports
 import { Reports } from './Reports';
 import { ArrowLeft, Calendar, DollarSign, ListTodo, MessageSquare, Send, CheckCircle, Circle, AlertCircle, Droplets, Ruler, ShoppingBag, Download, Loader2, Edit2, Check, MapPin, Navigation, Trash2, Plus, X, Clock, Sprout, FileText, Home, Sparkles, Bot, MessageCircle } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
@@ -17,7 +16,6 @@ interface CropDetailsProps {
 }
 
 export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdateCrop, onDeleteCrop }) => {
-  // Adicionado 'reports' ao estado de abas
   const [activeTab, setActiveTab] = useState<'overview' | 'finance' | 'timeline' | 'assistant' | 'reports'>('overview');
   const [chatInput, setChatInput] = useState('');
   const [chatHistory, setChatHistory] = useState<{role: 'user' | 'ai', text: string}[]>([
@@ -26,10 +24,8 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   
-  // Use the safe key from config
   const mapsApiKey = GOOGLE_MAPS_API_KEY;
   
-  // State for Editing
   const [isEditingPrices, setIsEditingPrices] = useState(false);
   const [isAddingItem, setIsAddingItem] = useState(false);
   const [newItem, setNewItem] = useState<Material>({
@@ -40,10 +36,8 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
     category: 'outros'
   });
 
-  // State for Timeline Editing
   const [isEditingTimeline, setIsEditingTimeline] = useState(false);
 
-  // Helper styles based on crop type - Cores translúcidas para efeito vidro
   const getTheme = (type: string) => {
     switch(type) {
       case 'cafe': return { main: 'text-[#A67C52]', bg: 'bg-[#A67C52]', bgGlass: 'bg-[#A67C52]/85', bgSoft: 'bg-[#A67C52]/10', border: 'border-[#A67C52]/20', light: 'bg-[#FAF3E0] dark:bg-[#A67C52]/20', gradient: 'from-[#A67C52] to-[#8B6642]' };
@@ -61,52 +55,498 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
   };
   const theme = getTheme(crop.type);
 
-  // ... (Rest of the handlers: toggleTask, handleAddStage, etc. remain the same)
-  // Abreviando para caber na resposta, mantendo a lógica intacta
-
-  // --- Render Functions ---
-  // ... (renderOverview, renderFinance, renderTimeline, renderAssistant from previous code)
-  // Apenas o render atualizado com a nova aba Reports
-  
-  // --- Copiando handlers necessários para contexto ---
-  const handleChatSubmit = async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!chatInput.trim()) return;
-      const userMsg = chatInput;
-      setChatInput('');
-      setChatHistory(prev => [...prev, { role: 'user', text: userMsg }]);
-      setIsChatLoading(true);
-      const timelineStatus = crop.timeline?.find(t => t.status === 'em_andamento')?.title || 'Planejamento';
-      const context = `Lavoura: ${crop.name}, Cultura: ${crop.type}, Fase atual: ${timelineStatus}`;
-      const response = await getAssistantResponse(userMsg, context);
-      setChatHistory(prev => [...prev, { role: 'ai', text: response }]);
-      setIsChatLoading(false);
+  const toggleTask = (stageId: string, taskId: string) => {
+    const updatedTimeline = (crop.timeline || []).map(stage => {
+      if (stage.id === stageId) {
+        const updatedTasks = stage.tasks.map(task => 
+          task.id === taskId ? { ...task, done: !task.done } : task
+        );
+        const allDone = updatedTasks.every(t => t.done);
+        const someDone = updatedTasks.some(t => t.done);
+        let newStatus: 'pendente' | 'em_andamento' | 'concluido' = 'pendente';
+        if (allDone && updatedTasks.length > 0) newStatus = 'concluido';
+        else if (someDone) newStatus = 'em_andamento';
+        
+        return { ...stage, tasks: updatedTasks, status: newStatus } as TimelineStage;
+      }
+      return stage;
+    });
+    onUpdateCrop({ ...crop, timeline: updatedTimeline });
   };
 
-  // --- Main Render ---
-  
-  // ... (renderOverview, renderFinance, renderTimeline, renderAssistant bodies same as before)
+  const handleAddStage = () => {
+    const newStage: TimelineStage = {
+      id: Math.random().toString(36).substr(2, 9),
+      title: 'Nova Etapa',
+      description: 'Descrição da etapa...',
+      status: 'pendente',
+      dateEstimate: new Date().toLocaleDateString('pt-BR'),
+      tasks: []
+    };
+    onUpdateCrop({ ...crop, timeline: [...(crop.timeline || []), newStage] });
+  };
+
+  const handleRemoveStage = (index: number) => {
+    if (!confirm("Excluir esta etapa?")) return;
+    const updatedTimeline = [...(crop.timeline || [])];
+    updatedTimeline.splice(index, 1);
+    onUpdateCrop({ ...crop, timeline: updatedTimeline });
+  };
+
+  const handleUpdateStage = (index: number, field: keyof TimelineStage, value: any) => {
+    const updatedTimeline = [...(crop.timeline || [])];
+    updatedTimeline[index] = { ...updatedTimeline[index], [field]: value };
+    onUpdateCrop({ ...crop, timeline: updatedTimeline });
+  };
+
+  const handleUpdateMaterial = (index: number, field: 'quantity' | 'unitPriceEstimate', value: string) => {
+    const numValue = parseFloat(value);
+    const updatedMaterials = [...(crop.materials || [])];
+    if (!updatedMaterials[index]) return;
+
+    const item = { ...updatedMaterials[index] };
+    item[field] = isNaN(numValue) ? 0 : numValue;
+    updatedMaterials[index] = item;
+    const newTotalCost = updatedMaterials.reduce((acc, m) => acc + (m.quantity * m.unitPriceEstimate), 0);
+    onUpdateCrop({ ...crop, materials: updatedMaterials, estimatedCost: newTotalCost });
+  };
+
+  const handleRemoveItem = (index: number) => {
+    if(!confirm("Deseja excluir este item?")) return;
+    const updatedMaterials = [...(crop.materials || [])];
+    updatedMaterials.splice(index, 1);
+    const newTotalCost = updatedMaterials.reduce((acc, m) => acc + (m.quantity * m.unitPriceEstimate), 0);
+    onUpdateCrop({ ...crop, materials: updatedMaterials, estimatedCost: newTotalCost });
+  };
+
+  const handleAddItem = () => {
+    if (!newItem.name) return alert("Preencha o nome do item");
+    const updatedMaterials = [...(crop.materials || []), newItem];
+    const newTotalCost = updatedMaterials.reduce((acc, m) => acc + (m.quantity * m.unitPriceEstimate), 0);
+    onUpdateCrop({ ...crop, materials: updatedMaterials, estimatedCost: newTotalCost });
+    setNewItem({ name: '', quantity: 0, unit: 'un', unitPriceEstimate: 0, category: 'outros' });
+    setIsAddingItem(false);
+  };
+
+  const handleChatSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chatInput.trim()) return;
+    const userMsg = chatInput;
+    setChatInput('');
+    setChatHistory(prev => [...prev, { role: 'user', text: userMsg }]);
+    setIsChatLoading(true);
+    const context = `Lavoura: ${crop.name}, Cultura: ${crop.type}`;
+    const response = await getAssistantResponse(userMsg, context);
+    setChatHistory(prev => [...prev, { role: 'ai', text: response }]);
+    setIsChatLoading(false);
+  };
+
+  const generatePDF = () => {
+    setIsGeneratingPdf(true);
+    const doc = new jsPDF();
+    doc.setFillColor(39, 174, 96);
+    doc.rect(0, 0, 210, 30, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(22);
+    doc.text('MÃOS DO CAMPO', 105, 15, { align: 'center' });
+    doc.setFontSize(10);
+    doc.text('Relatório de Planejamento de Safra', 105, 22, { align: 'center' });
+    doc.setTextColor(40, 40, 40);
+    doc.setFontSize(14);
+    doc.text(`Lavoura: ${crop.name}`, 14, 45);
+    const materials = crop.materials || [];
+    const tableData = materials.map(m => [
+      m.name, m.category, `${m.quantity} ${m.unit}`, `R$ ${m.unitPriceEstimate.toFixed(2)}`, `R$ ${(m.quantity * m.unitPriceEstimate).toFixed(2)}`
+    ]);
+    autoTable(doc, { startY: 75, head: [['Item', 'Categoria', 'Qtd', 'Unit.', 'Total']], body: tableData });
+    doc.save(`plano_${crop.name}.pdf`);
+    setIsGeneratingPdf(false);
+  };
+
   const renderOverview = () => (
-    // ... (Código existente do Overview)
-    <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 mb-6">
-       <h3 className="text-xl font-bold mb-4 dark:text-white">Resumo da Lavoura</h3>
-       <div className="grid grid-cols-2 gap-4">
-          <div className="p-4 bg-gray-50 dark:bg-slate-700 rounded-xl">
-             <p className="text-xs text-gray-500 dark:text-gray-400">Área</p>
-             <p className="font-bold text-lg dark:text-white">{crop.areaHa} ha</p>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-slide-up">
+       <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 relative overflow-hidden group">
+          <div className={`absolute top-0 right-0 p-10 opacity-5 ${theme.main}`}>
+             <Ruler size={100} />
           </div>
-          <div className="p-4 bg-gray-50 dark:bg-slate-700 rounded-xl">
-             <p className="text-xs text-gray-500 dark:text-gray-400">Meta</p>
-             <p className="font-bold text-lg dark:text-white">{crop.productivityGoal}</p>
+          <h3 className="font-bold text-xl text-gray-800 dark:text-white mb-6 flex items-center gap-2">
+            <span className={`p-2 rounded-lg ${theme.light} ${theme.main}`}><Ruler size={20}/></span> 
+            Dados da Área
+          </h3>
+          <div className="space-y-5 relative z-10">
+             <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-slate-700 rounded-xl">
+               <span className="text-gray-500 dark:text-gray-300 font-medium">Área Total</span>
+               <span className="font-bold text-gray-800 dark:text-white text-lg">{crop.areaHa} ha</span>
+             </div>
+             <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-slate-700 rounded-xl">
+               <span className="text-gray-500 dark:text-gray-300 font-medium">Solo</span>
+               <span className="font-bold capitalize text-gray-800 dark:text-white">{crop.soilType}</span>
+             </div>
+             <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-slate-700 rounded-xl">
+               <span className="text-gray-500 dark:text-gray-300 font-medium">Espaçamento</span>
+               <span className="font-bold text-gray-800 dark:text-white">{crop.spacing}</span>
+             </div>
+             <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-slate-700 rounded-xl border border-dashed border-gray-300 dark:border-slate-600">
+               <span className="text-gray-500 dark:text-gray-300 font-medium">Meta</span>
+               <span className={`font-bold ${theme.main}`}>{crop.productivityGoal}</span>
+             </div>
           </div>
+       </div>
+
+       <div className="flex flex-col gap-6">
+           <div className={`p-8 rounded-3xl border relative overflow-hidden flex flex-col justify-between ${theme.light} border-${theme.bg}/20 flex-1`}>
+              <div className="relative z-10">
+                <h3 className={`font-bold text-xl mb-4 flex items-center gap-2 ${theme.main}`}>
+                   <AlertCircle size={24}/> Recomendação Técnica
+                </h3>
+                <p className="text-gray-700 dark:text-gray-200 italic leading-relaxed text-lg font-medium">
+                  "{crop.aiAdvice}"
+                </p>
+              </div>
+              <div className="mt-8 relative z-10">
+                <p className={`text-xs font-bold uppercase tracking-wider mb-1 ${theme.main}`}>Estimativa de Colheita</p>
+                <p className="text-3xl font-extrabold text-gray-800 dark:text-white">
+                  {new Date(crop.estimatedHarvestDate).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+                </p>
+              </div>
+           </div>
+
+           {crop.coordinates && (
+             <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700">
+                <h3 className="font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+                    <MapPin className="text-agro-green" size={20}/> Localização
+                </h3>
+                <div className="relative w-full h-40 bg-gray-200 dark:bg-slate-700 rounded-xl overflow-hidden mb-4 group cursor-pointer">
+                     <iframe
+                        width="100%"
+                        height="100%"
+                        frameBorder="0"
+                        style={{ border: 0 }}
+                        src={`https://www.google.com/maps/embed/v1/place?key=${mapsApiKey}&q=${crop.coordinates.lat},${crop.coordinates.lng}&maptype=satellite&zoom=15`}
+                        allowFullScreen
+                     ></iframe>
+                </div>
+                <a 
+                   href={`https://www.waze.com/ul?ll=${crop.coordinates.lat},${crop.coordinates.lng}&navigate=yes`}
+                   target="_blank"
+                   rel="noreferrer"
+                   className="flex items-center justify-center gap-2 w-full py-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-bold rounded-xl hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                >
+                   <Navigation size={18} /> Abrir no GPS
+                </a>
+             </div>
+           )}
        </div>
     </div>
   );
-  
-  // Placeholder functions for brevity, assume full implementation from previous step
-  const renderFinance = () => <div className="p-4 text-center">Módulo Financeiro</div>; 
-  const renderTimeline = () => <div className="p-4 text-center">Cronograma</div>; 
-  const renderAssistant = () => <div className="p-4 text-center">Chat IA</div>;
+
+  const renderFinance = () => {
+    const materials = crop.materials || [];
+    const data = materials.map(m => ({
+        name: m.category,
+        value: (m.quantity || 0) * (m.unitPriceEstimate || 0)
+    })).reduce((acc: any[], curr) => {
+        const found = acc.find(a => a.name === curr.name);
+        if (found) found.value += curr.value;
+        else acc.push(curr);
+        return acc;
+    }, []);
+
+    return (
+      <div className="space-y-6 animate-slide-up">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+           <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700">
+             <h3 className="font-bold text-gray-800 dark:text-white mb-6 text-xl">Distribuição de Custos</h3>
+             <div className="h-64 w-full">
+               <ResponsiveContainer width="100%" height="100%">
+                 <BarChart data={data}>
+                   <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} tick={{fill: '#9CA3AF'}} />
+                   <Tooltip formatter={(value: number) => `R$ ${value.toFixed(2)}`} />
+                   <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                     {data.map((_, index) => (
+                       <Cell key={`cell-${index}`} fill={['#27AE60', '#F2C94C', '#E74C3C', '#8E44AD'][index % 4]} />
+                     ))}
+                   </Bar>
+                 </BarChart>
+               </ResponsiveContainer>
+             </div>
+             <div className="mt-6 flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-700 rounded-2xl">
+               <p className="text-gray-500 dark:text-gray-300 font-medium">Total Estimado</p>
+               <div className="text-right">
+                 <p className="text-2xl font-bold text-gray-800 dark:text-white transition-all duration-300">
+                   {(crop.estimatedCost || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                 </p>
+               </div>
+             </div>
+           </div>
+
+           <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="font-bold text-gray-800 dark:text-white text-xl flex items-center gap-2">
+                   <ShoppingBag className="text-agro-green"/> Lista de Compras
+                </h3>
+                <div className="flex gap-2">
+                    <button 
+                    onClick={() => setIsEditingPrices(!isEditingPrices)}
+                    className={`p-2 rounded-lg transition-colors flex items-center gap-2 text-sm font-bold ${
+                        isEditingPrices 
+                        ? 'bg-agro-green text-white' 
+                        : 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300'
+                    }`}
+                    >
+                    {isEditingPrices ? <><Check size={16}/> Concluir</> : <><Edit2 size={16}/> Editar</>}
+                    </button>
+                    {isEditingPrices && (
+                        <button 
+                            onClick={() => setIsAddingItem(!isAddingItem)}
+                            className="p-2 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600"
+                        >
+                            <Plus size={16} />
+                        </button>
+                    )}
+                </div>
+              </div>
+
+              {isAddingItem && (
+                  <div className="mb-4 p-4 bg-gray-50 dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-700 animate-fade-in">
+                      <h4 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">Novo Item</h4>
+                      <div className="grid grid-cols-2 gap-3 mb-3">
+                          <input 
+                              type="text" 
+                              placeholder="Nome"
+                              className="p-2 rounded-lg border text-sm outline-none"
+                              value={newItem.name}
+                              onChange={e => setNewItem({...newItem, name: e.target.value})}
+                          />
+                          <select 
+                            className="p-2 rounded-lg border text-sm outline-none"
+                            value={newItem.category}
+                            onChange={e => setNewItem({...newItem, category: e.target.value as any})}
+                          >
+                              <option value="outros">Outros</option>
+                              <option value="fertilizante">Fertilizante</option>
+                          </select>
+                          <div className="flex gap-2">
+                            <input 
+                                type="number" 
+                                placeholder="Qtd"
+                                className="w-full p-2 rounded-lg border text-sm outline-none"
+                                value={newItem.quantity || ''}
+                                onChange={e => setNewItem({...newItem, quantity: parseFloat(e.target.value)})}
+                            />
+                             <input 
+                                type="text" 
+                                placeholder="Un"
+                                className="w-16 p-2 rounded-lg border text-sm outline-none"
+                                value={newItem.unit}
+                                onChange={e => setNewItem({...newItem, unit: e.target.value})}
+                            />
+                          </div>
+                          <input 
+                              type="number" 
+                              placeholder="Preço"
+                              className="p-2 rounded-lg border text-sm outline-none"
+                              value={newItem.unitPriceEstimate || ''}
+                              onChange={e => setNewItem({...newItem, unitPriceEstimate: parseFloat(e.target.value)})}
+                          />
+                      </div>
+                      <button onClick={handleAddItem} className="w-full py-2 bg-agro-green text-white rounded-lg text-sm font-bold">Salvar</button>
+                  </div>
+              )}
+
+              <div className="flex-1 overflow-y-auto max-h-[400px] pr-2 custom-scrollbar bg-white dark:bg-slate-800">
+                <div className="space-y-3">
+                  {materials.map((m, i) => (
+                    <div key={i} className="flex justify-between items-center p-3 border-b border-gray-50 dark:border-slate-700 last:border-0 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-lg transition-colors group">
+                      <div className="flex-1">
+                        <p className="font-bold text-gray-700 dark:text-gray-200">{m.name}</p>
+                        <p className="text-xs text-gray-400 uppercase tracking-wide font-medium">{m.category}</p>
+                      </div>
+                      <div className="text-right flex flex-col items-end gap-1">
+                         {isEditingPrices ? (
+                           <div className="flex flex-col gap-1 items-end">
+                             <div className="flex items-center gap-1">
+                               <span className="text-xs text-gray-400">R$</span>
+                               <input 
+                                 type="number"
+                                 value={m.unitPriceEstimate}
+                                 onChange={(e) => handleUpdateMaterial(i, 'unitPriceEstimate', e.target.value)}
+                                 className="w-20 p-1 text-right font-bold border rounded-md text-sm"
+                               />
+                               <button onClick={() => handleRemoveItem(i)} className="ml-2 text-red-400"><Trash2 size={14}/></button>
+                             </div>
+                             <div className="flex items-center gap-1 pr-8">
+                               <input 
+                                 type="number"
+                                 value={m.quantity}
+                                 onChange={(e) => handleUpdateMaterial(i, 'quantity', e.target.value)}
+                                 className="w-16 p-1 text-right text-xs border rounded-md"
+                               />
+                               <span className="text-xs text-gray-400">{m.unit}</span>
+                             </div>
+                           </div>
+                         ) : (
+                           <>
+                             <p className="font-bold text-gray-800 dark:text-white">
+                               {((m.quantity || 0) * (m.unitPriceEstimate || 0)).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                             </p>
+                             <p className="text-xs text-gray-500 dark:text-gray-400">
+                               {m.quantity} {m.unit} x {m.unitPriceEstimate.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                             </p>
+                           </>
+                         )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+           </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderTimeline = () => (
+    <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 animate-slide-up">
+      <div className="flex justify-between items-center mb-8">
+        <h3 className="font-bold text-xl text-gray-800 dark:text-white pl-4">Linha do Tempo</h3>
+        <div className="flex gap-2">
+            <button 
+                onClick={() => setIsEditingTimeline(!isEditingTimeline)}
+                className="p-2 bg-gray-100 dark:bg-slate-700 rounded-lg text-sm font-bold"
+            >
+                {isEditingTimeline ? <Check size={16}/> : <Edit2 size={16}/>}
+            </button>
+            {isEditingTimeline && (
+                <button onClick={handleAddStage} className="p-2 bg-blue-100 text-blue-600 rounded-lg">
+                    <Plus size={16}/>
+                </button>
+            )}
+        </div>
+      </div>
+
+      <div className="relative pl-8 border-l-2 border-gray-100 dark:border-slate-700 ml-4 space-y-10">
+        {(crop.timeline || []).map((stage, index) => (
+          <div key={stage.id} className="relative group">
+             <div className={`
+               absolute -left-[43px] top-0 w-8 h-8 rounded-full border-4 border-white dark:border-slate-800 shadow-md flex items-center justify-center
+               ${stage.status === 'concluido' ? 'bg-agro-green' : stage.status === 'em_andamento' ? 'bg-agro-yellow' : 'bg-gray-200 dark:bg-slate-600'}
+             `}>
+               {isEditingTimeline ? (
+                   <Trash2 size={14} className="text-red-500 cursor-pointer" onClick={() => handleRemoveStage(index)} />
+               ) : (
+                   stage.status === 'concluido' ? <CheckCircle size={14} className="text-white"/> : <div className="w-2 h-2 bg-white rounded-full"></div>
+               )}
+             </div>
+             
+             <div className="p-6 rounded-2xl border bg-gray-50/50 dark:bg-slate-900 border-gray-100 dark:border-slate-700">
+                {isEditingTimeline ? (
+                    <div className="space-y-2">
+                        <input 
+                            value={stage.title} 
+                            onChange={(e) => handleUpdateStage(index, 'title', e.target.value)}
+                            className="w-full p-2 border rounded font-bold"
+                        />
+                        <textarea 
+                            value={stage.description} 
+                            onChange={(e) => handleUpdateStage(index, 'description', e.target.value)}
+                            className="w-full p-2 border rounded text-sm"
+                        />
+                        <div className="flex gap-2">
+                            <input 
+                                value={stage.dateEstimate} 
+                                onChange={(e) => handleUpdateStage(index, 'dateEstimate', e.target.value)}
+                                className="flex-1 p-2 border rounded text-sm"
+                            />
+                            <input 
+                                value={stage.endDate || ''} 
+                                placeholder="Fim"
+                                onChange={(e) => handleUpdateStage(index, 'endDate', e.target.value)}
+                                className="flex-1 p-2 border rounded text-sm"
+                            />
+                        </div>
+                    </div>
+                ) : (
+                    <>
+                        <div className="flex justify-between items-start mb-3">
+                            <h4 className="text-lg font-bold text-gray-900 dark:text-white">{stage.title}</h4>
+                            <div className="text-right">
+                                <span className="text-xs font-bold font-mono bg-white px-3 py-1 rounded-full border shadow-sm">{stage.dateEstimate}</span>
+                                {stage.endDate && <p className="text-[10px] text-gray-400 mt-1">até {stage.endDate}</p>}
+                            </div>
+                        </div>
+                        <p className="text-gray-500 dark:text-gray-400 mb-5 leading-relaxed">{stage.description}</p>
+                        <div className="grid gap-3">
+                            {stage.tasks.map(task => (
+                            <div key={task.id} 
+                                    onClick={() => toggleTask(stage.id, task.id)}
+                                    className={`flex items-center gap-4 p-3 rounded-xl cursor-pointer transition-all border ${task.done ? 'bg-green-50 border-green-100' : 'bg-white border-gray-100'}`}
+                            >
+                                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${task.done ? 'bg-agro-green border-agro-green' : 'border-gray-300'}`}>
+                                    {task.done && <CheckCircle size={14} className="text-white"/>}
+                                </div>
+                                <span className={`text-sm font-medium ${task.done ? 'text-gray-400 line-through' : 'text-gray-700'}`}>{task.text}</span>
+                            </div>
+                            ))}
+                        </div>
+                    </>
+                )}
+             </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  const renderAssistant = () => (
+    <div className="flex flex-col h-[650px] bg-white dark:bg-slate-800 rounded-3xl shadow-lg border border-gray-100 dark:border-slate-700 overflow-hidden animate-slide-up">
+       <div className="bg-agro-green p-6 text-white flex items-center gap-4">
+         <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-sm">
+            <MessageSquare size={28} />
+         </div>
+         <div>
+           <h3 className="font-bold text-lg">Assistente Rural IA</h3>
+           <p className="text-sm text-green-100 opacity-90">Especialista em {crop.type}</p>
+         </div>
+       </div>
+
+       <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-50/50 dark:bg-slate-900/50">
+          {chatHistory.map((msg, idx) => (
+            <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+               <div className={`max-w-[85%] p-5 rounded-2xl text-sm leading-relaxed shadow-sm ${msg.role === 'user' ? 'bg-agro-green text-white rounded-tr-sm' : 'bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 rounded-tl-sm border border-gray-100 dark:border-slate-600'}`}>
+                 {msg.text}
+               </div>
+            </div>
+          ))}
+          {isChatLoading && (
+            <div className="flex justify-start">
+               <div className="bg-white dark:bg-slate-700 p-4 rounded-2xl rounded-tl-sm shadow-sm flex gap-2 border border-gray-100 dark:border-slate-600">
+                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-75"></div>
+                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-150"></div>
+               </div>
+            </div>
+          )}
+       </div>
+
+       <form onSubmit={handleChatSubmit} className="p-4 bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-slate-700 flex gap-3">
+         <input 
+           type="text" 
+           value={chatInput}
+           onChange={(e) => setChatInput(e.target.value)}
+           placeholder="Digite sua dúvida..."
+           className="flex-1 p-4 bg-gray-50 dark:bg-slate-900 border border-transparent focus:bg-white dark:focus:bg-slate-800 focus:border-agro-green rounded-xl outline-none transition-all font-medium dark:text-white"
+         />
+         <button 
+           type="submit" 
+           disabled={!chatInput.trim() || isChatLoading}
+           className="bg-agro-green text-white p-4 rounded-xl hover:bg-green-700 disabled:opacity-50 transition-transform active:scale-95 shadow-lg shadow-green-600/20"
+         >
+           <Send size={20} />
+         </button>
+       </form>
+    </div>
+  );
 
   return (
     <div className="space-y-6 pb-24 md:pb-8">
@@ -135,13 +575,10 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                    >
                      <MessageSquare size={18} fill="currentColor" className="text-agro-green" />
                      <span className="hidden sm:inline">Assistente IA</span>
-                     <span className="sm:hidden">IA</span>
+                     <span className="sm:hidden">Assistente IA</span>
                    </button>
 
-                   <button 
-                     onClick={onDeleteCrop}
-                     className="p-2 bg-white/10 hover:bg-red-500/80 text-white rounded-xl backdrop-blur-sm transition-all active:scale-95 border border-white/10"
-                   >
+                   <button onClick={onDeleteCrop} className="p-2 bg-white/10 hover:bg-red-500/80 text-white rounded-xl backdrop-blur-sm transition-all active:scale-95 border border-white/10">
                      <Trash2 size={20} />
                    </button>
                </div>
@@ -153,7 +590,7 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                   { id: 'overview', label: 'Home', icon: Home },
                   { id: 'finance', label: 'Finanças', icon: DollarSign },
                   { id: 'timeline', label: 'Etapas', icon: ListTodo },
-                  { id: 'reports', label: 'Relatório', icon: FileText }, // Alterado para Relatório (Tela)
+                  { id: 'reports', label: 'Relatório', icon: FileText }, // Alterado para Relatório
                 ].map((tab) => (
                   <button
                     key={tab.id}
@@ -172,8 +609,8 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
             </div>
          </div>
          
-         {/* Background Decor */}
          <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
+         <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-48 h-48 bg-black/10 rounded-full blur-2xl pointer-events-none"></div>
       </div>
 
       {/* Content Area */}
@@ -191,7 +628,7 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
             { id: 'overview', label: 'Home', icon: Home },
             { id: 'finance', label: 'Finanças', icon: DollarSign },
             { id: 'timeline', label: 'Etapas', icon: ListTodo },
-            { id: 'reports', label: 'Relatório', icon: FileText }, // Botão Relatório na Barra Inferior
+            { id: 'reports', label: 'Relatório', icon: FileText },
          ].map((tab) => {
             const isActive = activeTab === tab.id;
             return (
