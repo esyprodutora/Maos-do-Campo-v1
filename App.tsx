@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './components/Dashboard';
@@ -88,7 +87,6 @@ const App: React.FC = () => {
     try {
       if (!supabase) throw new Error("Supabase não iniciado");
 
-      // Timeout promise to prevent infinite loading
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error("Timeout")), 5000)
       );
@@ -98,28 +96,22 @@ const App: React.FC = () => {
         .select('*')
         .order('created_at', { ascending: false });
 
-      // Race: Database vs 5s Timer
       const result: any = await Promise.race([dbPromise, timeoutPromise]);
 
       if (result.error) throw result.error;
 
-      // Map Supabase rows back to CropData structure
       const loadedCrops = result.data.map((row: any) => ({
         ...row.content,
         id: row.id 
       }));
 
       setCrops(loadedCrops);
-      // Update local cache
       localStorage.setItem('maos-do-campo-crops', JSON.stringify(loadedCrops));
       
     } catch (e: any) {
       console.error("Erro de sincronização:", e);
-      // Only set error state if we have NO data to show
       if (!localData && crops.length === 0) {
         setError("Não foi possível carregar seus dados. Verifique a conexão.");
-      } else {
-        // Silent fail (toast could go here) - User still sees local data
       }
     } finally {
       setIsLoading(false);
@@ -130,7 +122,10 @@ const App: React.FC = () => {
     // Optimistic UI update
     const updatedList = [newCrop, ...crops];
     setCrops(updatedList);
-    setActiveTab('dashboard');
+    
+    // MUDANÇA: Redireciona direto para a nova lavoura em vez do dashboard
+    setActiveTab('dashboard'); 
+    setSelectedCrop(newCrop); 
 
     // Save to LocalStorage (backup)
     localStorage.setItem('maos-do-campo-crops', JSON.stringify(updatedList));
@@ -151,21 +146,17 @@ const App: React.FC = () => {
         if (error) throw error;
       } catch (e) {
         console.error("Erro ao salvar no Supabase:", e);
-        // We could add a "pending sync" flag here in future
       }
     }
   };
 
   const handleUpdateCrop = async (updatedCrop: CropData) => {
-    // Optimistic UI update
     const newCrops = crops.map(c => c.id === updatedCrop.id ? updatedCrop : c);
     setCrops(newCrops);
     setSelectedCrop(updatedCrop);
     
-    // Save to LocalStorage (backup)
     localStorage.setItem('maos-do-campo-crops', JSON.stringify(newCrops));
 
-    // Update in Supabase
     if (supabase && session) {
        try {
         const { error } = await supabase
@@ -180,8 +171,31 @@ const App: React.FC = () => {
     }
   };
 
+  // NOVA FUNÇÃO: Excluir Lavoura
+  const handleDeleteCrop = async (cropId: string) => {
+    if (!confirm("Tem certeza que deseja excluir esta lavoura permanentemente?")) return;
+
+    const newCrops = crops.filter(c => c.id !== cropId);
+    setCrops(newCrops);
+    setSelectedCrop(null); // Volta pro dashboard
+    
+    localStorage.setItem('maos-do-campo-crops', JSON.stringify(newCrops));
+
+    if (supabase && session) {
+       try {
+        const { error } = await supabase
+          .from('crops')
+          .delete()
+          .eq('id', cropId);
+        
+        if (error) throw error;
+      } catch (e) {
+        console.error("Erro ao excluir do Supabase:", e);
+      }
+    }
+  };
+
   const renderContent = () => {
-    // Show loading only if we have NO data and are fetching
     if (isLoading && crops.length === 0 && !error) {
       return (
         <div className="flex flex-col items-center justify-center h-full text-gray-400 animate-pulse">
@@ -212,6 +226,7 @@ const App: React.FC = () => {
           crop={selectedCrop} 
           onBack={() => setSelectedCrop(null)}
           onUpdateCrop={handleUpdateCrop}
+          onDeleteCrop={() => handleDeleteCrop(selectedCrop.id)}
         />
       );
     }
