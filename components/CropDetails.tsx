@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { CropData, TimelineStage, Material } from '../types';
 import { getAssistantResponse } from '../services/geminiService';
-import { ArrowLeft, Calendar, DollarSign, ListTodo, MessageSquare, Send, CheckCircle, Circle, AlertCircle, Droplets, Ruler, ShoppingBag, Download, Loader2, Edit2, Check, MapPin, Navigation, Trash2, Plus, X, Clock, Sprout, FileText, Home, Sparkles, Bot } from 'lucide-react';
+import { ArrowLeft, Calendar, DollarSign, ListTodo, MessageSquare, Send, CheckCircle, Circle, AlertCircle, Droplets, Ruler, ShoppingBag, Download, Loader2, Edit2, Check, MapPin, Navigation, Trash2, Plus, X, Clock, Sprout, FileText, Home, Sparkles, Bot, MessageCircle } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -644,63 +644,8 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
     );
   };
 
-  const renderAssistant = () => (
-    <div className="flex flex-col h-[650px] bg-white dark:bg-slate-800 rounded-3xl shadow-lg border border-gray-100 dark:border-slate-700 overflow-hidden animate-slide-up">
-       <div className="bg-agro-green p-6 text-white flex items-center gap-4">
-         <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-sm">
-            <MessageSquare size={28} />
-         </div>
-         <div>
-           <h3 className="font-bold text-lg">Assistente Rural IA</h3>
-           <p className="text-sm text-green-100 opacity-90">Especialista em {crop.type}</p>
-         </div>
-       </div>
-
-       <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-50/50 dark:bg-slate-900/50">
-          {chatHistory.map((msg, idx) => (
-            <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-               <div className={`
-                 max-w-[85%] p-5 rounded-2xl text-sm leading-relaxed shadow-sm
-                 ${msg.role === 'user' 
-                    ? 'bg-agro-green text-white rounded-tr-sm' 
-                    : 'bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 rounded-tl-sm border border-gray-100 dark:border-slate-600'}
-               `}>
-                 {msg.text}
-               </div>
-            </div>
-          ))}
-          {isChatLoading && (
-            <div className="flex justify-start">
-               <div className="bg-white dark:bg-slate-700 p-4 rounded-2xl rounded-tl-sm shadow-sm flex gap-2 border border-gray-100 dark:border-slate-600">
-                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-75"></div>
-                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-150"></div>
-               </div>
-            </div>
-          )}
-       </div>
-
-       <form onSubmit={handleChatSubmit} className="p-4 bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-slate-700 flex gap-3">
-         <input 
-           type="text" 
-           value={chatInput}
-           onChange={(e) => setChatInput(e.target.value)}
-           placeholder="Digite sua dúvida..."
-           className="flex-1 p-4 bg-gray-50 dark:bg-slate-900 border border-transparent focus:bg-white dark:focus:bg-slate-800 focus:border-agro-green rounded-xl outline-none transition-all font-medium dark:text-white"
-         />
-         <button 
-           type="submit" 
-           disabled={!chatInput.trim() || isChatLoading}
-           className="bg-agro-green text-white p-4 rounded-xl hover:bg-green-700 disabled:opacity-50 transition-transform active:scale-95 shadow-lg shadow-green-600/20"
-         >
-           <Send size={20} />
-         </button>
-       </form>
-    </div>
-  );
-
   return (
-    <div className="space-y-6 pb-24 md:pb-8">
+    <div className="space-y-6 pb-20">
       {/* Mobile-First Header with Glassmorphism */}
       <div className={`rounded-b-3xl md:rounded-3xl shadow-xl relative overflow-hidden transition-all duration-500 ${theme.bgGlass} backdrop-blur-xl`}>
          
@@ -722,18 +667,20 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                </div>
 
                <div className="flex gap-2">
-                   {/* Botão IA no Topo - SUPER DESTACADO */}
+                   {/* Botão IA no Topo - "Consultar IA" */}
                    <button 
                      onClick={() => setActiveTab('assistant')}
-                     className="p-2.5 bg-white text-agro-green rounded-xl shadow-lg transition-all active:scale-95 hover:scale-105 border border-white/20 animate-pulse-slow"
+                     className="flex items-center gap-2 px-4 py-2 bg-white text-agro-green rounded-full shadow-lg transition-all active:scale-95 hover:scale-105 border border-white/20 animate-pulse-slow font-bold text-xs"
                      title="Assistente IA"
                    >
-                     <Sparkles size={22} fill="currentColor" />
+                     <MessageSquare size={18} fill="currentColor" className="text-agro-green" />
+                     <span className="hidden sm:inline">Consultar IA</span>
+                     <span className="sm:hidden">IA</span>
                    </button>
 
                    <button 
                      onClick={onDeleteCrop}
-                     className="p-2.5 bg-white/10 hover:bg-red-500/80 text-white rounded-xl backdrop-blur-sm transition-all active:scale-95 border border-white/10"
+                     className="p-2 bg-white/10 hover:bg-red-500/80 text-white rounded-xl backdrop-blur-sm transition-all active:scale-95 border border-white/10"
                      title="Excluir Lavoura"
                    >
                      <Trash2 size={20} />
