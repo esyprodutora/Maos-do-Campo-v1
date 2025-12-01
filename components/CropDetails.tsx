@@ -645,7 +645,7 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
   };
 
   return (
-    <div className="space-y-6 pb-20">
+    <div className="space-y-6 pb-24 md:pb-8">
       {/* Mobile-First Header with Glassmorphism */}
       <div className={`rounded-b-3xl md:rounded-3xl shadow-xl relative overflow-hidden transition-all duration-500 ${theme.bgGlass} backdrop-blur-xl`}>
          
@@ -687,6 +687,30 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                    </button>
                </div>
             </div>
+
+            {/* Desktop Tabs - Restored */}
+            <div className="hidden md:flex overflow-x-auto gap-2 mt-6 pb-2 no-scrollbar">
+                {[
+                  { id: 'overview', label: 'Home', icon: Home },
+                  { id: 'finance', label: 'Finanças', icon: DollarSign },
+                  { id: 'timeline', label: 'Etapas', icon: ListTodo },
+                  { id: 'assistant', label: 'Assistente IA', icon: MessageSquare },
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id as any)}
+                    className={`
+                      flex items-center gap-2 px-4 py-2.5 rounded-full font-bold text-sm whitespace-nowrap transition-all shadow-sm
+                      ${activeTab === tab.id 
+                        ? 'bg-white text-gray-900 scale-105 ring-2 ring-white/50' 
+                        : 'bg-white/10 text-white hover:bg-white/20'}
+                    `}
+                  >
+                    <tab.icon size={16} />
+                    {tab.label}
+                  </button>
+                ))}
+            </div>
          </div>
 
          {/* Decorative Elements */}
@@ -705,7 +729,7 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
       {/* MOBILE BOTTOM NAVIGATION BAR - GLASSMORPHISM & RELATÓRIO INCLUÍDO */}
       <div className="md:hidden fixed bottom-4 left-4 right-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-gray-200/50 dark:border-slate-700/50 rounded-2xl shadow-2xl shadow-black/10 z-50 flex justify-around items-center py-3 px-1 ring-1 ring-black/5">
          {[
-            { id: 'overview', label: 'Visão', icon: Home },
+            { id: 'overview', label: 'Home', icon: Home },
             { id: 'finance', label: 'Finanças', icon: DollarSign },
             { id: 'timeline', label: 'Etapas', icon: ListTodo },
             // Relatório no menu inferior
