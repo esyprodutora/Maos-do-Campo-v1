@@ -1,4 +1,3 @@
-
 export interface MarketData {
   currency: string;
   price: number;
@@ -94,4 +93,12 @@ export const getMarketQuotes = async () => {
     console.error("Erro ao buscar cotações", error);
     return [];
   }
+};
+
+// Nova função auxiliar para buscar preço específico por tipo de cultura
+export const getCurrentPrice = async (cropType: string): Promise<number> => {
+    const quotes = await getMarketQuotes();
+    // @ts-ignore
+    const quote = quotes.find(q => q.id === cropType.toLowerCase());
+    return quote ? quote.price : 0;
 };
