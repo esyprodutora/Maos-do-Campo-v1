@@ -252,15 +252,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNew
            <div className="bg-white dark:bg-slate-800 rounded-3xl shadow border border-gray-200 dark:border-slate-700 p-6">
              <h3 className="font-bold text-gray-800 dark:text-white mb-6">Distribuição de Culturas</h3>
              {cropTypeData.length > 0 ? (
-               <div className="relative h-64">
+               <div className="relative h-80"> {/* Height increased for legend space */}
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
                         data={cropTypeData}
                         cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={80}
+                        cy="40%"
+                        innerRadius={50}
+                        outerRadius={70}
                         paddingAngle={5}
                         dataKey="value"
                         stroke="none"
@@ -274,12 +274,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNew
                       />
                     </PieChart>
                   </ResponsiveContainer>
-                  {/* Legend */}
-                  <div className="flex flex-wrap justify-center gap-3 mt-4">
+                  
+                  {/* Legend positioned absolutely at bottom within relative container */}
+                  <div className="absolute bottom-0 left-0 right-0 flex flex-wrap justify-center gap-2 max-h-24 overflow-y-auto px-2 pb-2">
                     {cropTypeData.map((d, i) => (
-                      <div key={i} className="flex items-center gap-2 bg-gray-50 dark:bg-slate-700 px-3 py-1 rounded-full border border-gray-100 dark:border-slate-600">
+                      <div key={i} className="flex items-center gap-1.5 bg-gray-50 dark:bg-slate-700 px-2 py-1 rounded-md border border-gray-100 dark:border-slate-600">
                         <div className="w-2 h-2 rounded-full" style={{ backgroundColor: d.color }}></div>
-                        <span className="text-xs font-bold text-gray-600 dark:text-gray-300 capitalize">{d.name}</span>
+                        <span className="text-[10px] font-bold text-gray-600 dark:text-gray-300 capitalize">{d.name}</span>
                       </div>
                     ))}
                   </div>
