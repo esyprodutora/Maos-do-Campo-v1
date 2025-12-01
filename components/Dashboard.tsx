@@ -200,7 +200,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNew
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {crops.map((crop) => {
                 const styles = getCropStyle(crop.type);
-                const percentDone = Math.random() * 60 + 20; // Mock progress for UI demo
+                
+                // CÁLCULO REAL DE PROGRESSO
+                const totalStages = crop.timeline ? crop.timeline.length : 0;
+                const completedStages = crop.timeline ? crop.timeline.filter(s => s.status === 'concluido').length : 0;
+                const percentDone = totalStages > 0 ? (completedStages / totalStages) * 100 : 0;
                 
                 return (
                   <div 
