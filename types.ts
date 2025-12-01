@@ -30,9 +30,18 @@ export interface TimelineStage {
   title: string;
   description: string;
   status: 'pendente' | 'em_andamento' | 'concluido';
-  dateEstimate: string; // Start Date
-  endDate?: string;     // End Date (New)
+  dateEstimate: string;
+  endDate?: string;
   tasks: { id: string; text: string; done: boolean }[];
+}
+
+export interface HarvestLog {
+  id: string;
+  date: string;
+  quantity: number;
+  unit: string; // sc, ton, kg
+  location: string; // Silo 1, Armazém, Cooperativa
+  qualityNote?: string; // Umidade 13%, Ardidos 2%, etc
 }
 
 export interface CropData {
@@ -42,7 +51,7 @@ export interface CropData {
   areaHa: number;
   soilType: SoilType;
   coordinates?: Coordinates;
-  productivityGoal: string; 
+  productivityGoal: string; // e.g. "60 sc/ha"
   spacing: string;
   datePlanted: string;
   
@@ -51,7 +60,8 @@ export interface CropData {
   estimatedHarvestDate: string;
   materials: Material[];
   timeline: TimelineStage[];
-  aiAdvice: string; // General advice
+  harvestLogs?: HarvestLog[]; // New field for Post-Harvest
+  aiAdvice: string;
 }
 
 export interface WeatherData {
