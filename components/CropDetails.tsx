@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { CropData, TimelineStage, Material } from '../types';
 import { getAssistantResponse } from '../services/geminiService';
-import { ArrowLeft, Calendar, DollarSign, ListTodo, MessageSquare, Send, CheckCircle, Circle, AlertCircle, Droplets, Ruler, ShoppingBag, Download, Loader2, Edit2, Check, MapPin, Navigation, Trash2, Plus, X, Clock, Sprout, FileText, Home, Sparkles } from 'lucide-react';
+import { ArrowLeft, Calendar, DollarSign, ListTodo, MessageSquare, Send, CheckCircle, Circle, AlertCircle, Droplets, Ruler, ShoppingBag, Download, Loader2, Edit2, Check, MapPin, Navigation, Trash2, Plus, X, Clock, Sprout, FileText, Home, Sparkles, Bot } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -43,17 +43,17 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
   // Helper styles based on crop type - Cores translúcidas para efeito vidro
   const getTheme = (type: string) => {
     switch(type) {
-      case 'cafe': return { main: 'text-[#A67C52]', bgGlass: 'bg-[#A67C52]/85', bgSoft: 'bg-[#A67C52]/10', border: 'border-[#A67C52]/20', light: 'bg-[#FAF3E0] dark:bg-[#A67C52]/20' };
-      case 'milho': return { main: 'text-orange-500', bgGlass: 'bg-orange-500/85', bgSoft: 'bg-orange-500/10', border: 'border-orange-500/20', light: 'bg-orange-50 dark:bg-orange-500/20' };
-      case 'soja': return { main: 'text-yellow-500', bgGlass: 'bg-yellow-500/85', bgSoft: 'bg-yellow-500/10', border: 'border-yellow-500/20', light: 'bg-yellow-50 dark:bg-yellow-500/20' };
-      case 'cana': return { main: 'text-green-600', bgGlass: 'bg-green-600/85', bgSoft: 'bg-green-600/10', border: 'border-green-600/20', light: 'bg-green-100 dark:bg-green-600/20' };
-      case 'algodao': return { main: 'text-slate-500 dark:text-slate-300', bgGlass: 'bg-slate-500/85', bgSoft: 'bg-slate-500/10', border: 'border-slate-500/20', light: 'bg-slate-100 dark:bg-slate-500/20' };
-      case 'arroz': return { main: 'text-yellow-600', bgGlass: 'bg-yellow-400/85', bgSoft: 'bg-yellow-400/10', border: 'border-yellow-400/20', light: 'bg-yellow-50 dark:bg-yellow-400/20' };
-      case 'feijao': return { main: 'text-red-700', bgGlass: 'bg-red-700/85', bgSoft: 'bg-red-700/10', border: 'border-red-700/20', light: 'bg-red-50 dark:bg-red-700/20' };
-      case 'trigo': return { main: 'text-amber-500', bgGlass: 'bg-amber-500/85', bgSoft: 'bg-amber-500/10', border: 'border-amber-500/20', light: 'bg-amber-50 dark:bg-amber-500/20' };
-      case 'laranja': return { main: 'text-orange-600', bgGlass: 'bg-orange-600/85', bgSoft: 'bg-orange-600/10', border: 'border-orange-600/20', light: 'bg-orange-100 dark:bg-orange-600/20' };
-      case 'mandioca': return { main: 'text-amber-800', bgGlass: 'bg-amber-800/85', bgSoft: 'bg-amber-800/10', border: 'border-amber-800/20', light: 'bg-amber-100 dark:bg-amber-800/20' };
-      default: return { main: 'text-agro-green', bgGlass: 'bg-agro-green/85', bgSoft: 'bg-agro-green/10', border: 'border-agro-green/20', light: 'bg-green-50 dark:bg-green-900/20' };
+      case 'cafe': return { main: 'text-[#A67C52]', bg: 'bg-[#A67C52]', bgGlass: 'bg-[#A67C52]/85', bgSoft: 'bg-[#A67C52]/10', border: 'border-[#A67C52]/20', light: 'bg-[#FAF3E0] dark:bg-[#A67C52]/20', gradient: 'from-[#A67C52] to-[#8B6642]' };
+      case 'milho': return { main: 'text-orange-500', bg: 'bg-orange-500', bgGlass: 'bg-orange-500/85', bgSoft: 'bg-orange-500/10', border: 'border-orange-500/20', light: 'bg-orange-50 dark:bg-orange-500/20', gradient: 'from-orange-500 to-orange-600' };
+      case 'soja': return { main: 'text-yellow-500', bg: 'bg-yellow-500', bgGlass: 'bg-yellow-500/85', bgSoft: 'bg-yellow-500/10', border: 'border-yellow-500/20', light: 'bg-yellow-50 dark:bg-yellow-500/20', gradient: 'from-yellow-500 to-yellow-600' };
+      case 'cana': return { main: 'text-green-600', bg: 'bg-green-600', bgGlass: 'bg-green-600/85', bgSoft: 'bg-green-600/10', border: 'border-green-600/20', light: 'bg-green-100 dark:bg-green-600/20', gradient: 'from-green-600 to-green-700' };
+      case 'algodao': return { main: 'text-slate-500 dark:text-slate-300', bg: 'bg-slate-500', bgGlass: 'bg-slate-500/85', bgSoft: 'bg-slate-500/10', border: 'border-slate-500/20', light: 'bg-slate-100 dark:bg-slate-500/20', gradient: 'from-slate-500 to-slate-600' };
+      case 'arroz': return { main: 'text-yellow-600', bg: 'bg-yellow-400', bgGlass: 'bg-yellow-400/85', bgSoft: 'bg-yellow-400/10', border: 'border-yellow-400/20', light: 'bg-yellow-50 dark:bg-yellow-400/20', gradient: 'from-yellow-400 to-yellow-500' };
+      case 'feijao': return { main: 'text-red-700', bg: 'bg-red-700', bgGlass: 'bg-red-700/85', bgSoft: 'bg-red-700/10', border: 'border-red-700/20', light: 'bg-red-50 dark:bg-red-700/20', gradient: 'from-red-700 to-red-800' };
+      case 'trigo': return { main: 'text-amber-500', bg: 'bg-amber-500', bgGlass: 'bg-amber-500/85', bgSoft: 'bg-amber-500/10', border: 'border-amber-500/20', light: 'bg-amber-50 dark:bg-amber-500/20', gradient: 'from-amber-500 to-amber-600' };
+      case 'laranja': return { main: 'text-orange-600', bg: 'bg-orange-600', bgGlass: 'bg-orange-600/85', bgSoft: 'bg-orange-600/10', border: 'border-orange-600/20', light: 'bg-orange-100 dark:bg-orange-600/20', gradient: 'from-orange-600 to-orange-700' };
+      case 'mandioca': return { main: 'text-amber-800', bg: 'bg-amber-800', bgGlass: 'bg-amber-800/85', bgSoft: 'bg-amber-800/10', border: 'border-amber-800/20', light: 'bg-amber-100 dark:bg-amber-800/20', gradient: 'from-amber-800 to-amber-900' };
+      default: return { main: 'text-agro-green', bg: 'bg-agro-green', bgGlass: 'bg-agro-green/85', bgSoft: 'bg-agro-green/10', border: 'border-agro-green/20', light: 'bg-green-50 dark:bg-green-900/20', gradient: 'from-agro-green to-green-700' };
     }
   };
   const theme = getTheme(crop.type);
@@ -644,8 +644,63 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
     );
   };
 
+  const renderAssistant = () => (
+    <div className="flex flex-col h-[650px] bg-white dark:bg-slate-800 rounded-3xl shadow-lg border border-gray-100 dark:border-slate-700 overflow-hidden animate-slide-up">
+       <div className="bg-agro-green p-6 text-white flex items-center gap-4">
+         <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-sm">
+            <MessageSquare size={28} />
+         </div>
+         <div>
+           <h3 className="font-bold text-lg">Assistente Rural IA</h3>
+           <p className="text-sm text-green-100 opacity-90">Especialista em {crop.type}</p>
+         </div>
+       </div>
+
+       <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-50/50 dark:bg-slate-900/50">
+          {chatHistory.map((msg, idx) => (
+            <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+               <div className={`
+                 max-w-[85%] p-5 rounded-2xl text-sm leading-relaxed shadow-sm
+                 ${msg.role === 'user' 
+                    ? 'bg-agro-green text-white rounded-tr-sm' 
+                    : 'bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 rounded-tl-sm border border-gray-100 dark:border-slate-600'}
+               `}>
+                 {msg.text}
+               </div>
+            </div>
+          ))}
+          {isChatLoading && (
+            <div className="flex justify-start">
+               <div className="bg-white dark:bg-slate-700 p-4 rounded-2xl rounded-tl-sm shadow-sm flex gap-2 border border-gray-100 dark:border-slate-600">
+                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-75"></div>
+                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-150"></div>
+               </div>
+            </div>
+          )}
+       </div>
+
+       <form onSubmit={handleChatSubmit} className="p-4 bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-slate-700 flex gap-3">
+         <input 
+           type="text" 
+           value={chatInput}
+           onChange={(e) => setChatInput(e.target.value)}
+           placeholder="Digite sua dúvida..."
+           className="flex-1 p-4 bg-gray-50 dark:bg-slate-900 border border-transparent focus:bg-white dark:focus:bg-slate-800 focus:border-agro-green rounded-xl outline-none transition-all font-medium dark:text-white"
+         />
+         <button 
+           type="submit" 
+           disabled={!chatInput.trim() || isChatLoading}
+           className="bg-agro-green text-white p-4 rounded-xl hover:bg-green-700 disabled:opacity-50 transition-transform active:scale-95 shadow-lg shadow-green-600/20"
+         >
+           <Send size={20} />
+         </button>
+       </form>
+    </div>
+  );
+
   return (
-    <div className="space-y-6 pb-20">
+    <div className="space-y-6 pb-24 md:pb-8">
       {/* Mobile-First Header with Glassmorphism */}
       <div className={`rounded-b-3xl md:rounded-3xl shadow-xl relative overflow-hidden transition-all duration-500 ${theme.bgGlass} backdrop-blur-xl`}>
          
@@ -667,17 +722,18 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                </div>
 
                <div className="flex gap-2">
-                   {/* Botão IA no Topo */}
+                   {/* Botão IA no Topo - SUPER DESTACADO */}
                    <button 
                      onClick={() => setActiveTab('assistant')}
-                     className="p-2 bg-white text-agro-green rounded-xl shadow-lg transition-all active:scale-95 hover:scale-105 border border-white/20"
+                     className="p-2.5 bg-white text-agro-green rounded-xl shadow-lg transition-all active:scale-95 hover:scale-105 border border-white/20 animate-pulse-slow"
                      title="Assistente IA"
                    >
-                     <Sparkles size={20} fill="currentColor" className="animate-pulse-slow" />
+                     <Sparkles size={22} fill="currentColor" />
                    </button>
+
                    <button 
                      onClick={onDeleteCrop}
-                     className="p-2 bg-white/10 hover:bg-red-500/80 text-white rounded-xl backdrop-blur-sm transition-all active:scale-95 border border-white/10"
+                     className="p-2.5 bg-white/10 hover:bg-red-500/80 text-white rounded-xl backdrop-blur-sm transition-all active:scale-95 border border-white/10"
                      title="Excluir Lavoura"
                    >
                      <Trash2 size={20} />
