@@ -481,7 +481,7 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                     {stage.tasks.map(task => (
                     <div 
                         key={task.id} 
-                        // CORREÇÃO: toggleTask agora funciona corretamente para atualizar estado
+                        /* CORREÇÃO: toggleTask agora funciona corretamente para atualizar estado */
                         onClick={() => !isEditingTimeline && toggleTask(stage.id, task.id)} 
                         className={`flex items-center gap-4 p-3 rounded-xl cursor-pointer transition-all border ${task.done ? 'bg-green-50 border-green-100' : 'bg-white border-gray-100'}`}
                     >
