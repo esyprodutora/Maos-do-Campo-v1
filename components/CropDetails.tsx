@@ -730,7 +730,7 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                    >
                      <MessageSquare size={18} fill="currentColor" className="text-agro-green" />
                      <span className="hidden sm:inline">Assistente IA</span>
-                     <span className="sm:hidden">IA</span>
+                     <span className="sm:hidden">Assistente IA</span>
                    </button>
 
                    <button 
