@@ -18,7 +18,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNew
 
   useEffect(() => {
     const loadWeather = async () => {
-        // Tenta pegar a coordenada da primeira lavoura ou usa GPS
         const firstCrop = crops[0];
         const lat = firstCrop?.coordinates?.lat;
         const lng = firstCrop?.coordinates?.lng;
@@ -27,10 +26,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNew
         setWeather(data);
     };
     loadWeather();
-  }, [crops]); // Recarrega se as lavouras mudarem (para pegar nova localização)
+  }, [crops]);
 
   const totalArea = crops.reduce((acc, c) => acc + c.areaHa, 0);
-  const totalCost = crops.reduce((acc, c) => acc + c.estimatedCost, 0);
+  const totalCostEstimated = crops.reduce((acc, c) => acc + c.estimatedCost, 0);
+  
+  // Calculate Total Realized Cost across all crops
+  const totalCostReal = crops.reduce((acc, crop) => {
+      const cropRealCost = (crop.materials || []).reduce((sum, m) => sum + (m.realCost || 0), 0);
+      return acc + cropRealCost;
+  }, 0);
 
   // Define colors helper first
   const getCropColor = (type: string) => {
@@ -77,7 +82,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNew
     }
   };
 
-  // Helper para ícone do clima
   const getWeatherIcon = (condition: string, isDay: boolean) => {
       if (!condition) return <Sun size={32} className="text-yellow-300 animate-pulse-slow" />;
       const lower = condition.toLowerCase();
@@ -118,7 +122,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNew
       {/* Hero Stats Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Weather Widget - REAL DATA */}
+        {/* Weather Widget */}
         <div className={`
             relative overflow-hidden rounded-3xl shadow-xl p-6 flex flex-col justify-between min-h-[180px] transition-all duration-500
             ${weather?.isDay === false ? 'bg-gradient-to-br from-indigo-900 to-slate-900 shadow-indigo-900/20' : 'bg-gradient-to-br from-blue-500 to-indigo-600 shadow-blue-500/20'}
@@ -173,25 +177,34 @@ export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNew
                <div className="p-3 bg-green-50 dark:bg-green-900/30 text-agro-green rounded-2xl">
                  <Sprout size={24} />
                </div>
-               <span className="text-xs font-bold text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/50 px-2 py-1 rounded-full">+2 esse ano</span>
+               <span className="text-xs font-bold text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/50 px-2 py-1 rounded-full">Ativas</span>
             </div>
             <div>
-              <p className="text-gray-500 dark:text-gray-400 font-medium text-sm">Lavouras Ativas</p>
+              <p className="text-gray-500 dark:text-gray-400 font-medium text-sm">Total Lavouras</p>
               <h3 className="text-3xl font-extrabold text-gray-900 dark:text-white mt-1">{crops.length}</h3>
             </div>
           </div>
 
           <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow border border-gray-200 dark:border-slate-700 flex flex-col justify-between hover:shadow-md transition-shadow">
-            <div className="flex justify-between items-start mb-4">
+            <div className="flex justify-between items-start mb-2">
                <div className="p-3 bg-yellow-50 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 rounded-2xl">
                  <DollarSign size={24} />
                </div>
             </div>
             <div>
-              <p className="text-gray-500 dark:text-gray-400 font-medium text-sm">Custo Previsto</p>
-              <h3 className="text-2xl font-extrabold text-gray-900 dark:text-white mt-1 truncate" title={totalCost.toString()}>
-                {totalCost.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}
-              </h3>
+              <p className="text-gray-500 dark:text-gray-400 font-medium text-xs uppercase tracking-wide">Custo Previsto vs Real</p>
+              <div className="flex items-baseline gap-2 mt-1">
+                  <h3 className="text-xl font-extrabold text-gray-900 dark:text-white" title="Previsto">
+                    {totalCostEstimated.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}
+                  </h3>
+                  <span className="text-xs text-gray-400">Est.</span>
+              </div>
+              <div className="flex items-baseline gap-2">
+                  <h3 className="text-lg font-bold text-green-600 dark:text-green-400" title="Realizado">
+                    {totalCostReal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}
+                  </h3>
+                  <span className="text-xs text-gray-400">Real</span>
+              </div>
             </div>
           </div>
 
@@ -236,7 +249,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNew
               {crops.map((crop) => {
                 const styles = getCropStyle(crop.type);
                 
-                // CÁLCULO REAL DE PROGRESSO
                 const totalStages = crop.timeline ? crop.timeline.length : 0;
                 const completedStages = crop.timeline ? crop.timeline.filter(s => s.status === 'concluido').length : 0;
                 const percentDone = totalStages > 0 ? (completedStages / totalStages) * 100 : 0;
@@ -291,7 +303,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNew
            <div className="bg-white dark:bg-slate-800 rounded-3xl shadow border border-gray-200 dark:border-slate-700 p-6">
              <h3 className="font-bold text-gray-800 dark:text-white mb-6">Distribuição de Culturas</h3>
              {cropTypeData.length > 0 ? (
-               <div className="relative h-80"> {/* Height increased for legend space */}
+               <div className="relative h-80"> 
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
@@ -314,7 +326,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNew
                     </PieChart>
                   </ResponsiveContainer>
                   
-                  {/* Legend positioned absolutely at bottom within relative container */}
                   <div className="absolute bottom-0 left-0 right-0 flex flex-wrap justify-center gap-2 max-h-24 overflow-y-auto px-2 pb-2">
                     {cropTypeData.map((d, i) => (
                       <div key={i} className="flex items-center gap-1.5 bg-gray-50 dark:bg-slate-700 px-2 py-1 rounded-md border border-gray-100 dark:border-slate-600">
