@@ -40,7 +40,7 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
   // State for Timeline Editing
   const [isEditingTimeline, setIsEditingTimeline] = useState(false);
 
-  // Helper styles based on crop type - Agora com transparência no bg
+  // Helper styles based on crop type
   const getTheme = (type: string) => {
     switch(type) {
       case 'cafe': return { main: 'text-[#A67C52]', bg: 'bg-[#A67C52]', bgSoft: 'bg-[#A67C52]/10', border: 'border-[#A67C52]/20', light: 'bg-[#FAF3E0] dark:bg-[#A67C52]/20' };
@@ -686,30 +686,28 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                </div>
             </div>
 
-            {/* Scrollable Tabs (Pills) with Sticky Behavior */}
-            <div className="sticky top-0 z-30 -mx-4 px-4 pb-2 pt-1 backdrop-blur-md bg-white/5 md:static md:bg-transparent md:backdrop-filter-none md:mx-0 md:px-0">
-                <div className="flex overflow-x-auto gap-2 pb-1 no-scrollbar">
-                    {[
-                    { id: 'overview', label: 'Visão Geral', icon: ListTodo },
-                    { id: 'finance', label: 'Finanças', icon: DollarSign },
-                    { id: 'timeline', label: 'Etapas', icon: Calendar },
-                    { id: 'assistant', label: 'Assistente IA', icon: MessageSquare },
-                    ].map((tab) => (
-                    <button
-                        key={tab.id}
-                        onClick={() => setActiveTab(tab.id as any)}
-                        className={`
-                        flex items-center gap-2 px-4 py-2.5 rounded-full font-bold text-sm whitespace-nowrap transition-all shadow-sm
-                        ${activeTab === tab.id 
-                            ? 'bg-white text-gray-900 scale-105 ring-2 ring-white/50' 
-                            : 'bg-white/10 text-white hover:bg-white/20'}
-                        `}
-                    >
-                        <tab.icon size={16} />
-                        {tab.label}
-                    </button>
-                    ))}
-                </div>
+            {/* Desktop Tabs (Hidden on Mobile - now using Bottom Bar) */}
+            <div className="hidden md:flex overflow-x-auto gap-2 pb-2 no-scrollbar">
+                {[
+                  { id: 'overview', label: 'Visão Geral', icon: ListTodo },
+                  { id: 'finance', label: 'Finanças', icon: DollarSign },
+                  { id: 'timeline', label: 'Etapas', icon: Calendar },
+                  { id: 'assistant', label: 'Assistente IA', icon: MessageSquare },
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id as any)}
+                    className={`
+                      flex items-center gap-2 px-4 py-2.5 rounded-full font-bold text-sm whitespace-nowrap transition-all shadow-sm
+                      ${activeTab === tab.id 
+                        ? 'bg-white text-gray-900 scale-105 ring-2 ring-white/50' 
+                        : 'bg-white/10 text-white hover:bg-white/20'}
+                    `}
+                  >
+                    <tab.icon size={16} />
+                    {tab.label}
+                  </button>
+                ))}
             </div>
          </div>
 
@@ -719,11 +717,38 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
       </div>
 
       {/* Content Area */}
-      <div className="min-h-[500px] animate-slide-up">
+      <div className="min-h-[500px] pb-32 md:pb-0 animate-slide-up">
         {activeTab === 'overview' && renderOverview()}
         {activeTab === 'finance' && renderFinance()}
         {activeTab === 'timeline' && renderTimeline()}
         {activeTab === 'assistant' && renderAssistant()}
+      </div>
+
+      {/* MOBILE BOTTOM NAVIGATION BAR */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-800 px-6 py-3 z-50 flex justify-between items-center shadow-lg pb-safe">
+         {[
+            { id: 'overview', label: 'Visão', icon: ListTodo },
+            { id: 'finance', label: 'Finanças', icon: DollarSign },
+            { id: 'timeline', label: 'Etapas', icon: Calendar },
+            { id: 'assistant', label: 'IA', icon: MessageSquare },
+         ].map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+               <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`flex flex-col items-center gap-1 transition-colors duration-300 ${isActive ? 'text-agro-green' : 'text-gray-400 dark:text-gray-500'}`}
+               >
+                  <div className={`
+                      p-1.5 rounded-xl transition-all duration-300
+                      ${isActive ? 'bg-green-50 dark:bg-green-900/20 -translate-y-1' : ''}
+                  `}>
+                      <tab.icon size={24} strokeWidth={isActive ? 2.5 : 2} />
+                  </div>
+                  <span className="text-[10px] font-bold">{tab.label}</span>
+               </button>
+            )
+         })}
       </div>
     </div>
   );
