@@ -79,14 +79,29 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
   const theme = getTheme(crop.type);
 
   // --- Timeline Handlers ---
+  const toggleTask = (stageId: string, taskId: string) => {
+    const updatedTimeline = (crop.timeline || []).map(stage => {
+      if (stage.id === stageId) {
+        const updatedTasks = stage.tasks.map(task => 
+          task.id === taskId ? { ...task, done: !task.done } : task
+        );
+        const allDone = updatedTasks.every(t => t.done);
+        const someDone = updatedTasks.some(t => t.done);
+        let newStatus: 'pendente' | 'em_andamento' | 'concluido' = 'pendente';
+        if (allDone && updatedTasks.length > 0) newStatus = 'concluido';
+        else if (someDone) newStatus = 'em_andamento';
+        return { ...stage, tasks: updatedTasks, status: newStatus } as TimelineStage;
+      }
+      return stage;
+    });
+    onUpdateCrop({ ...crop, timeline: updatedTimeline });
+  };
   
-  // Toggle de Status da Etapa (Pendente -> Andamento -> Concluido)
   const handleToggleStageStatus = (index: number) => {
     const updatedTimeline = [...(crop.timeline || [])];
     const stage = updatedTimeline[index];
     let newStatus: 'pendente' | 'em_andamento' | 'concluido' = 'pendente';
     let newTasks = [...stage.tasks];
-    
     if (stage.status === 'pendente') {
         newStatus = 'em_andamento';
     } else if (stage.status === 'em_andamento') {
@@ -96,38 +111,10 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
         newStatus = 'pendente';
         newTasks = newTasks.map(t => ({ ...t, done: false }));
     }
-    
     updatedTimeline[index] = { ...stage, status: newStatus, tasks: newTasks };
     onUpdateCrop({ ...crop, timeline: updatedTimeline });
   };
 
-  // Toggle de Status da Tarefa Individual
-  const toggleTask = (stageId: string, taskId: string) => {
-    const updatedTimeline = (crop.timeline || []).map(stage => {
-      if (stage.id === stageId) {
-        const updatedTasks = stage.tasks.map(task => 
-          task.id === taskId ? { ...task, done: !task.done } : task
-        );
-        
-        const allDone = updatedTasks.every(t => t.done);
-        const someDone = updatedTasks.some(t => t.done);
-        
-        let newStatus: 'pendente' | 'em_andamento' | 'concluido' = 'pendente';
-        if (allDone && updatedTasks.length > 0) newStatus = 'concluido';
-        else if (someDone) newStatus = 'em_andamento';
-        
-        return { 
-          ...stage, 
-          tasks: updatedTasks, 
-          status: newStatus 
-        } as TimelineStage;
-      }
-      return stage;
-    });
-    onUpdateCrop({ ...crop, timeline: updatedTimeline });
-  };
-
-  // Adicionar Nova Etapa
   const handleAddStage = () => {
     const newStage: TimelineStage = {
       id: Math.random().toString(36).substr(2, 9),
@@ -140,7 +127,6 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
     onUpdateCrop({ ...crop, timeline: [...(crop.timeline || []), newStage] });
   };
 
-  // Remover Etapa
   const handleRemoveStage = (index: number) => {
     if (!confirm("Excluir esta etapa?")) return;
     const updatedTimeline = [...(crop.timeline || [])];
@@ -148,20 +134,18 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
     onUpdateCrop({ ...crop, timeline: updatedTimeline });
   };
 
-  // Atualizar Texto/Datas da Etapa
   const handleUpdateStage = (index: number, field: keyof TimelineStage, value: any) => {
     const updatedTimeline = [...(crop.timeline || [])];
     updatedTimeline[index] = { ...updatedTimeline[index], [field]: value };
     onUpdateCrop({ ...crop, timeline: updatedTimeline });
   };
-
-  // --- NOVOS HANDLERS PARA SUBETAPAS (TAREFAS) ---
-
+  
+  // Sub-tasks Handlers
   const handleAddTaskToStage = (stageIndex: number) => {
     const updatedTimeline = [...(crop.timeline || [])];
     updatedTimeline[stageIndex].tasks.push({
         id: Math.random().toString(36).substr(2, 9),
-        text: '', // Começa vazio para o usuário digitar
+        text: '', 
         done: false
     });
     onUpdateCrop({ ...crop, timeline: updatedTimeline });
@@ -248,30 +232,6 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
     const response = await getAssistantResponse(userMsg, context);
     setChatHistory(prev => [...prev, { role: 'ai', text: response }]);
     setIsChatLoading(false);
-  };
-
-  const generatePDF = () => {
-    setIsGeneratingPdf(true);
-    const doc = new jsPDF();
-    doc.setFillColor(39, 174, 96);
-    doc.rect(0, 0, 210, 30, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(22);
-    doc.text('MÃOS DO CAMPO', 105, 15, { align: 'center' });
-    doc.setFontSize(10);
-    doc.text('Relatório de Planejamento de Safra', 105, 22, { align: 'center' });
-    doc.setTextColor(40, 40, 40);
-    doc.setFontSize(14);
-    doc.text(`Lavoura: ${crop.name}`, 14, 45);
-    const materials = crop.materials || [];
-    const tableData = materials.map(m => [
-      m.name, m.category, `${m.quantity} ${m.unit}`, 
-      `R$ ${m.unitPriceEstimate.toFixed(2)} (Est)`, 
-      m.realCost ? `R$ ${m.realCost.toFixed(2)} (Real)` : '-'
-    ]);
-    autoTable(doc, { startY: 75, head: [['Item', 'Categoria', 'Qtd', 'Preço Est.', 'Pago Real']], body: tableData });
-    doc.save(`plano_${crop.name}.pdf`);
-    setIsGeneratingPdf(false);
   };
 
   // --- Render Sections ---
@@ -370,7 +330,6 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
     return (
       <div className="space-y-6 animate-slide-up">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-           {/* Chart Card */}
            <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700">
              <h3 className="font-bold text-gray-800 dark:text-white mb-6 text-xl">Estimado (IA)</h3>
              <div className="h-64 w-full">
@@ -396,7 +355,6 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
              </div>
            </div>
 
-            {/* Realized Cost Card */}
            <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col justify-center items-center text-center">
               <div className="p-6 bg-blue-50 dark:bg-blue-900/20 rounded-full mb-4 text-blue-600 dark:text-blue-400">
                   <Wallet size={48} />
@@ -411,7 +369,6 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
            </div>
         </div>
 
-        {/* List with Real Cost Editing */}
         <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="font-bold text-gray-800 dark:text-white text-xl flex items-center gap-2">
@@ -526,7 +483,6 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                                 className="flex-1 p-2 border rounded text-sm"
                             />
                         </div>
-                        {/* Task Editing in Stage Edit Mode */}
                         <div className="mt-3 space-y-2 border-t pt-2">
                             <p className="text-xs font-bold text-gray-500">Subetapas</p>
                             {stage.tasks.map((task, tIndex) => (
@@ -714,7 +670,7 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
 
   return (
     <div className="space-y-6 pb-24 md:pb-8">
-      {/* Header */}
+      {/* Header with Dynamic Background */}
       <div className={`rounded-b-3xl md:rounded-3xl shadow-xl relative overflow-hidden transition-all duration-500 bg-gradient-to-br ${theme.gradient}`}>
          
          <div className="relative z-20 p-6 pt-8 md:p-8">
@@ -735,6 +691,7 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                </div>
 
                <div className="flex gap-2">
+                   {/* Botão IA no Topo */}
                    <button 
                      onClick={() => setActiveTab('assistant')}
                      className="flex items-center gap-2 px-4 py-2 bg-white text-agro-green rounded-full shadow-lg transition-all active:scale-95 hover:scale-105 border border-white/20 animate-pulse-slow font-bold text-xs"
@@ -762,21 +719,22 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                   { id: 'finance', label: 'Finanças', icon: DollarSign },
                   { id: 'timeline', label: 'Etapas', icon: ListTodo },
                   { id: 'storage', label: 'Armazenagem', icon: Warehouse },
-                  { id: 'reports', label: 'Relatório', icon: FileText, action: generatePDF, loading: isGeneratingPdf }, 
-                ].map((tab) => {
-                   if (tab.id === 'reports') {
-                       return (
-                        <button key={tab.id} onClick={tab.action} className="flex items-center gap-2 px-4 py-2.5 rounded-full font-bold text-sm bg-white/10 text-white hover:bg-white/20">
-                            {tab.loading ? <Loader2 size={16} className="animate-spin"/> : <tab.icon size={16}/>} {tab.label}
-                        </button>
-                       )
-                   }
-                   return (
-                    <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`flex items-center gap-2 px-4 py-2.5 rounded-full font-bold text-sm ${activeTab === tab.id ? 'bg-white text-gray-900' : 'bg-white/10 text-white'}`}>
-                        <tab.icon size={16} /> {tab.label}
-                    </button>
-                   )
-                })}
+                  { id: 'reports', label: 'Relatório', icon: FileText }, 
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id as any)}
+                    className={`
+                      flex items-center gap-2 px-4 py-2.5 rounded-full font-bold text-sm whitespace-nowrap transition-all shadow-sm
+                      ${activeTab === tab.id 
+                        ? 'bg-white text-gray-900 scale-105 ring-2 ring-white/50' 
+                        : 'bg-white/10 text-white hover:bg-white/20'}
+                    `}
+                  >
+                    <tab.icon size={16} />
+                    {tab.label}
+                  </button>
+                ))}
             </div>
          </div>
          <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
