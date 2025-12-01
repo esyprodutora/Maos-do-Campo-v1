@@ -11,9 +11,10 @@ interface CropDetailsProps {
   crop: CropData;
   onBack: () => void;
   onUpdateCrop: (updatedCrop: CropData) => void;
+  onDeleteCrop: () => void; // Nova prop
 }
 
-export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdateCrop }) => {
+export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdateCrop, onDeleteCrop }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'finance' | 'timeline' | 'assistant'>('overview');
   const [chatInput, setChatInput] = useState('');
   const [chatHistory, setChatHistory] = useState<{role: 'user' | 'ai', text: string}[]>([
@@ -39,20 +40,20 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
   // State for Timeline Editing
   const [isEditingTimeline, setIsEditingTimeline] = useState(false);
 
-  // Helper styles based on crop type
+  // Helper styles based on crop type - Agora com transparência no bg
   const getTheme = (type: string) => {
     switch(type) {
-      case 'cafe': return { main: 'text-[#A67C52]', bg: 'bg-[#A67C52]', light: 'bg-[#FAF3E0] dark:bg-[#A67C52]/20' };
-      case 'milho': return { main: 'text-orange-500', bg: 'bg-orange-500', light: 'bg-orange-50 dark:bg-orange-500/20' };
-      case 'soja': return { main: 'text-yellow-500', bg: 'bg-yellow-500', light: 'bg-yellow-50 dark:bg-yellow-500/20' };
-      case 'cana': return { main: 'text-green-600', bg: 'bg-green-600', light: 'bg-green-100 dark:bg-green-600/20' };
-      case 'algodao': return { main: 'text-slate-500 dark:text-slate-300', bg: 'bg-slate-500', light: 'bg-slate-100 dark:bg-slate-500/20' };
-      case 'arroz': return { main: 'text-yellow-600', bg: 'bg-yellow-400', light: 'bg-yellow-50 dark:bg-yellow-400/20' };
-      case 'feijao': return { main: 'text-red-700', bg: 'bg-red-700', light: 'bg-red-50 dark:bg-red-700/20' };
-      case 'trigo': return { main: 'text-amber-500', bg: 'bg-amber-500', light: 'bg-amber-50 dark:bg-amber-500/20' };
-      case 'laranja': return { main: 'text-orange-600', bg: 'bg-orange-600', light: 'bg-orange-100 dark:bg-orange-600/20' };
-      case 'mandioca': return { main: 'text-amber-800', bg: 'bg-amber-800', light: 'bg-amber-100 dark:bg-amber-800/20' };
-      default: return { main: 'text-agro-green', bg: 'bg-agro-green', light: 'bg-green-50 dark:bg-green-900/20' };
+      case 'cafe': return { main: 'text-[#A67C52]', bg: 'bg-[#A67C52]/90', light: 'bg-[#FAF3E0] dark:bg-[#A67C52]/20' };
+      case 'milho': return { main: 'text-orange-500', bg: 'bg-orange-500/90', light: 'bg-orange-50 dark:bg-orange-500/20' };
+      case 'soja': return { main: 'text-yellow-500', bg: 'bg-yellow-500/90', light: 'bg-yellow-50 dark:bg-yellow-500/20' };
+      case 'cana': return { main: 'text-green-600', bg: 'bg-green-600/90', light: 'bg-green-100 dark:bg-green-600/20' };
+      case 'algodao': return { main: 'text-slate-500 dark:text-slate-300', bg: 'bg-slate-500/90', light: 'bg-slate-100 dark:bg-slate-500/20' };
+      case 'arroz': return { main: 'text-yellow-600', bg: 'bg-yellow-400/90', light: 'bg-yellow-50 dark:bg-yellow-400/20' };
+      case 'feijao': return { main: 'text-red-700', bg: 'bg-red-700/90', light: 'bg-red-50 dark:bg-red-700/20' };
+      case 'trigo': return { main: 'text-amber-500', bg: 'bg-amber-500/90', light: 'bg-amber-50 dark:bg-amber-500/20' };
+      case 'laranja': return { main: 'text-orange-600', bg: 'bg-orange-600/90', light: 'bg-orange-100 dark:bg-orange-600/20' };
+      case 'mandioca': return { main: 'text-amber-800', bg: 'bg-amber-800/90', light: 'bg-amber-100 dark:bg-amber-800/20' };
+      default: return { main: 'text-agro-green', bg: 'bg-agro-green/90', light: 'bg-green-50 dark:bg-green-900/20' };
     }
   };
   const theme = getTheme(crop.type);
@@ -645,6 +646,7 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
 
   return (
     <div className="space-y-6 pb-20">
+      {/* Hero Header */}
       <div className={`rounded-3xl p-6 md:p-10 text-white shadow-xl ${theme.bg} relative overflow-hidden transition-all duration-500`}>
          <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div className="flex items-center gap-4">
@@ -693,10 +695,22 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                   {isGeneratingPdf ? <Loader2 size={18} className="animate-spin"/> : <Download size={18} />}
                   <span className="hidden sm:inline">Exportar PDF</span>
                 </button>
+
+                <button 
+                  onClick={onDeleteCrop}
+                  className="bg-white/20 hover:bg-red-500/80 text-white p-3 md:px-4 md:py-3 rounded-xl font-bold shadow-lg transition-all"
+                  title="Excluir Lavoura"
+                >
+                  <Trash2 size={18} />
+                </button>
             </div>
          </div>
+         {/* Decorative Circles */}
+         <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
+         <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-48 h-48 bg-black/10 rounded-full blur-2xl"></div>
       </div>
 
+      {/* Content Area */}
       <div className="min-h-[500px]">
         {activeTab === 'overview' && renderOverview()}
         {activeTab === 'finance' && renderFinance()}
