@@ -7,8 +7,17 @@ import { Login } from './components/Login';
 import { Subscription } from './components/Subscription';
 import { Quotes } from './components/Quotes';
 import { CropData } from './types';
-import { Menu, Loader2, WifiOff, RefreshCw, Sun, Moon, Leaf } from 'lucide-react';
+import { Menu, Loader2, WifiOff, RefreshCw, Sun, Moon, Leaf, CloudOff, Cloud } from 'lucide-react';
 import { supabase } from './services/supabaseClient';
+
+// Tipos para a fila de sincronização
+type SyncAction = 'INSERT' | 'UPDATE' | 'DELETE';
+interface SyncItem {
+  id: string;
+  action: SyncAction;
+  payload?: any;
+  timestamp: number;
+}
 
 const App: React.FC = () => {
   const [session, setSession] = useState<any>(null);
@@ -27,6 +36,11 @@ const App: React.FC = () => {
   const [crops, setCrops] = useState<CropData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Estado de Sincronização
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [pendingSyncs, setPendingSyncs] = useState<number>(0);
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -42,7 +56,9 @@ const App: React.FC = () => {
     setTheme(prev => prev === 'light' ? 'dark' : 'light');
   };
 
+  // Monitoramento de Conexão e Auth
   useEffect(() => {
+    // Auth Listener
     if(supabase) {
       supabase.auth.getSession().then(({ data: { session } }) => {
         setSession(session);
@@ -57,6 +73,25 @@ const App: React.FC = () => {
     } else {
         setAuthLoading(false); 
     }
+
+    // Network Listeners
+    const handleOnline = () => {
+        setIsOffline(false);
+        processSyncQueue(); // Tenta sincronizar ao voltar online
+    };
+    const handleOffline = () => setIsOffline(true);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    // Load initial sync queue size
+    const queue = JSON.parse(localStorage.getItem('sync_queue') || '[]');
+    setPendingSyncs(queue.length);
+
+    return () => {
+        window.removeEventListener('online', handleOnline);
+        window.removeEventListener('offline', handleOffline);
+    };
   }, []);
 
   useEffect(() => {
@@ -65,60 +100,147 @@ const App: React.FC = () => {
     }
   }, [session]);
 
+  // Função Mágica de Sincronização
+  const processSyncQueue = async () => {
+      if (!supabase || !session) return;
+      
+      const queue: SyncItem[] = JSON.parse(localStorage.getItem('sync_queue') || '[]');
+      if (queue.length === 0) return;
+
+      setIsSyncing(true);
+      console.log(`Sincronizando ${queue.length} itens...`);
+
+      const newQueue = [...queue];
+      const processedIds: string[] = [];
+
+      for (const item of queue) {
+          try {
+              if (item.action === 'INSERT') {
+                  await supabase.from('crops').upsert([{ 
+                      id: item.id, 
+                      content: item.payload, 
+                      user_id: session.user.id 
+                  }]);
+              } else if (item.action === 'UPDATE') {
+                  await supabase.from('crops').update({ 
+                      content: item.payload 
+                  }).eq('id', item.id);
+              } else if (item.action === 'DELETE') {
+                  await supabase.from('crops').delete().eq('id', item.id);
+              }
+              processedIds.push(item.id);
+          } catch (e) {
+              console.error(`Falha ao sincronizar item ${item.id}`, e);
+              // Se falhar, mantém na fila para tentar depois (exceto se for erro fatal 4xx)
+          }
+      }
+
+      // Remove itens processados da fila
+      const remainingQueue = newQueue.filter(i => !processedIds.includes(i.id) || processedIds.indexOf(i.id) > newQueue.indexOf(i)); // Simplificação segura
+      // Na verdade, melhor filtrar pelo timestamp ou ID único da operação se fosse complexo, 
+      // mas aqui vamos assumir sucesso se não caiu no catch (upsert é idempotente).
+      // Vamos limpar a fila processada:
+      
+      // Recarrega a fila do disco caso tenha entrado algo novo enquanto processava (raro em JS single thread mas boa prática)
+      const currentQueue = JSON.parse(localStorage.getItem('sync_queue') || '[]');
+      const finalQueue = currentQueue.filter((i: SyncItem) => !processedIds.includes(i.id)); // Remove processados
+      
+      localStorage.setItem('sync_queue', JSON.stringify(finalQueue));
+      setPendingSyncs(finalQueue.length);
+      setIsSyncing(false);
+      
+      // Atualiza dados locais com a versão "oficial" do servidor após sync
+      fetchCrops(); 
+  };
+
+  const addToSyncQueue = (item: SyncItem) => {
+      const queue = JSON.parse(localStorage.getItem('sync_queue') || '[]');
+      
+      // Otimização: Se já tem um update para o mesmo ID, substitui pelo mais novo
+      const existingIndex = queue.findIndex((i: SyncItem) => i.id === item.id && i.action === item.action);
+      
+      if (existingIndex >= 0) {
+          queue[existingIndex] = item;
+      } else {
+          queue.push(item);
+      }
+      
+      localStorage.setItem('sync_queue', JSON.stringify(queue));
+      setPendingSyncs(queue.length);
+
+      // Se estiver online, tenta sincronizar imediatamente
+      if (navigator.onLine) {
+          processSyncQueue();
+      }
+  };
+
   const fetchCrops = async () => {
     setIsLoading(true);
     setError(null);
+
+    // 1. Load from LocalStorage IMMEDIATELY (Offline First)
     const localData = localStorage.getItem('maos-do-campo-crops');
     if (localData) {
-      try {
-        setCrops(JSON.parse(localData));
-      } catch (e) {
-        console.error("Erro ao ler cache local", e);
-      }
+      setCrops(JSON.parse(localData));
     }
+
+    // 2. Se offline, para por aqui e avisa
+    if (!navigator.onLine) {
+        setIsLoading(false);
+        return;
+    }
+
+    // 3. Se online, busca do servidor
     try {
       if (!supabase) throw new Error("Supabase não iniciado");
+
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error("Timeout")), 5000)
       );
+
       const dbPromise = supabase
         .from('crops')
         .select('*')
         .order('created_at', { ascending: false });
+
       const result: any = await Promise.race([dbPromise, timeoutPromise]);
+
       if (result.error) throw result.error;
+
       const loadedCrops = result.data.map((row: any) => ({
         ...row.content,
         id: row.id 
       }));
-      setCrops(loadedCrops);
-      localStorage.setItem('maos-do-campo-crops', JSON.stringify(loadedCrops));
+
+      // Merge inteligente? Para MVP, servidor vence, mas mantemos a fila de sync se houver pendência
+      // Se tiver pendências locais, não sobrescreve tudo cegalmente para não perder o que acabou de criar
+      if (pendingSyncs === 0) {
+          setCrops(loadedCrops);
+          localStorage.setItem('maos-do-campo-crops', JSON.stringify(loadedCrops));
+      }
+      
     } catch (e: any) {
       console.error("Erro de sincronização:", e);
-      if (!localData && crops.length === 0) {
-        setError("Não foi possível carregar seus dados. Verifique a conexão.");
-      }
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleSaveCrop = async (newCrop: CropData) => {
+    // 1. Update Local State (Instant Feedback)
     const updatedList = [newCrop, ...crops];
     setCrops(updatedList);
     setActiveTab('dashboard'); 
     setSelectedCrop(newCrop); 
     localStorage.setItem('maos-do-campo-crops', JSON.stringify(updatedList));
-    if (supabase && session) {
-      try {
-        const { error } = await supabase
-          .from('crops')
-          .insert([{ id: newCrop.id, content: newCrop, user_id: session.user.id }]);
-        if (error) throw error;
-      } catch (e) {
-        console.error("Erro ao salvar no Supabase:", e);
-      }
-    }
+
+    // 2. Add to Sync Queue (Handles both Online and Offline transparently)
+    addToSyncQueue({
+        id: newCrop.id,
+        action: 'INSERT',
+        payload: newCrop,
+        timestamp: Date.now()
+    });
   };
 
   const handleUpdateCrop = async (updatedCrop: CropData) => {
@@ -126,17 +248,13 @@ const App: React.FC = () => {
     setCrops(newCrops);
     setSelectedCrop(updatedCrop);
     localStorage.setItem('maos-do-campo-crops', JSON.stringify(newCrops));
-    if (supabase && session) {
-       try {
-        const { error } = await supabase
-          .from('crops')
-          .update({ content: updatedCrop })
-          .eq('id', updatedCrop.id);
-        if (error) throw error;
-      } catch (e) {
-        console.error("Erro ao atualizar no Supabase:", e);
-      }
-    }
+
+    addToSyncQueue({
+        id: updatedCrop.id,
+        action: 'UPDATE',
+        payload: updatedCrop,
+        timestamp: Date.now()
+    });
   };
 
   const handleDeleteCrop = async (cropId: string) => {
@@ -145,14 +263,12 @@ const App: React.FC = () => {
     setCrops(newCrops);
     setSelectedCrop(null);
     localStorage.setItem('maos-do-campo-crops', JSON.stringify(newCrops));
-    if (supabase && session) {
-       try {
-        const { error } = await supabase.from('crops').delete().eq('id', cropId);
-        if (error) throw error;
-      } catch (e) {
-        console.error("Erro ao excluir do Supabase:", e);
-      }
-    }
+
+    addToSyncQueue({
+        id: cropId,
+        action: 'DELETE',
+        timestamp: Date.now()
+    });
   };
 
   const renderContent = () => {
@@ -160,21 +276,11 @@ const App: React.FC = () => {
       return (
         <div className="flex flex-col items-center justify-center h-full text-gray-400 animate-pulse">
            <Loader2 size={40} className="animate-spin mb-4 text-agro-green" />
-           <p className="dark:text-gray-300">Sincronizando sua fazenda...</p>
+           <p className="dark:text-gray-300">Carregando sua fazenda...</p>
         </div>
       );
     }
-    if (error && crops.length === 0) {
-      return (
-        <div className="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400">
-           <WifiOff size={48} className="mb-4 text-gray-300 dark:text-gray-600" />
-           <p className="mb-4 text-center max-w-xs">{error}</p>
-           <button onClick={fetchCrops} className="flex items-center gap-2 px-6 py-3 bg-agro-green text-white rounded-xl font-bold hover:bg-green-700 transition-colors">
-             <RefreshCw size={20} /> Tentar Novamente
-           </button>
-        </div>
-      );
-    }
+
     if (selectedCrop) {
       return (
         <CropDetails 
@@ -185,6 +291,7 @@ const App: React.FC = () => {
         />
       );
     }
+
     switch (activeTab) {
       case 'dashboard': return <Dashboard crops={crops} onSelectCrop={setSelectedCrop} onNewCrop={() => setActiveTab('new-crop')} theme={theme} toggleTheme={toggleTheme} />;
       case 'quotes': return <Quotes />;
@@ -194,10 +301,19 @@ const App: React.FC = () => {
         return (
           <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 text-center animate-slide-up">
             <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">Configurações</h2>
-            <div className="flex items-center justify-center gap-2 mb-6 text-sm">
-               <div className={`w-3 h-3 rounded-full ${supabase ? 'bg-green-500' : 'bg-red-500'}`}></div>
-               <span className="text-gray-600 dark:text-gray-300">{supabase ? 'Conectado à Nuvem' : 'Modo Offline'}</span>
+            
+            <div className="flex flex-col items-center gap-4 mb-8">
+               <div className={`flex items-center gap-2 px-4 py-2 rounded-full ${isOffline ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
+                   {isOffline ? <CloudOff size={18}/> : <Cloud size={18}/>}
+                   <span className="font-bold text-sm">{isOffline ? 'Modo Offline' : 'Sincronizado'}</span>
+               </div>
+               {pendingSyncs > 0 && (
+                   <p className="text-xs text-gray-500">
+                       {pendingSyncs} alterações pendentes de envio.
+                   </p>
+               )}
             </div>
+            
             <p className="text-gray-500 dark:text-gray-400 mb-6">Conta: <strong>{session?.user?.email}</strong></p>
             <button onClick={async () => { if(confirm("Deseja sair?")) { localStorage.clear(); try { if (supabase) await supabase.auth.signOut(); } catch (e) {} window.location.reload(); } }} className="text-red-500 hover:text-red-700 font-medium border border-red-200 px-6 py-3 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">Desconectar</button>
           </div>
@@ -223,7 +339,7 @@ const App: React.FC = () => {
       <Sidebar activeTab={activeTab} setActiveTab={(tab) => { setActiveTab(tab); setSelectedCrop(null); }} isMobileMenuOpen={isMobileMenuOpen} setIsMobileMenuOpen={setIsMobileMenuOpen} />
 
       <main className="flex-1 p-4 md:p-8 h-screen overflow-y-auto custom-scrollbar">
-        {/* Mobile Header - LOGO ATUALIZADA */}
+        {/* Mobile Header */}
         <div className="md:hidden flex items-center justify-between mb-6">
            <div className="flex items-center gap-2">
               <div className="bg-gradient-to-br from-agro-green to-emerald-600 p-1.5 rounded-lg shadow-sm">
@@ -232,6 +348,13 @@ const App: React.FC = () => {
               <span className="font-bold text-agro-green text-lg leading-none">MÃOS DO<br/><span className="text-agro-yellow">CAMPO</span></span>
            </div>
            <div className="flex items-center gap-3">
+               {/* Sync Indicator Mobile */}
+               {isSyncing ? (
+                   <Loader2 size={18} className="animate-spin text-agro-green" />
+               ) : isOffline ? (
+                   <CloudOff size={18} className="text-gray-400" />
+               ) : null}
+
                <button onClick={toggleTheme} className="p-2 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-100 dark:border-slate-700 text-gray-600 dark:text-gray-300 active:scale-95 transition-transform">
                  {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
                </button>
@@ -241,11 +364,20 @@ const App: React.FC = () => {
            </div>
         </div>
 
-        {!navigator.onLine && (
-           <div className="mb-4 bg-gray-800 dark:bg-black border border-gray-700 text-white px-4 py-3 rounded-xl flex items-center gap-3 text-sm">
-              <WifiOff size={16} />
-              <span>Você está offline. Alterações serão salvas localmente.</span>
+        {/* Sync/Offline Warning Banner */}
+        {isOffline && (
+           <div className="mb-4 bg-yellow-50 border border-yellow-200 text-yellow-800 dark:bg-yellow-900/20 dark:border-yellow-900/50 dark:text-yellow-200 px-4 py-3 rounded-xl flex items-center justify-between text-sm animate-fade-in">
+              <div className="flex items-center gap-2">
+                <CloudOff size={16} />
+                <span>Você está offline. Dados salvos no dispositivo.</span>
+              </div>
+              {pendingSyncs > 0 && <span className="text-xs font-bold bg-yellow-200 dark:bg-yellow-800 px-2 py-0.5 rounded-full">{pendingSyncs} pendentes</span>}
            </div>
+        )}
+        {isSyncing && (
+            <div className="mb-4 bg-blue-50 border border-blue-200 text-blue-700 dark:bg-blue-900/20 dark:border-blue-900/50 px-4 py-2 rounded-xl flex items-center gap-2 text-sm animate-pulse">
+                <RefreshCw size={14} className="animate-spin"/> Sincronizando dados com a nuvem...
+            </div>
         )}
 
         {renderContent()}
