@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { CropData, TimelineStage, Material } from '../types';
 import { getAssistantResponse } from '../services/geminiService';
-import { ArrowLeft, Calendar, DollarSign, ListTodo, MessageSquare, Send, CheckCircle, Circle, AlertCircle, Droplets, Ruler, ShoppingBag, Download, Loader2, Edit2, Check, MapPin, Navigation, Trash2, Plus, X, Clock, Sprout, FileText, Home } from 'lucide-react';
+import { ArrowLeft, Calendar, DollarSign, ListTodo, MessageSquare, Send, CheckCircle, Circle, AlertCircle, Droplets, Ruler, ShoppingBag, Download, Loader2, Edit2, Check, MapPin, Navigation, Trash2, Plus, X, Clock, Sprout, FileText, Home, Sparkles } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -40,20 +40,20 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
   // State for Timeline Editing
   const [isEditingTimeline, setIsEditingTimeline] = useState(false);
 
-  // Helper styles based on crop type
+  // Helper styles based on crop type - Cores translúcidas para efeito vidro
   const getTheme = (type: string) => {
     switch(type) {
-      case 'cafe': return { main: 'text-[#A67C52]', bg: 'bg-[#A67C52]', bgSoft: 'bg-[#A67C52]/10', border: 'border-[#A67C52]/20', light: 'bg-[#FAF3E0] dark:bg-[#A67C52]/20', gradient: 'from-[#A67C52] to-[#8B6642]' };
-      case 'milho': return { main: 'text-orange-500', bg: 'bg-orange-500', bgSoft: 'bg-orange-500/10', border: 'border-orange-500/20', light: 'bg-orange-50 dark:bg-orange-500/20', gradient: 'from-orange-500 to-orange-600' };
-      case 'soja': return { main: 'text-yellow-500', bg: 'bg-yellow-500', bgSoft: 'bg-yellow-500/10', border: 'border-yellow-500/20', light: 'bg-yellow-50 dark:bg-yellow-500/20', gradient: 'from-yellow-500 to-yellow-600' };
-      case 'cana': return { main: 'text-green-600', bg: 'bg-green-600', bgSoft: 'bg-green-600/10', border: 'border-green-600/20', light: 'bg-green-100 dark:bg-green-600/20', gradient: 'from-green-600 to-green-700' };
-      case 'algodao': return { main: 'text-slate-500 dark:text-slate-300', bg: 'bg-slate-500', bgSoft: 'bg-slate-500/10', border: 'border-slate-500/20', light: 'bg-slate-100 dark:bg-slate-500/20', gradient: 'from-slate-500 to-slate-600' };
-      case 'arroz': return { main: 'text-yellow-600', bg: 'bg-yellow-400', bgSoft: 'bg-yellow-400/10', border: 'border-yellow-400/20', light: 'bg-yellow-50 dark:bg-yellow-400/20', gradient: 'from-yellow-400 to-yellow-500' };
-      case 'feijao': return { main: 'text-red-700', bg: 'bg-red-700', bgSoft: 'bg-red-700/10', border: 'border-red-700/20', light: 'bg-red-50 dark:bg-red-700/20', gradient: 'from-red-700 to-red-800' };
-      case 'trigo': return { main: 'text-amber-500', bg: 'bg-amber-500', bgSoft: 'bg-amber-500/10', border: 'border-amber-500/20', light: 'bg-amber-50 dark:bg-amber-500/20', gradient: 'from-amber-500 to-amber-600' };
-      case 'laranja': return { main: 'text-orange-600', bg: 'bg-orange-600', bgSoft: 'bg-orange-600/10', border: 'border-orange-600/20', light: 'bg-orange-100 dark:bg-orange-600/20', gradient: 'from-orange-600 to-orange-700' };
-      case 'mandioca': return { main: 'text-amber-800', bg: 'bg-amber-800', bgSoft: 'bg-amber-800/10', border: 'border-amber-800/20', light: 'bg-amber-100 dark:bg-amber-800/20', gradient: 'from-amber-800 to-amber-900' };
-      default: return { main: 'text-agro-green', bg: 'bg-agro-green', bgSoft: 'bg-agro-green/10', border: 'border-agro-green/20', light: 'bg-green-50 dark:bg-green-900/20', gradient: 'from-agro-green to-green-700' };
+      case 'cafe': return { main: 'text-[#A67C52]', bgGlass: 'bg-[#A67C52]/85', bgSoft: 'bg-[#A67C52]/10', border: 'border-[#A67C52]/20', light: 'bg-[#FAF3E0] dark:bg-[#A67C52]/20' };
+      case 'milho': return { main: 'text-orange-500', bgGlass: 'bg-orange-500/85', bgSoft: 'bg-orange-500/10', border: 'border-orange-500/20', light: 'bg-orange-50 dark:bg-orange-500/20' };
+      case 'soja': return { main: 'text-yellow-500', bgGlass: 'bg-yellow-500/85', bgSoft: 'bg-yellow-500/10', border: 'border-yellow-500/20', light: 'bg-yellow-50 dark:bg-yellow-500/20' };
+      case 'cana': return { main: 'text-green-600', bgGlass: 'bg-green-600/85', bgSoft: 'bg-green-600/10', border: 'border-green-600/20', light: 'bg-green-100 dark:bg-green-600/20' };
+      case 'algodao': return { main: 'text-slate-500 dark:text-slate-300', bgGlass: 'bg-slate-500/85', bgSoft: 'bg-slate-500/10', border: 'border-slate-500/20', light: 'bg-slate-100 dark:bg-slate-500/20' };
+      case 'arroz': return { main: 'text-yellow-600', bgGlass: 'bg-yellow-400/85', bgSoft: 'bg-yellow-400/10', border: 'border-yellow-400/20', light: 'bg-yellow-50 dark:bg-yellow-400/20' };
+      case 'feijao': return { main: 'text-red-700', bgGlass: 'bg-red-700/85', bgSoft: 'bg-red-700/10', border: 'border-red-700/20', light: 'bg-red-50 dark:bg-red-700/20' };
+      case 'trigo': return { main: 'text-amber-500', bgGlass: 'bg-amber-500/85', bgSoft: 'bg-amber-500/10', border: 'border-amber-500/20', light: 'bg-amber-50 dark:bg-amber-500/20' };
+      case 'laranja': return { main: 'text-orange-600', bgGlass: 'bg-orange-600/85', bgSoft: 'bg-orange-600/10', border: 'border-orange-600/20', light: 'bg-orange-100 dark:bg-orange-600/20' };
+      case 'mandioca': return { main: 'text-amber-800', bgGlass: 'bg-amber-800/85', bgSoft: 'bg-amber-800/10', border: 'border-amber-800/20', light: 'bg-amber-100 dark:bg-amber-800/20' };
+      default: return { main: 'text-agro-green', bgGlass: 'bg-agro-green/85', bgSoft: 'bg-agro-green/10', border: 'border-agro-green/20', light: 'bg-green-50 dark:bg-green-900/20' };
     }
   };
   const theme = getTheme(crop.type);
@@ -644,65 +644,10 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
     );
   };
 
-  const renderAssistant = () => (
-    <div className="flex flex-col h-[650px] bg-white dark:bg-slate-800 rounded-3xl shadow-lg border border-gray-100 dark:border-slate-700 overflow-hidden animate-slide-up">
-       <div className="bg-agro-green p-6 text-white flex items-center gap-4">
-         <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-sm">
-            <MessageSquare size={28} />
-         </div>
-         <div>
-           <h3 className="font-bold text-lg">Assistente Rural IA</h3>
-           <p className="text-sm text-green-100 opacity-90">Especialista em {crop.type}</p>
-         </div>
-       </div>
-
-       <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-50/50 dark:bg-slate-900/50">
-          {chatHistory.map((msg, idx) => (
-            <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-               <div className={`
-                 max-w-[85%] p-5 rounded-2xl text-sm leading-relaxed shadow-sm
-                 ${msg.role === 'user' 
-                    ? 'bg-agro-green text-white rounded-tr-sm' 
-                    : 'bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 rounded-tl-sm border border-gray-100 dark:border-slate-600'}
-               `}>
-                 {msg.text}
-               </div>
-            </div>
-          ))}
-          {isChatLoading && (
-            <div className="flex justify-start">
-               <div className="bg-white dark:bg-slate-700 p-4 rounded-2xl rounded-tl-sm shadow-sm flex gap-2 border border-gray-100 dark:border-slate-600">
-                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-75"></div>
-                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-150"></div>
-               </div>
-            </div>
-          )}
-       </div>
-
-       <form onSubmit={handleChatSubmit} className="p-4 bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-slate-700 flex gap-3">
-         <input 
-           type="text" 
-           value={chatInput}
-           onChange={(e) => setChatInput(e.target.value)}
-           placeholder="Digite sua dúvida..."
-           className="flex-1 p-4 bg-gray-50 dark:bg-slate-900 border border-transparent focus:bg-white dark:focus:bg-slate-800 focus:border-agro-green rounded-xl outline-none transition-all font-medium dark:text-white"
-         />
-         <button 
-           type="submit" 
-           disabled={!chatInput.trim() || isChatLoading}
-           className="bg-agro-green text-white p-4 rounded-xl hover:bg-green-700 disabled:opacity-50 transition-transform active:scale-95 shadow-lg shadow-green-600/20"
-         >
-           <Send size={20} />
-         </button>
-       </form>
-    </div>
-  );
-
   return (
-    <div className="space-y-6 pb-24 md:pb-8">
-      {/* Header with Dynamic Background */}
-      <div className={`rounded-b-3xl md:rounded-3xl shadow-xl relative overflow-hidden transition-all duration-500 bg-gradient-to-br ${theme.gradient}`}>
+    <div className="space-y-6 pb-20">
+      {/* Mobile-First Header with Glassmorphism */}
+      <div className={`rounded-b-3xl md:rounded-3xl shadow-xl relative overflow-hidden transition-all duration-500 ${theme.bgGlass} backdrop-blur-xl`}>
          
          <div className="relative z-20 p-6 pt-8 md:p-8">
             <div className="flex items-start justify-between gap-4">
@@ -722,26 +667,23 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                </div>
 
                <div className="flex gap-2">
+                   {/* Botão IA no Topo */}
+                   <button 
+                     onClick={() => setActiveTab('assistant')}
+                     className="p-2 bg-white text-agro-green rounded-xl shadow-lg transition-all active:scale-95 hover:scale-105 border border-white/20"
+                     title="Assistente IA"
+                   >
+                     <Sparkles size={20} fill="currentColor" className="animate-pulse-slow" />
+                   </button>
                    <button 
                      onClick={onDeleteCrop}
                      className="p-2 bg-white/10 hover:bg-red-500/80 text-white rounded-xl backdrop-blur-sm transition-all active:scale-95 border border-white/10"
                      title="Excluir Lavoura"
                    >
-                     <Trash2 size={18} />
+                     <Trash2 size={20} />
                    </button>
                </div>
             </div>
-
-            {/* Generate Report Button (Featured) */}
-            <button 
-                onClick={generatePDF}
-                disabled={isGeneratingPdf}
-                className="mt-6 w-full md:w-auto bg-white text-agro-green hover:bg-gray-50 px-4 py-3 rounded-xl font-bold shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-70 active:scale-[0.98]"
-            >
-                {isGeneratingPdf ? <Loader2 size={18} className="animate-spin"/> : <FileText size={18} />}
-                <span>Gerar Relatório Completo</span>
-            </button>
-
          </div>
 
          {/* Decorative Elements */}
@@ -750,22 +692,40 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
       </div>
 
       {/* Content Area */}
-      <div className="min-h-[500px] animate-slide-up px-1">
+      <div className="min-h-[500px] animate-slide-up px-1 pb-24">
         {activeTab === 'overview' && renderOverview()}
         {activeTab === 'finance' && renderFinance()}
         {activeTab === 'timeline' && renderTimeline()}
         {activeTab === 'assistant' && renderAssistant()}
       </div>
 
-      {/* MOBILE BOTTOM NAVIGATION BAR */}
-      <div className="md:hidden fixed bottom-4 left-4 right-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-gray-200/50 dark:border-slate-700/50 rounded-2xl shadow-2xl shadow-black/10 z-50 flex justify-around items-center py-3 px-2 ring-1 ring-black/5">
+      {/* MOBILE BOTTOM NAVIGATION BAR - GLASSMORPHISM & RELATÓRIO INCLUÍDO */}
+      <div className="md:hidden fixed bottom-4 left-4 right-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-gray-200/50 dark:border-slate-700/50 rounded-2xl shadow-2xl shadow-black/10 z-50 flex justify-around items-center py-3 px-1 ring-1 ring-black/5">
          {[
             { id: 'overview', label: 'Visão', icon: Home },
             { id: 'finance', label: 'Finanças', icon: DollarSign },
             { id: 'timeline', label: 'Etapas', icon: ListTodo },
-            { id: 'assistant', label: 'IA', icon: MessageSquare },
+            // Relatório no menu inferior
+            { id: 'report', label: 'Relatório', icon: FileText, action: generatePDF, loading: isGeneratingPdf }, 
          ].map((tab) => {
             const isActive = activeTab === tab.id;
+            
+            if (tab.id === 'report') {
+                return (
+                    <button
+                        key={tab.id}
+                        onClick={tab.action}
+                        disabled={tab.loading}
+                        className={`
+                            relative flex flex-col items-center gap-1 px-3 py-1 transition-all duration-300 rounded-xl text-gray-400 dark:text-gray-500 hover:text-agro-green
+                        `}
+                    >
+                        {tab.loading ? <Loader2 size={24} className="animate-spin text-agro-green"/> : <tab.icon size={24} />}
+                        <span className="text-[10px] font-bold tracking-tight">{tab.label}</span>
+                    </button>
+                )
+            }
+
             return (
                <button
                   key={tab.id}
@@ -778,7 +738,7 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                   {isActive && (
                      <div className="absolute inset-0 bg-green-50 dark:bg-green-900/20 rounded-xl -z-10 scale-110 opacity-100 transition-all"></div>
                   )}
-                  <tab.icon size={22} strokeWidth={isActive ? 2.5 : 2} />
+                  <tab.icon size={24} strokeWidth={isActive ? 2.5 : 2} />
                   <span className="text-[10px] font-bold tracking-tight">{tab.label}</span>
                </button>
             )
