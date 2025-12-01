@@ -644,6 +644,61 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
     );
   };
 
+  const renderAssistant = () => (
+    <div className="flex flex-col h-[650px] bg-white dark:bg-slate-800 rounded-3xl shadow-lg border border-gray-100 dark:border-slate-700 overflow-hidden animate-slide-up">
+       <div className="bg-agro-green p-6 text-white flex items-center gap-4">
+         <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-sm">
+            <MessageSquare size={28} />
+         </div>
+         <div>
+           <h3 className="font-bold text-lg">Assistente Rural IA</h3>
+           <p className="text-sm text-green-100 opacity-90">Especialista em {crop.type}</p>
+         </div>
+       </div>
+
+       <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-50/50 dark:bg-slate-900/50">
+          {chatHistory.map((msg, idx) => (
+            <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+               <div className={`
+                 max-w-[85%] p-5 rounded-2xl text-sm leading-relaxed shadow-sm
+                 ${msg.role === 'user' 
+                    ? 'bg-agro-green text-white rounded-tr-sm' 
+                    : 'bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 rounded-tl-sm border border-gray-100 dark:border-slate-600'}
+               `}>
+                 {msg.text}
+               </div>
+            </div>
+          ))}
+          {isChatLoading && (
+            <div className="flex justify-start">
+               <div className="bg-white dark:bg-slate-700 p-4 rounded-2xl rounded-tl-sm shadow-sm flex gap-2 border border-gray-100 dark:border-slate-600">
+                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-75"></div>
+                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-150"></div>
+               </div>
+            </div>
+          )}
+       </div>
+
+       <form onSubmit={handleChatSubmit} className="p-4 bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-slate-700 flex gap-3">
+         <input 
+           type="text" 
+           value={chatInput}
+           onChange={(e) => setChatInput(e.target.value)}
+           placeholder="Digite sua dúvida..."
+           className="flex-1 p-4 bg-gray-50 dark:bg-slate-900 border border-transparent focus:bg-white dark:focus:bg-slate-800 focus:border-agro-green rounded-xl outline-none transition-all font-medium dark:text-white"
+         />
+         <button 
+           type="submit" 
+           disabled={!chatInput.trim() || isChatLoading}
+           className="bg-agro-green text-white p-4 rounded-xl hover:bg-green-700 disabled:opacity-50 transition-transform active:scale-95 shadow-lg shadow-green-600/20"
+         >
+           <Send size={20} />
+         </button>
+       </form>
+    </div>
+  );
+
   return (
     <div className="space-y-6 pb-24 md:pb-8">
       {/* Mobile-First Header with Glassmorphism */}
@@ -667,14 +722,14 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                </div>
 
                <div className="flex gap-2">
-                   {/* Botão IA no Topo - "Consultar IA" */}
+                   {/* Botão IA no Topo - "Assistente IA" */}
                    <button 
                      onClick={() => setActiveTab('assistant')}
                      className="flex items-center gap-2 px-4 py-2 bg-white text-agro-green rounded-full shadow-lg transition-all active:scale-95 hover:scale-105 border border-white/20 animate-pulse-slow font-bold text-xs"
                      title="Assistente IA"
                    >
                      <MessageSquare size={18} fill="currentColor" className="text-agro-green" />
-                     <span className="hidden sm:inline">Consultar IA</span>
+                     <span className="hidden sm:inline">Assistente IA</span>
                      <span className="sm:hidden">IA</span>
                    </button>
 
@@ -688,28 +743,44 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                </div>
             </div>
 
-            {/* Desktop Tabs - Restored */}
+            {/* Desktop Tabs - Restored and Updated */}
             <div className="hidden md:flex overflow-x-auto gap-2 mt-6 pb-2 no-scrollbar">
                 {[
                   { id: 'overview', label: 'Home', icon: Home },
                   { id: 'finance', label: 'Finanças', icon: DollarSign },
                   { id: 'timeline', label: 'Etapas', icon: ListTodo },
-                  { id: 'assistant', label: 'Assistente IA', icon: MessageSquare },
-                ].map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id as any)}
-                    className={`
-                      flex items-center gap-2 px-4 py-2.5 rounded-full font-bold text-sm whitespace-nowrap transition-all shadow-sm
-                      ${activeTab === tab.id 
-                        ? 'bg-white text-gray-900 scale-105 ring-2 ring-white/50' 
-                        : 'bg-white/10 text-white hover:bg-white/20'}
-                    `}
-                  >
-                    <tab.icon size={16} />
-                    {tab.label}
-                  </button>
-                ))}
+                  { id: 'report', label: 'Relatório', icon: FileText, action: generatePDF, loading: isGeneratingPdf }, 
+                ].map((tab) => {
+                  if (tab.id === 'report') {
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={tab.action}
+                        disabled={tab.loading}
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-full font-bold text-sm whitespace-nowrap transition-all shadow-sm bg-white/10 text-white hover:bg-white/20"
+                      >
+                        {tab.loading ? <Loader2 size={16} className="animate-spin"/> : <tab.icon size={16} />}
+                        {tab.label}
+                      </button>
+                    )
+                  }
+
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id as any)}
+                      className={`
+                        flex items-center gap-2 px-4 py-2.5 rounded-full font-bold text-sm whitespace-nowrap transition-all shadow-sm
+                        ${activeTab === tab.id 
+                          ? 'bg-white text-gray-900 scale-105 ring-2 ring-white/50' 
+                          : 'bg-white/10 text-white hover:bg-white/20'}
+                      `}
+                    >
+                      <tab.icon size={16} />
+                      {tab.label}
+                    </button>
+                  )
+                })}
             </div>
          </div>
 
