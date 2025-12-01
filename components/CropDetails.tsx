@@ -27,7 +27,6 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
   
   const mapsApiKey = GOOGLE_MAPS_API_KEY;
   
-  // State for Editing
   const [isEditingPrices, setIsEditingPrices] = useState(false);
   const [isAddingItem, setIsAddingItem] = useState(false);
   const [newItem, setNewItem] = useState<Material>({
@@ -39,10 +38,8 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
     category: 'outros'
   });
 
-  // State for Timeline Editing
   const [isEditingTimeline, setIsEditingTimeline] = useState(false);
 
-  // State for Storage/Harvest
   const [isAddingHarvest, setIsAddingHarvest] = useState(false);
   const [editingHarvestId, setEditingHarvestId] = useState<string | null>(null);
   const [harvestForm, setHarvestForm] = useState<HarvestLog>({
@@ -66,67 +63,45 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
       case 'cafe': return { main: 'text-[#A67C52]', bg: 'bg-[#A67C52]', bgGlass: 'bg-[#A67C52]/85', bgSoft: 'bg-[#A67C52]/10', border: 'border-[#A67C52]/20', light: 'bg-[#FAF3E0] dark:bg-[#A67C52]/20', gradient: 'from-[#A67C52] to-[#8B6642]' };
       case 'milho': return { main: 'text-orange-500', bg: 'bg-orange-500', bgGlass: 'bg-orange-500/85', bgSoft: 'bg-orange-500/10', border: 'border-orange-500/20', light: 'bg-orange-50 dark:bg-orange-500/20', gradient: 'from-orange-500 to-orange-600' };
       case 'soja': return { main: 'text-yellow-500', bg: 'bg-yellow-500', bgGlass: 'bg-yellow-500/85', bgSoft: 'bg-yellow-500/10', border: 'border-yellow-500/20', light: 'bg-yellow-50 dark:bg-yellow-500/20', gradient: 'from-yellow-500 to-yellow-600' };
-      case 'cana': return { main: 'text-green-600', bg: 'bg-green-600', bgGlass: 'bg-green-600/85', bgSoft: 'bg-green-600/10', border: 'border-green-600/20', light: 'bg-green-100 dark:bg-green-600/20', gradient: 'from-green-600 to-green-700' };
-      case 'algodao': return { main: 'text-slate-500 dark:text-slate-300', bg: 'bg-slate-500', bgGlass: 'bg-slate-500/85', bgSoft: 'bg-slate-500/10', border: 'border-slate-500/20', light: 'bg-slate-100 dark:bg-slate-500/20', gradient: 'from-slate-500 to-slate-600' };
-      case 'arroz': return { main: 'text-yellow-600', bg: 'bg-yellow-400', bgGlass: 'bg-yellow-400/85', bgSoft: 'bg-yellow-400/10', border: 'border-yellow-400/20', light: 'bg-yellow-50 dark:bg-yellow-400/20', gradient: 'from-yellow-400 to-yellow-500' };
-      case 'feijao': return { main: 'text-red-700', bg: 'bg-red-700', bgGlass: 'bg-red-700/85', bgSoft: 'bg-red-700/10', border: 'border-red-700/20', light: 'bg-red-50 dark:bg-red-700/20', gradient: 'from-red-700 to-red-800' };
-      case 'trigo': return { main: 'text-amber-500', bg: 'bg-amber-500', bgGlass: 'bg-amber-500/85', bgSoft: 'bg-amber-500/10', border: 'border-amber-500/20', light: 'bg-amber-50 dark:bg-amber-500/20', gradient: 'from-amber-500 to-amber-600' };
-      case 'laranja': return { main: 'text-orange-600', bg: 'bg-orange-600', bgGlass: 'bg-orange-600/85', bgSoft: 'bg-orange-600/10', border: 'border-orange-600/20', light: 'bg-orange-100 dark:bg-orange-600/20', gradient: 'from-orange-600 to-orange-700' };
-      case 'mandioca': return { main: 'text-amber-800', bg: 'bg-amber-800', bgGlass: 'bg-amber-800/85', bgSoft: 'bg-amber-800/10', border: 'border-amber-800/20', light: 'bg-amber-100 dark:bg-amber-800/20', gradient: 'from-amber-800 to-amber-900' };
       default: return { main: 'text-agro-green', bg: 'bg-agro-green', bgGlass: 'bg-agro-green/85', bgSoft: 'bg-agro-green/10', border: 'border-agro-green/20', light: 'bg-green-50 dark:bg-green-900/20', gradient: 'from-agro-green to-green-700' };
     }
   };
   const theme = getTheme(crop.type);
 
-  // --- Timeline Handlers ---
-  
-  // Função para alternar status da etapa inteira ao clicar na bolinha
-  const handleToggleStageStatus = (index: number) => {
-    const updatedTimeline = [...(crop.timeline || [])];
-    const stage = updatedTimeline[index];
-    
-    let newStatus: 'pendente' | 'em_andamento' | 'concluido' = 'pendente';
-    let newTasks = [...stage.tasks];
-
-    // Ciclo: Pendente -> Em Andamento -> Concluído -> Pendente
-    if (stage.status === 'pendente') {
-        newStatus = 'em_andamento';
-    } else if (stage.status === 'em_andamento') {
-        newStatus = 'concluido';
-        // Marca todas as tarefas como feitas
-        newTasks = newTasks.map(t => ({ ...t, done: true }));
-    } else {
-        newStatus = 'pendente';
-        // Desmarca todas as tarefas
-        newTasks = newTasks.map(t => ({ ...t, done: false }));
-    }
-    
-    updatedTimeline[index] = { ...stage, status: newStatus, tasks: newTasks };
-    onUpdateCrop({ ...crop, timeline: updatedTimeline });
-  };
-
+  // Handlers
   const toggleTask = (stageId: string, taskId: string) => {
     const updatedTimeline = (crop.timeline || []).map(stage => {
       if (stage.id === stageId) {
         const updatedTasks = stage.tasks.map(task => 
           task.id === taskId ? { ...task, done: !task.done } : task
         );
-        
         const allDone = updatedTasks.every(t => t.done);
         const someDone = updatedTasks.some(t => t.done);
-        
         let newStatus: 'pendente' | 'em_andamento' | 'concluido' = 'pendente';
         if (allDone && updatedTasks.length > 0) newStatus = 'concluido';
         else if (someDone) newStatus = 'em_andamento';
-        
-        return { 
-          ...stage, 
-          tasks: updatedTasks, 
-          status: newStatus 
-        } as TimelineStage;
+        return { ...stage, tasks: updatedTasks, status: newStatus } as TimelineStage;
       }
       return stage;
     });
+    onUpdateCrop({ ...crop, timeline: updatedTimeline });
+  };
+
+  const handleToggleStageStatus = (index: number) => {
+    const updatedTimeline = [...(crop.timeline || [])];
+    const stage = updatedTimeline[index];
+    let newStatus: 'pendente' | 'em_andamento' | 'concluido' = 'pendente';
+    let newTasks = [...stage.tasks];
+    if (stage.status === 'pendente') {
+        newStatus = 'em_andamento';
+    } else if (stage.status === 'em_andamento') {
+        newStatus = 'concluido';
+        newTasks = newTasks.map(t => ({ ...t, done: true }));
+    } else {
+        newStatus = 'pendente';
+        newTasks = newTasks.map(t => ({ ...t, done: false }));
+    }
+    updatedTimeline[index] = { ...stage, status: newStatus, tasks: newTasks };
     onUpdateCrop({ ...crop, timeline: updatedTimeline });
   };
 
@@ -155,23 +130,15 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
     onUpdateCrop({ ...crop, timeline: updatedTimeline });
   };
 
-  // --- Finance Handlers ---
   const handleUpdateMaterial = (index: number, field: 'quantity' | 'unitPriceEstimate' | 'realCost', value: string) => {
     const numValue = parseFloat(value);
     const updatedMaterials = [...(crop.materials || [])];
     if (!updatedMaterials[index]) return;
-
     const item = { ...updatedMaterials[index] };
     item[field] = isNaN(numValue) ? 0 : numValue;
     updatedMaterials[index] = item;
-
     const newTotalCost = updatedMaterials.reduce((acc, m) => acc + (m.quantity * m.unitPriceEstimate), 0);
-
-    onUpdateCrop({
-      ...crop,
-      materials: updatedMaterials,
-      estimatedCost: newTotalCost
-    });
+    onUpdateCrop({ ...crop, materials: updatedMaterials, estimatedCost: newTotalCost });
   };
 
   const handleRemoveItem = (index: number) => {
@@ -191,21 +158,16 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
     setIsAddingItem(false);
   };
 
-  // --- Storage Handlers ---
   const handleSaveHarvest = () => {
       if(harvestForm.quantity <= 0) return alert("Quantidade deve ser maior que zero.");
-      
       let updatedLogs = [...(crop.harvestLogs || [])];
-      
       if (editingHarvestId) {
           updatedLogs = updatedLogs.map(h => h.id === editingHarvestId ? { ...harvestForm, id: editingHarvestId } : h);
       } else {
           const newLog = { ...harvestForm, id: Math.random().toString(36).substr(2, 9) };
           updatedLogs.push(newLog);
       }
-      
       onUpdateCrop({ ...crop, harvestLogs: updatedLogs });
-      
       setHarvestForm({ id: '', date: new Date().toISOString().split('T')[0], quantity: 0, unit: 'sc', location: '', qualityNote: '' });
       setIsAddingHarvest(false);
       setEditingHarvestId(null);
@@ -260,8 +222,6 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
     doc.save(`plano_${crop.name}.pdf`);
     setIsGeneratingPdf(false);
   };
-
-  // --- Render Sections ---
 
   const renderOverview = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-slide-up">
@@ -331,17 +291,8 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                     <div className="w-full h-40 bg-gray-100 dark:bg-slate-700 rounded-xl mb-4 flex items-center justify-center flex-col text-gray-400 p-4 text-center">
                         <MapPin size={32} className="mb-2 opacity-50"/>
                         <p className="text-xs font-medium">Mapa indisponível</p>
-                        <p className="text-[10px] opacity-70">Chave de API não configurada</p>
                     </div>
                 )}
-                <a 
-                   href={`https://www.waze.com/ul?ll=${crop.coordinates.lat},${crop.coordinates.lng}&navigate=yes`}
-                   target="_blank"
-                   rel="noreferrer"
-                   className="flex items-center justify-center gap-2 w-full py-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-bold rounded-xl hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
-                >
-                   <Navigation size={18} /> Abrir no GPS
-                </a>
              </div>
            )}
        </div>
@@ -350,32 +301,29 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
 
   const renderFinance = () => {
     const materials = crop.materials || [];
-    const data = materials.map(m => ({
+    const dataEstimated = materials.map(m => ({
         name: m.category,
-        value: (m.quantity || 0) * (m.unitPriceEstimate || 0),
-        type: 'Estimado'
+        value: (m.quantity || 0) * (m.unitPriceEstimate || 0)
     })).reduce((acc: any[], curr) => {
         const found = acc.find(a => a.name === curr.name);
         if (found) found.value += curr.value;
         else acc.push(curr);
         return acc;
     }, []);
-
     const totalRealCost = materials.reduce((acc, m) => acc + (m.realCost || 0), 0);
 
     return (
       <div className="space-y-6 animate-slide-up">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-           {/* Chart Card */}
            <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700">
              <h3 className="font-bold text-gray-800 dark:text-white mb-6 text-xl">Estimado (IA)</h3>
              <div className="h-64 w-full">
                <ResponsiveContainer width="100%" height="100%">
-                 <BarChart data={data}>
+                 <BarChart data={dataEstimated}>
                    <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} tick={{fill: '#9CA3AF'}} />
                    <Tooltip formatter={(value: number) => `R$ ${value.toFixed(2)}`} />
-                   <Bar dataKey="value" radius={[6, 6, 0, 0]} name="Estimado">
-                     {data.map((_, index) => (
+                   <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                     {dataEstimated.map((_, index) => (
                        <Cell key={`cell-${index}`} fill={['#27AE60', '#F2C94C', '#E74C3C', '#8E44AD'][index % 4]} />
                      ))}
                    </Bar>
@@ -392,7 +340,6 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
              </div>
            </div>
 
-            {/* Realized Cost Card */}
            <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col justify-center items-center text-center">
               <div className="p-6 bg-blue-50 dark:bg-blue-900/20 rounded-full mb-4 text-blue-600 dark:text-blue-400">
                   <Wallet size={48} />
@@ -401,13 +348,9 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
               <p className="text-4xl font-extrabold text-gray-900 dark:text-white mt-2">
                   {totalRealCost.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
               </p>
-              <p className="text-xs text-gray-400 mt-4">
-                  Preencha o "Valor Pago" na lista abaixo para atualizar.
-              </p>
            </div>
         </div>
 
-        {/* List with Real Cost Editing */}
         <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="font-bold text-gray-800 dark:text-white text-xl flex items-center gap-2">
@@ -441,9 +384,6 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                       <div className="flex-1">
                         <p className="font-bold text-gray-700 dark:text-gray-200">{m.name}</p>
                         <p className="text-xs text-gray-400 uppercase">{m.category}</p>
-                        <p className="text-[10px] text-gray-400 mt-1">
-                            Est: {((m.quantity||0)*(m.unitPriceEstimate||0)).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}
-                        </p>
                       </div>
                       <div className="text-right flex flex-col items-end gap-1">
                          {isEditingPrices ? (
@@ -475,7 +415,6 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                 </div>
               </div>
            </div>
-        </div>
       </div>
     );
   };
@@ -529,54 +468,37 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
 
   const renderStorage = () => {
     const logs = crop.harvestLogs || [];
-    const goalValue = parseFloat(crop.productivityGoal.replace(/[^0-9.]/g, '')) || 0; 
-    const totalExpected = goalValue * crop.areaHa;
     const totalHarvested = logs.reduce((acc, l) => acc + l.quantity, 0);
-    const progress = totalExpected > 0 ? (totalHarvested / totalExpected) * 100 : 0;
     const estimatedRevenue = totalHarvested * currentMarketPrice;
 
     return (
       <div className="space-y-6 animate-slide-up">
           <div className={`rounded-3xl p-8 text-white shadow-lg bg-gradient-to-br ${theme.gradient}`}>
-             <h3 className="font-bold text-lg opacity-90 mb-1 flex items-center gap-2"><Warehouse size={20} /> Armazenamento & Colheita</h3>
+             <h3 className="font-bold text-lg opacity-90 mb-1 flex items-center gap-2"><Warehouse size={20} /> Colheita</h3>
              <div className="flex items-end gap-2 mt-4">
                 <span className="text-5xl font-extrabold">{totalHarvested.toLocaleString('pt-BR')}</span>
                 <span className="text-lg font-medium opacity-80 mb-1">sc colhidas</span>
              </div>
-             
              {currentMarketPrice > 0 && (
                 <div className="mt-4 bg-black/20 p-3 rounded-xl inline-block backdrop-blur-sm">
                      <p className="text-xs font-medium opacity-80 mb-1">Receita Estimada</p>
-                     <p className="text-xl font-bold text-green-300">
-                        {estimatedRevenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                     </p>
+                     <p className="text-xl font-bold text-green-300">{estimatedRevenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
                 </div>
              )}
-
-             <div className="mt-6">
-                <div className="flex justify-between text-xs font-bold mb-2 opacity-80">
-                   <span>Progresso da Safra</span>
-                   <span>{progress.toFixed(1)}% da Meta ({totalExpected.toLocaleString('pt-BR')} sc)</span>
-                </div>
-                <div className="w-full bg-black/20 rounded-full h-3 overflow-hidden">
-                   <div className="h-full bg-white rounded-full transition-all duration-1000" style={{ width: `${Math.min(progress, 100)}%` }} />
-                </div>
-             </div>
           </div>
 
           <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700">
              <div className="flex justify-between items-center mb-6">
-                <h3 className="font-bold text-gray-800 dark:text-white">Histórico de Cargas</h3>
+                <h3 className="font-bold text-gray-800 dark:text-white">Cargas</h3>
                 <button onClick={() => { setIsAddingHarvest(!isAddingHarvest); if (!isAddingHarvest) { setHarvestForm({ id: '', date: new Date().toISOString().split('T')[0], quantity: 0, unit: 'sc', location: '', qualityNote: '' }); setEditingHarvestId(null); } }} className="flex items-center gap-2 text-sm font-bold text-agro-green bg-green-50 dark:bg-green-900/20 px-3 py-2 rounded-lg hover:bg-green-100 transition-colors">
                    {isAddingHarvest ? <X size={16}/> : <Plus size={16}/>} {isAddingHarvest ? 'Cancelar' : 'Nova Carga'}
                 </button>
              </div>
              {isAddingHarvest && (
                 <div className="mb-6 p-4 bg-gray-50 dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-700 animate-fade-in">
-                   <h4 className="text-sm font-bold text-gray-600 dark:text-gray-300 mb-3">{editingHarvestId ? 'Editar Carga' : 'Registrar Colheita'}</h4>
                    <div className="grid grid-cols-2 gap-3 mb-3">
                       <div className="col-span-2">
-                         <input type="text" placeholder="Local (Silo 1)" className="w-full p-3 rounded-xl border" value={harvestForm.location} onChange={e => setHarvestForm({...harvestForm, location: e.target.value})} />
+                         <input type="text" placeholder="Local" className="w-full p-3 rounded-xl border" value={harvestForm.location} onChange={e => setHarvestForm({...harvestForm, location: e.target.value})} />
                       </div>
                       <div>
                          <input type="date" className="w-full p-3 rounded-xl border" value={harvestForm.date} onChange={e => setHarvestForm({...harvestForm, date: e.target.value})} />
@@ -584,25 +506,19 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                       <div>
                          <input type="number" placeholder="Qtd" className="w-full p-3 rounded-xl border" value={harvestForm.quantity || ''} onChange={e => setHarvestForm({...harvestForm, quantity: parseFloat(e.target.value)})} />
                       </div>
-                      <div className="col-span-2">
-                          <input type="text" placeholder="Obs. Qualidade (Opcional)" className="w-full p-3 rounded-xl border" value={harvestForm.qualityNote || ''} onChange={e => setHarvestForm({...harvestForm, qualityNote: e.target.value})} />
-                      </div>
                    </div>
                    <button onClick={handleSaveHarvest} className="w-full py-3 bg-agro-green text-white font-bold rounded-xl">Confirmar</button>
                 </div>
              )}
              <div className="space-y-3">
-                {crop.harvestLogs?.map((log) => (
+                {logs.map((log) => (
                    <div key={log.id} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-700/50 rounded-2xl border border-gray-100 dark:border-slate-700">
-                      <div className="flex items-center gap-3">
-                         <div className={`p-3 rounded-xl bg-white dark:bg-slate-800 text-agro-green shadow-sm`}><Package size={20} /></div>
-                         <div>
-                            <h4 className="font-bold text-gray-800 dark:text-white text-sm">{log.location}</h4>
-                            <p className="text-xs text-gray-500">{new Date(log.date).toLocaleDateString('pt-BR')}</p>
-                         </div>
+                      <div>
+                         <h4 className="font-bold text-gray-800 dark:text-white text-sm">{log.location}</h4>
+                         <p className="text-xs text-gray-500">{new Date(log.date).toLocaleDateString('pt-BR')}</p>
                       </div>
                       <div className="flex items-center gap-2">
-                         <span className="font-extrabold text-lg text-gray-900 dark:text-white">{log.quantity} <span className="text-xs font-normal text-gray-400">{log.unit}</span></span>
+                         <span className="font-extrabold text-lg text-gray-900 dark:text-white">{log.quantity}</span>
                          <button onClick={() => handleEditHarvest(log)} className="p-2 text-blue-400"><Edit2 size={16}/></button>
                          <button onClick={() => handleDeleteHarvest(log.id)} className="p-2 text-red-400"><Trash2 size={16}/></button>
                       </div>
@@ -625,7 +541,6 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
            <p className="text-sm text-green-100 opacity-90">Especialista em {crop.type}</p>
          </div>
        </div>
-
        <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-50/50 dark:bg-slate-900/50">
           {chatHistory.map((msg, idx) => (
             <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -634,48 +549,22 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                </div>
             </div>
           ))}
-          {isChatLoading && (
-            <div className="flex justify-start">
-               <div className="bg-white dark:bg-slate-700 p-4 rounded-2xl rounded-tl-sm shadow-sm flex gap-2 border border-gray-100 dark:border-slate-600">
-                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-75"></div>
-                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-150"></div>
-               </div>
-            </div>
-          )}
+          {isChatLoading && <div className="p-4 text-center text-gray-400">Digitando...</div>}
        </div>
-
        <form onSubmit={handleChatSubmit} className="p-4 bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-slate-700 flex gap-3">
-         <input 
-           type="text" 
-           value={chatInput}
-           onChange={(e) => setChatInput(e.target.value)}
-           placeholder="Digite sua dúvida..."
-           className="flex-1 p-4 bg-gray-50 dark:bg-slate-900 border border-transparent focus:bg-white dark:focus:bg-slate-800 focus:border-agro-green rounded-xl outline-none transition-all font-medium dark:text-white"
-         />
-         <button 
-           type="submit" 
-           disabled={!chatInput.trim() || isChatLoading}
-           className="bg-agro-green text-white p-4 rounded-xl hover:bg-green-700 disabled:opacity-50 transition-transform active:scale-95 shadow-lg shadow-green-600/20"
-         >
-           <Send size={20} />
-         </button>
+         <input type="text" value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder="Digite sua dúvida..." className="flex-1 p-4 bg-gray-50 dark:bg-slate-900 border rounded-xl" />
+         <button type="submit" disabled={!chatInput.trim() || isChatLoading} className="bg-agro-green text-white p-4 rounded-xl"><Send size={20} /></button>
        </form>
     </div>
   );
 
   return (
     <div className="space-y-6 pb-24 md:pb-8">
-      {/* Header with Dynamic Background */}
-      <div className={`rounded-b-3xl md:rounded-3xl shadow-xl relative overflow-hidden transition-all duration-500 bg-gradient-to-br ${theme.gradient}`}>
-         
+      <div className={`rounded-b-3xl md:rounded-3xl shadow-xl relative overflow-hidden transition-all duration-500 ${theme.bgGlass} backdrop-blur-xl`}>
          <div className="relative z-20 p-6 pt-8 md:p-8">
             <div className="flex items-start justify-between gap-4">
                <div className="flex items-center gap-3">
-                 <button 
-                   onClick={onBack} 
-                   className="p-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-xl text-white transition-all active:scale-95"
-                 >
+                 <button onClick={onBack} className="p-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-xl text-white transition-all active:scale-95">
                    <ArrowLeft size={20} />
                  </button>
                  <div className="text-white">
@@ -685,57 +574,29 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                    </p>
                  </div>
                </div>
-
                <div className="flex gap-2">
-                   <button 
-                     onClick={() => setActiveTab('assistant')}
-                     className="flex items-center gap-2 px-4 py-2 bg-white text-agro-green rounded-full shadow-lg transition-all active:scale-95 hover:scale-105 border border-white/20 animate-pulse-slow font-bold text-xs"
-                     title="Assistente IA"
-                   >
-                     <MessageSquare size={18} fill="currentColor" className="text-agro-green" />
-                     <span className="hidden sm:inline">Assistente IA</span>
-                     <span className="sm:hidden">Assistente IA</span>
+                   <button onClick={() => setActiveTab('assistant')} className="flex items-center gap-2 px-4 py-2 bg-white text-agro-green rounded-full shadow-lg font-bold text-xs">
+                     <MessageSquare size={18} fill="currentColor" /> <span className="hidden sm:inline">Assistente IA</span>
                    </button>
-
-                   <button 
-                     onClick={onDeleteCrop}
-                     className="p-2 bg-white/10 hover:bg-red-500/80 text-white rounded-xl backdrop-blur-sm transition-all active:scale-95 border border-white/10"
-                     title="Excluir Lavoura"
-                   >
-                     <Trash2 size={20} />
-                   </button>
+                   <button onClick={onDeleteCrop} className="p-2 bg-white/10 hover:bg-red-500/80 text-white rounded-xl"><Trash2 size={20} /></button>
                </div>
             </div>
-
-            {/* Desktop Tabs */}
             <div className="hidden md:flex overflow-x-auto gap-2 mt-6 pb-2 no-scrollbar">
                 {[
                   { id: 'overview', label: 'Home', icon: Home },
                   { id: 'finance', label: 'Finanças', icon: DollarSign },
                   { id: 'timeline', label: 'Etapas', icon: ListTodo },
                   { id: 'storage', label: 'Armazenagem', icon: Warehouse },
-                  { id: 'reports', label: 'Relatório', icon: FileText }, 
+                  { id: 'reports', label: 'Relatório', icon: FileText, action: generatePDF, loading: isGeneratingPdf }, 
                 ].map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id as any)}
-                    className={`
-                      flex items-center gap-2 px-4 py-2.5 rounded-full font-bold text-sm whitespace-nowrap transition-all shadow-sm
-                      ${activeTab === tab.id 
-                        ? 'bg-white text-gray-900 scale-105 ring-2 ring-white/50' 
-                        : 'bg-white/10 text-white hover:bg-white/20'}
-                    `}
-                  >
-                    <tab.icon size={16} />
-                    {tab.label}
+                  <button key={tab.id} onClick={tab.action || (() => setActiveTab(tab.id as any))} className={`flex items-center gap-2 px-4 py-2.5 rounded-full font-bold text-sm ${activeTab === tab.id ? 'bg-white text-gray-900' : 'bg-white/10 text-white'}`}>
+                    {tab.loading ? <Loader2 size={16} className="animate-spin"/> : <tab.icon size={16} />} {tab.label}
                   </button>
                 ))}
             </div>
          </div>
-         <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
       </div>
 
-      {/* Content Area */}
       <div className="min-h-[500px] animate-slide-up px-1 pb-24">
         {activeTab === 'overview' && renderOverview()}
         {activeTab === 'finance' && renderFinance()}
@@ -745,33 +606,20 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
         {activeTab === 'reports' && <Reports crop={crop} />}
       </div>
 
-      {/* MOBILE BOTTOM NAVIGATION BAR */}
       <div className="md:hidden fixed bottom-4 left-4 right-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-gray-200/50 dark:border-slate-700/50 rounded-2xl shadow-2xl shadow-black/10 z-50 flex justify-around items-center py-3 px-1 ring-1 ring-black/5 overflow-x-auto">
          {[
             { id: 'overview', label: 'Home', icon: Home },
             { id: 'finance', label: 'Finanças', icon: DollarSign },
             { id: 'timeline', label: 'Etapas', icon: ListTodo },
             { id: 'storage', label: 'Silo', icon: Warehouse },
-            { id: 'reports', label: 'Relatório', icon: FileText },
-         ].map((tab) => {
-            const isActive = activeTab === tab.id;
-            return (
-               <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
-                  className={`
-                    relative flex flex-col items-center gap-1 px-3 py-1 transition-all duration-300 rounded-xl min-w-[60px]
-                    ${isActive ? 'text-agro-green scale-105' : 'text-gray-400 dark:text-gray-500 hover:text-gray-600'}
-                  `}
-               >
-                  {isActive && (
-                     <div className="absolute inset-0 bg-green-50 dark:bg-green-900/20 rounded-xl -z-10 scale-110 opacity-100 transition-all"></div>
-                  )}
-                  <tab.icon size={22} strokeWidth={isActive ? 2.5 : 2} />
-                  <span className="text-[9px] font-bold tracking-tight">{tab.label}</span>
-               </button>
-            )
-         })}
+            { id: 'reports', label: 'Relatório', icon: FileText, action: generatePDF },
+         ].map((tab) => (
+            <button key={tab.id} onClick={tab.action || (() => setActiveTab(tab.id as any))} className={`relative flex flex-col items-center gap-1 px-3 py-1 rounded-xl min-w-[60px] ${activeTab === tab.id ? 'text-agro-green scale-105' : 'text-gray-400'}`}>
+               {activeTab === tab.id && <div className="absolute inset-0 bg-green-50 dark:bg-green-900/20 rounded-xl -z-10 scale-110"></div>}
+               <tab.icon size={22} strokeWidth={activeTab === tab.id ? 2.5 : 2} />
+               <span className="text-[9px] font-bold">{tab.label}</span>
+            </button>
+         ))}
       </div>
     </div>
   );
