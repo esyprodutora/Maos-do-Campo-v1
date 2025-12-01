@@ -1,6 +1,5 @@
-
 import React, { useEffect, useState } from 'react';
-import { LayoutDashboard, PlusCircle, Settings, LogOut, Crown, TrendingUp } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, Settings, LogOut, Crown, TrendingUp, Leaf } from 'lucide-react';
 import { supabase } from '../services/supabaseClient';
 
 interface SidebarProps {
@@ -24,11 +23,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMob
   }, []);
 
   const handleLogout = async () => {
-    // 1. Limpa dados locais imediatamente para garantir sensação de saída
     localStorage.clear();
-    localStorage.removeItem('sb-hzgnvkbwytoyszfmybfq-auth-token'); // Limpeza específica do Supabase se necessário
-
-    // 2. Tenta avisar o servidor (opcional, não pode bloquear a saída)
+    localStorage.removeItem('sb-hzgnvkbwytoyszfmybfq-auth-token');
     try {
         if (supabase) {
             await supabase.auth.signOut();
@@ -36,7 +32,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMob
     } catch (error) {
         console.error("Erro ao desconectar do servidor:", error);
     } finally {
-        // 3. Força o recarregamento da página para zerar estados e voltar ao Login
         window.location.reload();
     }
   };
@@ -70,15 +65,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMob
         md:translate-x-0 md:static md:h-screen md:shadow-none flex flex-col justify-between
       `}>
         <div>
-          {/* Logo Section */}
+          {/* Logo Section - PADRONIZADA */}
           <div className="p-8 flex items-center gap-3">
             <div className="bg-gradient-to-br from-agro-green to-emerald-600 p-2.5 rounded-xl shadow-lg shadow-green-900/20">
-              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white">
-                <path d="M7 20h10" />
-                <path d="M10 20c5.5-2.5.8-6.4 3-10" />
-                <path d="M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8z" />
-                <path d="M14.1 6a7 7 0 0 0-1.1 4c1.9-.1 3.3-.6 4.3-1.4 1-1 1.6-2.3 1.7-4.6-2.7.1-4 1-4.9 2z" />
-              </svg>
+              <Leaf className="text-white" size={28} fill="currentColor" />
             </div>
             <div>
               <h1 className="font-bold text-xl leading-none tracking-tight text-white">MÃOS DO<br/><span className="text-agro-yellow">CAMPO</span></h1>
@@ -114,8 +104,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMob
 
         {/* Premium CTA & User Profile */}
         <div className="p-4 m-4 space-y-4">
-          
-          {/* Premium Button */}
           <button 
             onClick={() => handleNav('subscription')}
             className="w-full relative overflow-hidden group p-4 rounded-2xl bg-gradient-to-r from-gray-900 to-black border border-yellow-500/30 shadow-lg transition-all hover:scale-[1.02]"
