@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './components/Dashboard';
 import { NewCropForm } from './components/NewCropForm';
-import CropDetails from './components/CropDetails';
+import { CropDetails } from './components/CropDetails'; // Correção Aqui (Import Named)
 import { Login } from './components/Login';
 import { Subscription } from './components/Subscription';
 import { Quotes } from './components/Quotes';
 import { CropData } from './types';
-import { Menu, Loader2, WifiOff, RefreshCw, Sun, Moon, Leaf, CloudOff, Cloud } from 'lucide-react';
+import { Menu, Loader2, WifiOff, RefreshCw, Sun, Moon, CloudOff, Cloud, Leaf } from 'lucide-react';
 import { supabase } from './services/supabaseClient';
 
 // Tipos para a fila de sincronização
@@ -23,6 +23,7 @@ const App: React.FC = () => {
   const [session, setSession] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
 
+  // Theme State
   const [theme, setTheme] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('theme') || 'light';
@@ -131,32 +132,22 @@ const App: React.FC = () => {
               processedIds.push(item.id);
           } catch (e) {
               console.error(`Falha ao sincronizar item ${item.id}`, e);
-              // Se falhar, mantém na fila para tentar depois (exceto se for erro fatal 4xx)
           }
       }
 
-      // Remove itens processados da fila
-      const remainingQueue = newQueue.filter(i => !processedIds.includes(i.id) || processedIds.indexOf(i.id) > newQueue.indexOf(i)); // Simplificação segura
-      // Na verdade, melhor filtrar pelo timestamp ou ID único da operação se fosse complexo, 
-      // mas aqui vamos assumir sucesso se não caiu no catch (upsert é idempotente).
-      // Vamos limpar a fila processada:
-      
-      // Recarrega a fila do disco caso tenha entrado algo novo enquanto processava (raro em JS single thread mas boa prática)
       const currentQueue = JSON.parse(localStorage.getItem('sync_queue') || '[]');
-      const finalQueue = currentQueue.filter((i: SyncItem) => !processedIds.includes(i.id)); // Remove processados
+      const finalQueue = currentQueue.filter((i: SyncItem) => !processedIds.includes(i.id));
       
       localStorage.setItem('sync_queue', JSON.stringify(finalQueue));
       setPendingSyncs(finalQueue.length);
       setIsSyncing(false);
       
-      // Atualiza dados locais com a versão "oficial" do servidor após sync
       fetchCrops(); 
   };
 
   const addToSyncQueue = (item: SyncItem) => {
       const queue = JSON.parse(localStorage.getItem('sync_queue') || '[]');
       
-      // Otimização: Se já tem um update para o mesmo ID, substitui pelo mais novo
       const existingIndex = queue.findIndex((i: SyncItem) => i.id === item.id && i.action === item.action);
       
       if (existingIndex >= 0) {
@@ -168,7 +159,6 @@ const App: React.FC = () => {
       localStorage.setItem('sync_queue', JSON.stringify(queue));
       setPendingSyncs(queue.length);
 
-      // Se estiver online, tenta sincronizar imediatamente
       if (navigator.onLine) {
           processSyncQueue();
       }
@@ -178,19 +168,16 @@ const App: React.FC = () => {
     setIsLoading(true);
     setError(null);
 
-    // 1. Load from LocalStorage IMMEDIATELY (Offline First)
     const localData = localStorage.getItem('maos-do-campo-crops');
     if (localData) {
       setCrops(JSON.parse(localData));
     }
 
-    // 2. Se offline, para por aqui e avisa
     if (!navigator.onLine) {
         setIsLoading(false);
         return;
     }
 
-    // 3. Se online, busca do servidor
     try {
       if (!supabase) throw new Error("Supabase não iniciado");
 
@@ -212,8 +199,6 @@ const App: React.FC = () => {
         id: row.id 
       }));
 
-      // Merge inteligente? Para MVP, servidor vence, mas mantemos a fila de sync se houver pendência
-      // Se tiver pendências locais, não sobrescreve tudo cegalmente para não perder o que acabou de criar
       if (pendingSyncs === 0) {
           setCrops(loadedCrops);
           localStorage.setItem('maos-do-campo-crops', JSON.stringify(loadedCrops));
@@ -227,14 +212,12 @@ const App: React.FC = () => {
   };
 
   const handleSaveCrop = async (newCrop: CropData) => {
-    // 1. Update Local State (Instant Feedback)
     const updatedList = [newCrop, ...crops];
     setCrops(updatedList);
     setActiveTab('dashboard'); 
     setSelectedCrop(newCrop); 
     localStorage.setItem('maos-do-campo-crops', JSON.stringify(updatedList));
 
-    // 2. Add to Sync Queue (Handles both Online and Offline transparently)
     addToSyncQueue({
         id: newCrop.id,
         action: 'INSERT',
