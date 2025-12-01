@@ -149,16 +149,24 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
     setIsAddingItem(false);
   };
 
+  // --- Storage Handlers (Edit/Save) ---
   const handleSaveHarvest = () => {
       if(harvestForm.quantity <= 0) return alert("Quantidade deve ser maior que zero.");
+      
       let updatedLogs = [...(crop.harvestLogs || [])];
+      
       if (editingHarvestId) {
+          // Editar existente
           updatedLogs = updatedLogs.map(h => h.id === editingHarvestId ? { ...harvestForm, id: editingHarvestId } : h);
       } else {
+          // Criar novo
           const newLog = { ...harvestForm, id: Math.random().toString(36).substr(2, 9) };
           updatedLogs.push(newLog);
       }
+      
       onUpdateCrop({ ...crop, harvestLogs: updatedLogs });
+      
+      // Reset form
       setHarvestForm({ id: '', date: new Date().toISOString().split('T')[0], quantity: 0, unit: 'sc', location: '', qualityNote: '' });
       setIsAddingHarvest(false);
       setEditingHarvestId(null);
@@ -211,8 +219,6 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
     doc.save(`plano_${crop.name}.pdf`);
     setIsGeneratingPdf(false);
   };
-
-  // --- Render Sections ---
 
   const renderOverview = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-slide-up">
@@ -335,6 +341,7 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                  <p className="text-2xl font-bold text-gray-800 dark:text-white transition-all duration-300">
                    {(crop.estimatedCost || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                  </p>
+                 {isEditingPrices && <p className="text-xs text-agro-green animate-pulse">Atualizando...</p>}
                </div>
              </div>
            </div>
@@ -413,16 +420,11 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
              <div className="p-6 rounded-2xl border bg-white dark:bg-slate-800 border-gray-100 dark:border-slate-700">
                 <h4 className="text-lg font-bold text-gray-900 dark:text-white">{stage.title}</h4>
                 <p className="text-gray-500 text-sm mb-4">{stage.description}</p>
-                <div className="grid gap-3">
-                    {stage.tasks.map(task => (
-                    <div key={task.id} onClick={() => toggleTask(stage.id, task.id)} className={`flex items-center gap-4 p-3 rounded-xl cursor-pointer transition-all border ${task.done ? 'bg-green-50 border-green-100' : 'bg-white border-gray-100'}`}>
-                        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${task.done ? 'bg-agro-green border-agro-green' : 'border-gray-300'}`}>
-                            {task.done && <CheckCircle size={14} className="text-white"/>}
-                        </div>
-                        <span className={`text-sm font-medium ${task.done ? 'text-gray-400 line-through' : 'text-gray-700'}`}>{task.text}</span>
-                    </div>
-                    ))}
-                </div>
+                {isEditingTimeline ? (
+                     <input value={stage.dateEstimate} onChange={e => handleUpdateStage(index, 'dateEstimate', e.target.value)} className="border rounded p-1 text-xs"/>
+                ) : (
+                     <span className="text-xs font-mono bg-gray-100 px-2 py-1 rounded">{stage.dateEstimate}</span>
+                )}
              </div>
           </div>
         ))}
@@ -447,10 +449,20 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                 <span className="text-5xl font-extrabold">{totalHarvested.toLocaleString('pt-BR')}</span>
                 <span className="text-lg font-medium opacity-80 mb-1">sc colhidas</span>
              </div>
+             
+             {currentMarketPrice > 0 && (
+                <div className="mt-4 bg-black/20 p-3 rounded-xl inline-block backdrop-blur-sm">
+                     <p className="text-xs font-medium opacity-80 mb-1">Receita Estimada</p>
+                     <p className="text-xl font-bold text-green-300">
+                        {estimatedRevenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                     </p>
+                </div>
+             )}
+
              <div className="mt-6">
                 <div className="flex justify-between text-xs font-bold mb-2 opacity-80">
                    <span>Progresso da Safra</span>
-                   <span>{progress.toFixed(1)}% da Meta ({totalExpected.toLocaleString('pt-BR')} sc)</span>
+                   <span>{progress.toFixed(1)}% da Meta ({totalExpected} sc)</span>
                 </div>
                 <div className="w-full bg-black/20 rounded-full h-3 overflow-hidden">
                    <div className="h-full bg-white rounded-full transition-all duration-1000" style={{ width: `${Math.min(progress, 100)}%` }} />
@@ -461,7 +473,10 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
           <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700">
              <div className="flex justify-between items-center mb-6">
                 <h3 className="font-bold text-gray-800 dark:text-white">Histórico de Cargas</h3>
-                <button onClick={() => { setIsAddingHarvest(!isAddingHarvest); if (!isAddingHarvest) { setHarvestForm({ id: '', date: new Date().toISOString().split('T')[0], quantity: 0, unit: 'sc', location: '', qualityNote: '' }); setEditingHarvestId(null); } }} className="flex items-center gap-2 text-sm font-bold text-agro-green bg-green-50 dark:bg-green-900/20 px-3 py-2 rounded-lg hover:bg-green-100 transition-colors">
+                <button 
+                  onClick={() => { setIsAddingHarvest(!isAddingHarvest); if (!isAddingHarvest) { setHarvestForm({ id: '', date: new Date().toISOString().split('T')[0], quantity: 0, unit: 'sc', location: '', qualityNote: '' }); setEditingHarvestId(null); } }} 
+                  className="flex items-center gap-2 text-sm font-bold text-agro-green bg-green-50 dark:bg-green-900/20 px-3 py-2 rounded-lg hover:bg-green-100 transition-colors"
+                >
                    {isAddingHarvest ? <X size={16}/> : <Plus size={16}/>} {isAddingHarvest ? 'Cancelar' : 'Nova Carga'}
                 </button>
              </div>
@@ -598,7 +613,33 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                    </button>
                </div>
             </div>
+
+            {/* Desktop Tabs */}
+            <div className="hidden md:flex overflow-x-auto gap-2 mt-6 pb-2 no-scrollbar">
+                {[
+                  { id: 'overview', label: 'Home', icon: Home },
+                  { id: 'finance', label: 'Finanças', icon: DollarSign },
+                  { id: 'timeline', label: 'Etapas', icon: ListTodo },
+                  { id: 'storage', label: 'Armazenagem', icon: Warehouse }, // Nova Aba
+                  { id: 'reports', label: 'Relatório', icon: FileText }, 
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id as any)}
+                    className={`
+                      flex items-center gap-2 px-4 py-2.5 rounded-full font-bold text-sm whitespace-nowrap transition-all shadow-sm
+                      ${activeTab === tab.id 
+                        ? 'bg-white text-gray-900 scale-105 ring-2 ring-white/50' 
+                        : 'bg-white/10 text-white hover:bg-white/20'}
+                    `}
+                  >
+                    <tab.icon size={16} />
+                    {tab.label}
+                  </button>
+                ))}
+            </div>
          </div>
+         
          <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
       </div>
 
