@@ -21,7 +21,8 @@ export interface Material {
   name: string;
   quantity: number;
   unit: string;
-  unitPriceEstimate: number;
+  unitPriceEstimate: number; // Preço Estimado pela IA
+  realCost?: number;         // Custo Real (Novo)
   category: 'fertilizante' | 'semente' | 'defensivo' | 'corretivo' | 'outros';
 }
 
@@ -39,9 +40,9 @@ export interface HarvestLog {
   id: string;
   date: string;
   quantity: number;
-  unit: string; // sc, ton, kg
-  location: string; // Silo 1, Armazém, Cooperativa
-  qualityNote?: string; // Umidade 13%, Ardidos 2%, etc
+  unit: string;
+  location: string;
+  qualityNote?: string;
 }
 
 export interface CropData {
@@ -51,7 +52,7 @@ export interface CropData {
   areaHa: number;
   soilType: SoilType;
   coordinates?: Coordinates;
-  productivityGoal: string; // e.g. "60 sc/ha"
+  productivityGoal: string;
   spacing: string;
   datePlanted: string;
   
@@ -60,7 +61,7 @@ export interface CropData {
   estimatedHarvestDate: string;
   materials: Material[];
   timeline: TimelineStage[];
-  harvestLogs?: HarvestLog[]; // New field for Post-Harvest
+  harvestLogs?: HarvestLog[];
   aiAdvice: string;
 }
 
