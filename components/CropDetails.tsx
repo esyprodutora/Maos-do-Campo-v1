@@ -64,11 +64,18 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
         const updatedTasks = stage.tasks.map(task => 
           task.id === taskId ? { ...task, done: !task.done } : task
         );
+        
         const allDone = updatedTasks.every(t => t.done);
+        const someDone = updatedTasks.some(t => t.done);
+        
+        let newStatus: 'pendente' | 'em_andamento' | 'concluido' = 'pendente';
+        if (allDone && updatedTasks.length > 0) newStatus = 'concluido';
+        else if (someDone) newStatus = 'em_andamento';
+        
         return { 
           ...stage, 
           tasks: updatedTasks, 
-          status: allDone ? 'concluido' : 'em_andamento' 
+          status: newStatus 
         } as TimelineStage;
       }
       return stage;
@@ -515,10 +522,12 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                 )}
               </div>
               
-              {/* Card Content */}
+              {/* Card Content - Styled as a proper Card with shadow */}
               <div className={`
-                  p-6 rounded-2xl border transition-all duration-300
-                  ${!isEditingTimeline && stage.status === 'em_andamento' ? 'bg-white dark:bg-slate-800 border-agro-yellow shadow-lg ring-1 ring-agro-yellow/20' : 'bg-gray-50/50 dark:bg-slate-900 border-gray-100 dark:border-slate-700'}
+                  p-6 rounded-2xl border transition-all duration-300 shadow-sm hover:shadow-md
+                  ${!isEditingTimeline && stage.status === 'em_andamento' 
+                    ? 'bg-white dark:bg-slate-800 border-agro-yellow ring-1 ring-agro-yellow/20 shadow-lg shadow-yellow-900/5' 
+                    : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700'}
               `}>
                 {isEditingTimeline ? (
                     <div className="space-y-3">
@@ -576,8 +585,13 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                         <div className="flex justify-between items-start mb-3">
                             <h4 className={`text-lg font-bold ${stage.status === 'em_andamento' ? 'text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-300'}`}>{stage.title}</h4>
                             <div className="flex flex-col items-end gap-1">
-                                <span className="text-xs font-bold font-mono bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 px-3 py-1 rounded-full text-gray-500 dark:text-gray-300 shadow-sm flex items-center gap-1">
-                                    <Calendar size={10} /> {stage.dateEstimate}
+                                <span className={`
+                                    text-xs font-bold font-mono px-3 py-1 rounded-full shadow-sm flex items-center gap-1
+                                    ${stage.status === 'em_andamento' 
+                                        ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' 
+                                        : 'bg-gray-100 text-gray-500 dark:bg-slate-700 dark:text-gray-300'}
+                                `}>
+                                    <Calendar size={12} /> {stage.dateEstimate}
                                 </span>
                                 {stage.endDate && (
                                     <span className="text-[10px] font-mono text-gray-400 dark:text-gray-500 flex items-center gap-1">
@@ -586,23 +600,23 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                                 )}
                             </div>
                         </div>
-                        <p className="text-gray-500 dark:text-gray-400 mb-5 leading-relaxed">{stage.description}</p>
+                        <p className="text-gray-600 dark:text-gray-400 mb-5 leading-relaxed text-sm">{stage.description}</p>
                         
-                        <div className="grid gap-3">
+                        <div className="grid gap-2">
                         {stage.tasks.map(task => (
                             <div key={task.id} 
                                 onClick={() => toggleTask(stage.id, task.id)}
                                 className={`
-                                flex items-center gap-4 p-3 rounded-xl cursor-pointer transition-all border
+                                flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all border
                                 ${task.done 
                                     ? 'bg-green-50 dark:bg-green-900/20 border-green-100 dark:border-green-900/30' 
-                                    : 'bg-white dark:bg-slate-800 border-gray-100 dark:border-slate-700 hover:border-agro-green hover:shadow-md'}
+                                    : 'bg-white dark:bg-slate-800 border-gray-100 dark:border-slate-700 hover:border-agro-green hover:shadow-sm'}
                                 `}>
                             <div className={`
-                                w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors flex-shrink-0
+                                w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors flex-shrink-0
                                 ${task.done ? 'bg-agro-green border-agro-green' : 'border-gray-300 dark:border-slate-500'}
                             `}>
-                                {task.done && <CheckCircle size={14} className="text-white"/>}
+                                {task.done && <CheckCircle size={12} className="text-white"/>}
                             </div>
                             <span className={`text-sm font-medium ${task.done ? 'text-gray-400 dark:text-gray-500 line-through' : 'text-gray-700 dark:text-gray-200'}`}>
                                 {task.text}
