@@ -650,7 +650,7 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
       <div className={`rounded-b-3xl md:rounded-3xl shadow-xl relative overflow-hidden transition-all duration-500 ${theme.bg}`}>
          
          {/* Navigation & Title */}
-         <div className="relative z-20 p-6 md:p-8">
+         <div className="relative z-20 p-4 md:p-8">
             <div className="flex items-start justify-between gap-4 mb-6">
                <div className="flex items-center gap-3">
                  <button 
@@ -686,28 +686,30 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                </div>
             </div>
 
-            {/* Scrollable Tabs (Pills) */}
-            <div className="flex overflow-x-auto gap-2 pb-2 no-scrollbar -mx-2 px-2 md:mx-0 md:px-0">
-                {[
-                  { id: 'overview', label: 'Visão Geral', icon: ListTodo },
-                  { id: 'finance', label: 'Finanças', icon: DollarSign },
-                  { id: 'timeline', label: 'Etapas', icon: Calendar },
-                  { id: 'assistant', label: 'Assistente IA', icon: MessageSquare },
-                ].map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id as any)}
-                    className={`
-                      flex items-center gap-2 px-4 py-2.5 rounded-full font-bold text-sm whitespace-nowrap transition-all shadow-sm
-                      ${activeTab === tab.id 
-                        ? 'bg-white text-gray-900 scale-105 ring-2 ring-white/50' 
-                        : 'bg-white/10 text-white hover:bg-white/20'}
-                    `}
-                  >
-                    <tab.icon size={16} />
-                    {tab.label}
-                  </button>
-                ))}
+            {/* Scrollable Tabs (Pills) with Sticky Behavior */}
+            <div className="sticky top-0 z-30 -mx-4 px-4 pb-2 pt-1 backdrop-blur-md bg-white/5 md:static md:bg-transparent md:backdrop-filter-none md:mx-0 md:px-0">
+                <div className="flex overflow-x-auto gap-2 pb-1 no-scrollbar">
+                    {[
+                    { id: 'overview', label: 'Visão Geral', icon: ListTodo },
+                    { id: 'finance', label: 'Finanças', icon: DollarSign },
+                    { id: 'timeline', label: 'Etapas', icon: Calendar },
+                    { id: 'assistant', label: 'Assistente IA', icon: MessageSquare },
+                    ].map((tab) => (
+                    <button
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id as any)}
+                        className={`
+                        flex items-center gap-2 px-4 py-2.5 rounded-full font-bold text-sm whitespace-nowrap transition-all shadow-sm
+                        ${activeTab === tab.id 
+                            ? 'bg-white text-gray-900 scale-105 ring-2 ring-white/50' 
+                            : 'bg-white/10 text-white hover:bg-white/20'}
+                        `}
+                    >
+                        <tab.icon size={16} />
+                        {tab.label}
+                    </button>
+                    ))}
+                </div>
             </div>
          </div>
 
