@@ -24,7 +24,7 @@ const getFallbackData = (name: string, type: string, areaHa: number): Partial<Cr
   return {
     estimatedCost: areaHa * baseCostPerHa,
     estimatedHarvestDate: harvestDate.toISOString().split('T')[0],
-    aiAdvice: `Olá! Aqui é o Tonico. Para ${type} nesta área, recomendo atenção total na correção do solo antes do plantio.`,
+    aiAdvice: `Aqui fala a experiência de quem já viu muita safra: para ${type}, o segredo está no preparo bem feito do solo. Não tenha pressa, faça bem feito.`,
     materials: [
       {
         name: isSeed ? "Sementes Certificadas" : "Mudas Selecionadas",
@@ -74,13 +74,18 @@ export const generateCropPlan = async (
   const materialType = isSeeding ? 'Sementes' : 'Mudas';
 
   const prompt = `
-    Atue como o Tonico, um agrônomo experiente e prático do aplicativo Mãos do Campo.
-    Dados: Cultura ${type} (${materialType}), Área ${areaHa}ha, Solo ${soilType}, Meta ${productivityGoal}, Espaçamento ${spacing}.
+    Você é o Tonico, um senhor de 90 anos, produtor rural de imensa sabedoria e experiência.
+    Você construiu sua vida no campo com trabalho sério e técnica.
+    Sua comunicação é respeitosa, ponderada, técnica e paternal. Você não usa gírias, mas fala com a clareza de quem sabe o que diz.
+    Você transmite segurança e assertividade.
 
-    Gere um JSON com:
+    Gere um plano técnico para uma lavoura de ${type} (${materialType}).
+    Dados: Área ${areaHa}ha, Solo ${soilType}, Meta ${productivityGoal}, Espaçamento ${spacing}.
+
+    Retorne APENAS um JSON com:
     1. estimatedCost (number)
     2. estimatedHarvestDate (YYYY-MM-DD)
-    3. aiAdvice (string - Uma dica técnica curta e direta do Tonico)
+    3. aiAdvice (string - Um conselho sábio e técnico do Tonico sobre essa cultura)
     4. materials (array): {name, quantity, unit, unitPriceEstimate, category}
     5. timeline (array): {id, title, description, status='pendente', dateEstimate, tasks:[{id, text, done=false}]}
   `;
@@ -158,18 +163,20 @@ export const getAssistantResponse = async (question: string, context: string): P
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash",
             contents: `
-              Você é o Tonico, o assistente virtual inteligente do aplicativo "Mãos do Campo".
-              Sua personalidade: Você é um agrônomo experiente, fala de forma simples, direta e amigável (como um bom parceiro de campo), mas com precisão técnica absoluta.
+              Você é o Tonico, um senhor de 90 anos, patriarca do campo.
+              Sua história é de sucesso através do trabalho duro e inteligência na lavoura.
+              Você fala com autoridade, sabedoria e calma. Use palavras como "meu filho", "veja bem", "a experiência me ensinou".
+              Jamais use gírias de "caipira" caricato. Seja um mentor sábio e técnico.
               
-              Contexto da lavoura do usuário: ${context}. 
+              Contexto da lavoura: ${context}. 
               Pergunta do produtor: ${question}. 
               
-              Responda como o Tonico, ajudando o produtor a resolver o problema.
+              Responda com a sabedoria de 90 anos de campo.
             `,
         });
-        return response.text || "Opa, deu um enrosco aqui na conexão. Pode repetir?";
+        return response.text || "Meu filho, a conexão falhou por um instante. Vamos tentar novamente com calma.";
     } catch (e) {
         console.error(e);
-        return "Tô sem sinal do satélite agora, companheiro. Verifique sua internet.";
+        return "A tecnologia às vezes nos prega peças. Verifique sua conexão, meu jovem.";
     }
 }
