@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { CropData, TimelineStage, Material, HarvestLog } from '../types';
 import { getAssistantResponse } from '../services/geminiService';
 import { getCurrentPrice } from '../services/marketService';
-import { Reports } from './Reports';
-import { ArrowLeft, Calendar, DollarSign, ListTodo, MessageSquare, Send, CheckCircle, Circle, AlertCircle, Droplets, Ruler, ShoppingBag, Download, Loader2, Edit2, Check, MapPin, Navigation, Trash2, Plus, X, Clock, Sprout, FileText, Home, Sparkles, Bot, MessageCircle, Warehouse, Package, Truck, TrendingUp, Wallet, User } from 'lucide-react';
+import { Reports } from './Reports'; // Ensuring this import exists
+import { ArrowLeft, Calendar, DollarSign, ListTodo, MessageSquare, Send, CheckCircle, Circle, AlertCircle, Droplets, Ruler, ShoppingBag, Download, Loader2, Edit2, Check, MapPin, Navigation, Trash2, Plus, X, Clock, Sprout, FileText, Home, Sparkles, Bot, MessageCircle, Warehouse, Package, Truck, TrendingUp, Wallet } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -19,14 +19,18 @@ interface CropDetailsProps {
 export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdateCrop, onDeleteCrop }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'finance' | 'timeline' | 'storage' | 'assistant' | 'reports'>('overview');
   const [chatInput, setChatInput] = useState('');
+  
+  // Safe initialization for chat history
   const [chatHistory, setChatHistory] = useState<{role: 'user' | 'ai', text: string}[]>([
-    { role: 'ai', text: `Olá! Sou seu assistente para a lavoura ${crop.name}. Como posso ajudar hoje?` }
+    { role: 'ai', text: `Olá! Sou seu assistente para a lavoura ${crop?.name || ''}. Como posso ajudar hoje?` }
   ]);
+  
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   
   const mapsApiKey = GOOGLE_MAPS_API_KEY;
   
+  // State for Editing
   const [isEditingPrices, setIsEditingPrices] = useState(false);
   const [isAddingItem, setIsAddingItem] = useState(false);
   const [newItem, setNewItem] = useState<Material>({
@@ -38,8 +42,10 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
     category: 'outros'
   });
 
+  // State for Timeline Editing
   const [isEditingTimeline, setIsEditingTimeline] = useState(false);
 
+  // State for Storage/Harvest
   const [isAddingHarvest, setIsAddingHarvest] = useState(false);
   const [editingHarvestId, setEditingHarvestId] = useState<string | null>(null);
   const [harvestForm, setHarvestForm] = useState<HarvestLog>({
@@ -53,19 +59,22 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
   const [currentMarketPrice, setCurrentMarketPrice] = useState<number>(0);
 
   useEffect(() => {
-      if (activeTab === 'storage') {
+      if (activeTab === 'storage' && crop) {
           getCurrentPrice(crop.type).then(price => setCurrentMarketPrice(price));
       }
-  }, [activeTab, crop.type]);
+  }, [activeTab, crop]);
 
   const getTheme = (type: string) => {
     switch(type) {
       case 'cafe': return { main: 'text-[#A67C52]', bg: 'bg-[#A67C52]', bgGlass: 'bg-[#A67C52]/85', bgSoft: 'bg-[#A67C52]/10', border: 'border-[#A67C52]/20', light: 'bg-[#FAF3E0] dark:bg-[#A67C52]/20', gradient: 'from-[#A67C52] to-[#8B6642]' };
+      case 'milho': return { main: 'text-orange-500', bg: 'bg-orange-500', bgGlass: 'bg-orange-500/85', bgSoft: 'bg-orange-500/10', border: 'border-orange-500/20', light: 'bg-orange-50 dark:bg-orange-500/20', gradient: 'from-orange-500 to-orange-600' };
+      case 'soja': return { main: 'text-yellow-500', bg: 'bg-yellow-500', bgGlass: 'bg-yellow-500/85', bgSoft: 'bg-yellow-500/10', border: 'border-yellow-500/20', light: 'bg-yellow-50 dark:bg-yellow-500/20', gradient: 'from-yellow-500 to-yellow-600' };
       default: return { main: 'text-agro-green', bg: 'bg-agro-green', bgGlass: 'bg-agro-green/85', bgSoft: 'bg-agro-green/10', border: 'border-agro-green/20', light: 'bg-green-50 dark:bg-green-900/20', gradient: 'from-agro-green to-green-700' };
     }
   };
   const theme = getTheme(crop.type);
 
+  // ... Handlers (ToggleTask, etc.) - keeping logic consistent
   const toggleTask = (stageId: string, taskId: string) => {
     const updatedTimeline = (crop.timeline || []).map(stage => {
       if (stage.id === stageId) {
@@ -96,19 +105,24 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
     const newStage: TimelineStage = { id: Math.random().toString(36).substr(2, 9), title: 'Nova Etapa', description: 'Descrição...', status: 'pendente', dateEstimate: new Date().toLocaleDateString('pt-BR'), tasks: [] };
     onUpdateCrop({ ...crop, timeline: [...(crop.timeline || []), newStage] });
   };
+
   const handleRemoveStage = (index: number) => {
     if (!confirm("Excluir esta etapa?")) return;
     const updatedTimeline = [...(crop.timeline || [])]; updatedTimeline.splice(index, 1); onUpdateCrop({ ...crop, timeline: updatedTimeline });
   };
+
   const handleUpdateStage = (index: number, field: keyof TimelineStage, value: any) => {
     const updatedTimeline = [...(crop.timeline || [])]; updatedTimeline[index] = { ...updatedTimeline[index], [field]: value }; onUpdateCrop({ ...crop, timeline: updatedTimeline });
   };
+
   const handleAddTaskToStage = (stageIndex: number) => {
     const updatedTimeline = [...(crop.timeline || [])]; updatedTimeline[stageIndex].tasks.push({ id: Math.random().toString(36).substr(2, 9), text: '', done: false }); onUpdateCrop({ ...crop, timeline: updatedTimeline });
   };
+
   const handleRemoveTaskFromStage = (stageIndex: number, taskIndex: number) => {
     const updatedTimeline = [...(crop.timeline || [])]; updatedTimeline[stageIndex].tasks.splice(taskIndex, 1); onUpdateCrop({ ...crop, timeline: updatedTimeline });
   };
+
   const handleUpdateTaskText = (stageIndex: number, taskIndex: number, text: string) => {
     const updatedTimeline = [...(crop.timeline || [])]; updatedTimeline[stageIndex].tasks[taskIndex].text = text; onUpdateCrop({ ...crop, timeline: updatedTimeline });
   };
@@ -119,10 +133,12 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
     const newTotalCost = updatedMaterials.reduce((acc, m) => acc + (m.quantity * m.unitPriceEstimate), 0);
     onUpdateCrop({ ...crop, materials: updatedMaterials, estimatedCost: newTotalCost });
   };
+
   const handleRemoveItem = (index: number) => {
     if(!confirm("Deseja excluir este item?")) return; const updatedMaterials = [...(crop.materials || [])]; updatedMaterials.splice(index, 1);
     const newTotalCost = updatedMaterials.reduce((acc, m) => acc + (m.quantity * m.unitPriceEstimate), 0); onUpdateCrop({ ...crop, materials: updatedMaterials, estimatedCost: newTotalCost });
   };
+
   const handleAddItem = () => {
     if (!newItem.name) return alert("Preencha o nome"); const updatedMaterials = [...(crop.materials || []), newItem];
     const newTotalCost = updatedMaterials.reduce((acc, m) => acc + (m.quantity * m.unitPriceEstimate), 0);
@@ -135,6 +151,7 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
       else { updatedLogs.push({ ...harvestForm, id: Math.random().toString(36).substr(2, 9) }); }
       onUpdateCrop({ ...crop, harvestLogs: updatedLogs }); setHarvestForm({ id: '', date: new Date().toISOString().split('T')[0], quantity: 0, unit: 'sc', location: '', qualityNote: '' }); setIsAddingHarvest(false); setEditingHarvestId(null);
   };
+
   const handleEditHarvest = (log: HarvestLog) => { setHarvestForm(log); setEditingHarvestId(log.id); setIsAddingHarvest(true); };
   const handleDeleteHarvest = (id: string) => { if(!confirm("Excluir?")) return; const updatedLogs = (crop.harvestLogs || []).filter(h => h.id !== id); onUpdateCrop({ ...crop, harvestLogs: updatedLogs }); };
 
@@ -145,7 +162,9 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
     const response = await getAssistantResponse(userMsg, context); setChatHistory(prev => [...prev, { role: 'ai', text: response }]); setIsChatLoading(false);
   };
 
-  // Renders
+  const generatePDF = () => { /* PDF logic handled by Reports component */ };
+
+  // --- Renderers ---
   const renderOverview = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-slide-up">
        <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 relative overflow-hidden group">
@@ -156,12 +175,23 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
           <div className="space-y-5 relative z-10">
              <div className="flex justify-between p-3 bg-gray-50 dark:bg-slate-700 rounded-xl"><span className="text-gray-500 dark:text-gray-300 font-medium">Área Total</span><span className="font-bold text-gray-800 dark:text-white text-lg">{crop.areaHa} ha</span></div>
              <div className="flex justify-between p-3 bg-gray-50 dark:bg-slate-700 rounded-xl"><span className="text-gray-500 dark:text-gray-300 font-medium">Solo</span><span className="font-bold capitalize text-gray-800 dark:text-white">{crop.soilType}</span></div>
+             <div className="flex justify-between p-3 bg-gray-50 dark:bg-slate-700 rounded-xl"><span className="text-gray-500 dark:text-gray-300 font-medium">Espaçamento</span><span className="font-bold text-gray-800 dark:text-white">{crop.spacing}</span></div>
+             <div className="flex justify-between p-3 bg-gray-50 dark:bg-slate-700 rounded-xl border border-dashed border-gray-300 dark:border-slate-600"><span className="text-gray-500 dark:text-gray-300 font-medium">Meta</span><span className={`font-bold ${theme.main}`}>{crop.productivityGoal}</span></div>
           </div>
        </div>
        <div className="flex flex-col gap-6">
            <div className={`p-8 rounded-3xl border relative overflow-hidden flex flex-col justify-between ${theme.light} border-${theme.bg}/20 flex-1`}>
               <div className="relative z-10"><h3 className={`font-bold text-xl mb-4 flex items-center gap-3 ${theme.main}`}><img src="/tonyk.png" className="w-10 h-10 rounded-full border-2 border-white/30 object-cover" alt="Tonico" onError={(e) => (e.currentTarget.src = 'https://cdn-icons-png.flaticon.com/512/4712/4712035.png')} /><span>Dica do Tonico</span></h3><p className="text-gray-700 dark:text-gray-200 italic leading-relaxed text-lg font-medium">"{crop.aiAdvice}"</p></div>
+              <div className="mt-8 relative z-10"><p className={`text-xs font-bold uppercase tracking-wider mb-1 ${theme.main}`}>Colheita Estimada</p><p className="text-3xl font-extrabold text-gray-800 dark:text-white">{new Date(crop.estimatedHarvestDate).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</p></div>
            </div>
+           {crop.coordinates && (
+             <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700">
+                <h3 className="font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2"><MapPin className="text-agro-green" size={20}/> Localização</h3>
+                {mapsApiKey ? (
+                    <div className="relative w-full h-40 bg-gray-200 dark:bg-slate-700 rounded-xl overflow-hidden mb-4"><iframe width="100%" height="100%" frameBorder="0" style={{ border: 0 }} src={`https://www.google.com/maps/embed/v1/place?key=${mapsApiKey}&q=${crop.coordinates.lat},${crop.coordinates.lng}&maptype=satellite&zoom=15`} allowFullScreen></iframe></div>
+                ) : <div className="w-full h-40 bg-gray-100 rounded-xl flex items-center justify-center text-gray-400 text-xs">Mapa Indisponível</div>}
+             </div>
+           )}
        </div>
     </div>
   );
@@ -187,13 +217,14 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
               <div className="p-6 bg-blue-50 dark:bg-blue-900/20 rounded-full mb-4 text-blue-600"><Wallet size={48} /></div>
               <h3 className="text-gray-500 dark:text-gray-400 text-sm font-bold uppercase">Total Gasto (Real)</h3>
               <p className="text-4xl font-extrabold text-gray-900 dark:text-white mt-2">{totalRealCost.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+              <p className="text-xs text-gray-400 mt-4">Preencha o "Valor Pago" na lista abaixo.</p>
            </div>
         </div>
         <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col">
               <div className="flex items-center justify-between mb-6"><h3 className="font-bold text-gray-800 dark:text-white text-xl flex items-center gap-2"><ShoppingBag className="text-agro-green"/> Lista de Compras</h3><div className="flex gap-2"><button onClick={() => setIsEditingPrices(!isEditingPrices)} className="p-2 rounded-lg bg-gray-100 text-gray-600">{isEditingPrices ? <Check size={16}/> : <Edit2 size={16}/>}</button>{isEditingPrices && <button onClick={() => setIsAddingItem(!isAddingItem)} className="p-2 rounded-lg bg-blue-50 text-blue-600"><Plus size={16}/></button>}</div></div>
               {isAddingItem && <div className="mb-4 p-4 bg-gray-50 dark:bg-slate-900 rounded-xl animate-fade-in"><input className="w-full p-2 mb-2 border rounded" placeholder="Nome" value={newItem.name} onChange={e => setNewItem({...newItem, name: e.target.value})} /><div className="flex gap-2 mb-2"><input type="number" className="w-full p-2 border rounded" placeholder="Qtd" value={newItem.quantity || ''} onChange={e => setNewItem({...newItem, quantity: parseFloat(e.target.value)})} /><input type="number" className="w-full p-2 border rounded" placeholder="Preço Est." value={newItem.unitPriceEstimate || ''} onChange={e => setNewItem({...newItem, unitPriceEstimate: parseFloat(e.target.value)})} /></div><button onClick={handleAddItem} className="w-full py-2 bg-agro-green text-white rounded font-bold">Adicionar</button></div>}
               <div className="flex-1 overflow-y-auto max-h-[400px] pr-2 custom-scrollbar bg-white dark:bg-slate-800">
-                <div className="space-y-3">{materials.map((m, i) => (<div key={i} className="flex justify-between items-center p-3 border-b border-gray-50 dark:border-slate-700"><div className="flex-1"><p className="font-bold text-gray-700 dark:text-gray-200">{m.name}</p><p className="text-xs text-gray-400 uppercase">{m.category}</p></div><div className="text-right flex flex-col items-end gap-1">{isEditingPrices ? (<div className="flex flex-col gap-1 items-end"><label className="text-[9px] font-bold text-gray-400 uppercase">Valor Pago</label><div className="flex items-center gap-1"><span className="text-xs text-gray-400">R$</span><input type="number" value={m.realCost || ''} onChange={(e) => handleUpdateMaterial(i, 'realCost', e.target.value)} className="w-24 p-1 text-right font-bold border border-blue-200 rounded-md text-sm bg-blue-50"/><button onClick={() => handleRemoveItem(i)} className="text-red-400 ml-2"><Trash2 size={14}/></button></div></div>) : (<div className="flex flex-col items-end"><span className="text-[10px] font-bold text-gray-400 uppercase">Realizado</span><p className={`font-bold ${m.realCost ? 'text-blue-600' : 'text-gray-300'}`}>{(m.realCost || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p></div>)}</div></div>))}</div>
+                <div className="space-y-3">{materials.map((m, i) => (<div key={i} className="flex justify-between items-center p-3 border-b border-gray-50 dark:border-slate-700"><div className="flex-1"><p className="font-bold text-gray-700 dark:text-gray-200">{m.name}</p><p className="text-xs text-gray-400 uppercase">{m.category}</p><p className="text-[10px] text-gray-400 mt-1">Est: {((m.quantity||0)*(m.unitPriceEstimate||0)).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</p></div><div className="text-right flex flex-col items-end gap-1">{isEditingPrices ? (<div className="flex flex-col gap-1 items-end"><label className="text-[9px] font-bold text-gray-400 uppercase">Valor Pago</label><div className="flex items-center gap-1"><span className="text-xs text-gray-400">R$</span><input type="number" value={m.realCost || ''} onChange={(e) => handleUpdateMaterial(i, 'realCost', e.target.value)} className="w-24 p-1 text-right font-bold border border-blue-200 rounded-md text-sm bg-blue-50"/><button onClick={() => handleRemoveItem(i)} className="text-red-400 ml-2"><Trash2 size={14}/></button></div></div>) : (<div className="flex flex-col items-end"><span className="text-[10px] font-bold text-gray-400 uppercase">Realizado</span><p className={`font-bold ${m.realCost ? 'text-blue-600' : 'text-gray-300'}`}>{(m.realCost || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p></div>)}</div></div>))}</div>
               </div>
            </div>
       </div>
@@ -226,12 +257,10 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
 
   const renderStorage = () => {
     const logs = crop.harvestLogs || [];
-    const totalHarvested = logs.reduce((acc, l) => acc + l.quantity, 0);
-    const estimatedRevenue = totalHarvested * currentMarketPrice;
+    const goalValue = parseFloat(crop.productivityGoal.replace(/[^0-9.]/g, '')) || 0; const totalExpected = goalValue * crop.areaHa; const totalHarvested = logs.reduce((acc, l) => acc + l.quantity, 0); const progress = totalExpected > 0 ? (totalHarvested / totalExpected) * 100 : 0; const estimatedRevenue = totalHarvested * currentMarketPrice;
     return (
       <div className="space-y-6 animate-slide-up">
-          <div className={`rounded-3xl p-8 text-white shadow-lg bg-gradient-to-br ${theme.gradient}`}><h3 className="font-bold text-lg opacity-90 mb-1 flex items-center gap-2"><Warehouse size={20} /> Colheita</h3><div className="flex items-end gap-2 mt-4"><span className="text-5xl font-extrabold">{totalHarvested.toLocaleString('pt-BR')}</span><span className="text-lg font-medium opacity-80 mb-1">sc colhidas</span></div>
-          {currentMarketPrice > 0 && <div className="mt-4 bg-black/20 p-3 rounded-xl inline-block backdrop-blur-sm"><p className="text-xs font-medium opacity-80 mb-1">Receita Estimada</p><p className="text-xl font-bold text-green-300">{estimatedRevenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p></div>}</div>
+          <div className={`rounded-3xl p-8 text-white shadow-lg bg-gradient-to-br ${theme.gradient}`}><h3 className="font-bold text-lg opacity-90 mb-1 flex items-center gap-2"><Warehouse size={20} /> Armazenamento & Colheita</h3><div className="flex items-end gap-2 mt-4"><span className="text-5xl font-extrabold">{totalHarvested.toLocaleString('pt-BR')}</span><span className="text-lg font-medium opacity-80 mb-1">sc colhidas</span></div><div className="mt-6"><div className="flex justify-between text-xs font-bold mb-2 opacity-80"><span>Progresso da Safra</span><span>{progress.toFixed(1)}% da Meta ({totalExpected.toLocaleString('pt-BR')} sc)</span></div><div className="w-full bg-black/20 rounded-full h-3 overflow-hidden"><div className="h-full bg-white rounded-full transition-all duration-1000" style={{ width: `${Math.min(progress, 100)}%` }} /></div></div></div>
           <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700"><div className="flex justify-between items-center mb-6"><h3 className="font-bold text-gray-800 dark:text-white">Histórico de Cargas</h3><button onClick={() => { setIsAddingHarvest(!isAddingHarvest); if (!isAddingHarvest) { setHarvestForm({ id: '', date: new Date().toISOString().split('T')[0], quantity: 0, unit: 'sc', location: '', qualityNote: '' }); setEditingHarvestId(null); } }} className="flex items-center gap-2 text-sm font-bold text-agro-green bg-green-50 dark:bg-green-900/20 px-3 py-2 rounded-lg hover:bg-green-100 transition-colors">{isAddingHarvest ? <X size={16}/> : <Plus size={16}/>} {isAddingHarvest ? 'Cancelar' : 'Nova Carga'}</button></div>{isAddingHarvest && (<div className="mb-6 p-4 bg-gray-50 dark:bg-slate-900 rounded-2xl animate-fade-in"><div className="grid grid-cols-2 gap-3 mb-3"><div className="col-span-2"><input type="text" placeholder="Local (Silo 1)" className="w-full p-3 rounded-xl border" value={harvestForm.location} onChange={e => setHarvestForm({...harvestForm, location: e.target.value})} /></div><div><input type="date" className="w-full p-3 rounded-xl border" value={harvestForm.date} onChange={e => setHarvestForm({...harvestForm, date: e.target.value})} /></div><div><input type="number" placeholder="Qtd" className="w-full p-3 rounded-xl border" value={harvestForm.quantity || ''} onChange={e => setHarvestForm({...harvestForm, quantity: parseFloat(e.target.value)})} /></div></div><button onClick={handleSaveHarvest} className="w-full py-3 bg-agro-green text-white font-bold rounded-xl">Confirmar</button></div>)}<div className="space-y-3">{crop.harvestLogs?.map((log) => (<div key={log.id} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-700/50 rounded-2xl border border-gray-100 dark:border-slate-700"><div className="flex items-center gap-3"><div className={`p-3 rounded-xl bg-white dark:bg-slate-800 text-agro-green shadow-sm`}><Package size={20} /></div><div><h4 className="font-bold text-gray-800 dark:text-white text-sm">{log.location}</h4><p className="text-xs text-gray-500">{new Date(log.date).toLocaleDateString('pt-BR')}</p></div></div><div className="flex items-center gap-2"><span className="font-extrabold text-lg text-gray-900 dark:text-white">{log.quantity}</span><button onClick={() => handleEditHarvest(log)} className="p-2 text-blue-400"><Edit2 size={16}/></button><button onClick={() => handleDeleteHarvest(log.id)} className="p-2 text-red-400"><Trash2 size={16}/></button></div></div>))}</div></div>
       </div>
     );
@@ -248,6 +277,7 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
            <p className="text-sm text-green-100 opacity-90">Seu parceiro no campo</p>
          </div>
        </div>
+
        <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-50/50 dark:bg-slate-900/50">
           {chatHistory.map((msg, idx) => (
             <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -259,15 +289,29 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
           ))}
           {isChatLoading && <div className="p-4 text-center text-gray-400">Tonico está pensando...</div>}
        </div>
+
        <form onSubmit={handleChatSubmit} className="p-4 bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-slate-700 flex gap-3">
-         <input type="text" value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder="Pergunte ao Tonico..." className="flex-1 p-4 bg-gray-50 dark:bg-slate-900 border rounded-xl" />
-         <button type="submit" disabled={!chatInput.trim() || isChatLoading} className="bg-agro-green text-white p-4 rounded-xl"><Send size={20} /></button>
+         <input 
+           type="text" 
+           value={chatInput}
+           onChange={(e) => setChatInput(e.target.value)}
+           placeholder="Pergunte ao Tonico..."
+           className="flex-1 p-4 bg-gray-50 dark:bg-slate-900 border border-transparent focus:bg-white dark:focus:bg-slate-800 focus:border-agro-green rounded-xl outline-none transition-all font-medium dark:text-white"
+         />
+         <button 
+           type="submit" 
+           disabled={!chatInput.trim() || isChatLoading}
+           className="bg-agro-green text-white p-4 rounded-xl hover:bg-green-700 disabled:opacity-50 transition-transform active:scale-95 shadow-lg shadow-green-600/20"
+         >
+           <Send size={20} />
+         </button>
        </form>
     </div>
   );
 
   return (
     <div className="space-y-6 pb-24 md:pb-8">
+      {/* Header */}
       <div className={`rounded-b-3xl md:rounded-3xl shadow-xl relative overflow-hidden transition-all duration-500 bg-gradient-to-br ${theme.gradient}`}>
          <div className="relative z-20 p-6 pt-8 md:p-8">
             <div className="flex items-start justify-between gap-4">
@@ -290,7 +334,9 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                   { id: 'storage', label: 'Armazenagem', icon: Warehouse },
                   { id: 'reports', label: 'Relatório', icon: FileText }, 
                 ].map((tab) => (
-                  <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`flex items-center gap-2 px-4 py-2.5 rounded-full font-bold text-sm ${activeTab === tab.id ? 'bg-white text-gray-900' : 'bg-white/10 text-white'}`}><tab.icon size={16} /> {tab.label}</button>
+                  <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`flex items-center gap-2 px-4 py-2.5 rounded-full font-bold text-sm ${activeTab === tab.id ? 'bg-white text-gray-900' : 'bg-white/10 text-white'}`}>
+                    <tab.icon size={16} /> {tab.label}
+                  </button>
                 ))}
             </div>
          </div>
