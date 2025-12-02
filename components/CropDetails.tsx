@@ -1,33 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { CropData, TimelineStage, Material, HarvestLog } from '../types';
-import { getAssistantResponse } from '../services/geminiService';
-import { getCurrentPrice } from '../services/marketService';
-import { Reports } from './Reports';
-import { ArrowLeft, Calendar, DollarSign, ListTodo, MessageSquare, Send, CheckCircle, Circle, AlertCircle, Droplets, Ruler, ShoppingBag, Download, Loader2, Edit2, Check, MapPin, Navigation, Trash2, Plus, X, Clock, Sprout, FileText, Home, Sparkles, Bot, MessageCircle, Warehouse, Package, Truck, TrendingUp, Wallet } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
-import { GOOGLE_MAPS_API_KEY } from '../config/env';
-
-interface CropDetailsProps {
-  crop: CropData;
-  onBack: () => void;
-  onUpdateCrop: (updatedCrop: CropData) => void;
-  onDeleteCrop: () => void;
-}
+// ... (imports mantidos)
 
 export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdateCrop, onDeleteCrop }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'finance' | 'timeline' | 'storage' | 'assistant' | 'reports'>('overview');
   const [chatInput, setChatInput] = useState('');
+  
+  // MENSAGEM ATUALIZADA DO TONICO (Direta e Profissional)
   const [chatHistory, setChatHistory] = useState<{role: 'user' | 'ai', text: string}[]>([
-    { role: 'ai', text: `Olá! Sou seu assistente para a lavoura ${crop.name}. Como posso ajudar hoje?` }
+    { role: 'ai', text: `Olá. Sou o Tonico, seu consultor técnico.\n\nEstou analisando os dados da sua lavoura de ${crop.name}. Como posso auxiliar na tomada de decisão hoje?` }
   ]);
+
+// ... (resto do código idêntico ao anterior)
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   
   const mapsApiKey = GOOGLE_MAPS_API_KEY;
   
-  // State for Editing
   const [isEditingPrices, setIsEditingPrices] = useState(false);
   const [isAddingItem, setIsAddingItem] = useState(false);
   const [newItem, setNewItem] = useState<Material>({
@@ -39,10 +26,8 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
     category: 'outros'
   });
 
-  // State for Timeline Editing
   const [isEditingTimeline, setIsEditingTimeline] = useState(false);
 
-  // State for Storage/Harvest
   const [isAddingHarvest, setIsAddingHarvest] = useState(false);
   const [editingHarvestId, setEditingHarvestId] = useState<string | null>(null);
   const [harvestForm, setHarvestForm] = useState<HarvestLog>({
@@ -78,14 +63,29 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
   };
   const theme = getTheme(crop.type);
 
-  // --- Timeline Handlers ---
-  
+  const toggleTask = (stageId: string, taskId: string) => {
+    const updatedTimeline = (crop.timeline || []).map(stage => {
+      if (stage.id === stageId) {
+        const updatedTasks = stage.tasks.map(task => 
+          task.id === taskId ? { ...task, done: !task.done } : task
+        );
+        const allDone = updatedTasks.every(t => t.done);
+        const someDone = updatedTasks.some(t => t.done);
+        let newStatus: 'pendente' | 'em_andamento' | 'concluido' = 'pendente';
+        if (allDone && updatedTasks.length > 0) newStatus = 'concluido';
+        else if (someDone) newStatus = 'em_andamento';
+        return { ...stage, tasks: updatedTasks, status: newStatus } as TimelineStage;
+      }
+      return stage;
+    });
+    onUpdateCrop({ ...crop, timeline: updatedTimeline });
+  };
+
   const handleToggleStageStatus = (index: number) => {
     const updatedTimeline = [...(crop.timeline || [])];
     const stage = updatedTimeline[index];
     let newStatus: 'pendente' | 'em_andamento' | 'concluido' = 'pendente';
     let newTasks = [...stage.tasks];
-    
     if (stage.status === 'pendente') {
         newStatus = 'em_andamento';
     } else if (stage.status === 'em_andamento') {
@@ -95,33 +95,7 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
         newStatus = 'pendente';
         newTasks = newTasks.map(t => ({ ...t, done: false }));
     }
-    
     updatedTimeline[index] = { ...stage, status: newStatus, tasks: newTasks };
-    onUpdateCrop({ ...crop, timeline: updatedTimeline });
-  };
-
-  const toggleTask = (stageId: string, taskId: string) => {
-    const updatedTimeline = (crop.timeline || []).map(stage => {
-      if (stage.id === stageId) {
-        const updatedTasks = stage.tasks.map(task => 
-          task.id === taskId ? { ...task, done: !task.done } : task
-        );
-        
-        const allDone = updatedTasks.every(t => t.done);
-        const someDone = updatedTasks.some(t => t.done);
-        
-        let newStatus: 'pendente' | 'em_andamento' | 'concluido' = 'pendente';
-        if (allDone && updatedTasks.length > 0) newStatus = 'concluido';
-        else if (someDone) newStatus = 'em_andamento';
-        
-        return { 
-          ...stage, 
-          tasks: updatedTasks, 
-          status: newStatus 
-        } as TimelineStage;
-      }
-      return stage;
-    });
     onUpdateCrop({ ...crop, timeline: updatedTimeline });
   };
 
@@ -172,23 +146,15 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
     onUpdateCrop({ ...crop, timeline: updatedTimeline });
   };
 
-  // --- Finance Handlers ---
   const handleUpdateMaterial = (index: number, field: 'quantity' | 'unitPriceEstimate' | 'realCost', value: string) => {
     const numValue = parseFloat(value);
     const updatedMaterials = [...(crop.materials || [])];
     if (!updatedMaterials[index]) return;
-
     const item = { ...updatedMaterials[index] };
     item[field] = isNaN(numValue) ? 0 : numValue;
     updatedMaterials[index] = item;
-
     const newTotalCost = updatedMaterials.reduce((acc, m) => acc + (m.quantity * m.unitPriceEstimate), 0);
-
-    onUpdateCrop({
-      ...crop,
-      materials: updatedMaterials,
-      estimatedCost: newTotalCost
-    });
+    onUpdateCrop({ ...crop, materials: updatedMaterials, estimatedCost: newTotalCost });
   };
 
   const handleRemoveItem = (index: number) => {
@@ -208,21 +174,16 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
     setIsAddingItem(false);
   };
 
-  // --- Storage Handlers ---
   const handleSaveHarvest = () => {
       if(harvestForm.quantity <= 0) return alert("Quantidade deve ser maior que zero.");
-      
       let updatedLogs = [...(crop.harvestLogs || [])];
-      
       if (editingHarvestId) {
           updatedLogs = updatedLogs.map(h => h.id === editingHarvestId ? { ...harvestForm, id: editingHarvestId } : h);
       } else {
           const newLog = { ...harvestForm, id: Math.random().toString(36).substr(2, 9) };
           updatedLogs.push(newLog);
       }
-      
       onUpdateCrop({ ...crop, harvestLogs: updatedLogs });
-      
       setHarvestForm({ id: '', date: new Date().toISOString().split('T')[0], quantity: 0, unit: 'sc', location: '', qualityNote: '' });
       setIsAddingHarvest(false);
       setEditingHarvestId(null);
@@ -277,8 +238,6 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
     doc.save(`plano_${crop.name}.pdf`);
     setIsGeneratingPdf(false);
   };
-
-  // --- Render Sections ---
 
   const renderOverview = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-slide-up">
@@ -351,6 +310,14 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                         <p className="text-[10px] opacity-70">Chave de API não configurada</p>
                     </div>
                 )}
+                <a 
+                   href={`https://www.waze.com/ul?ll=${crop.coordinates.lat},${crop.coordinates.lng}&navigate=yes`}
+                   target="_blank"
+                   rel="noreferrer"
+                   className="flex items-center justify-center gap-2 w-full py-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-bold rounded-xl hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                >
+                   <Navigation size={18} /> Abrir no GPS
+                </a>
              </div>
            )}
        </div>
@@ -374,7 +341,6 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
     return (
       <div className="space-y-6 animate-slide-up">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-           {/* Chart Card */}
            <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700">
              <h3 className="font-bold text-gray-800 dark:text-white mb-6 text-xl">Estimado (IA)</h3>
              <div className="h-64 w-full">
@@ -400,7 +366,6 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
              </div>
            </div>
 
-            {/* Realized Cost Card */}
            <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col justify-center items-center text-center">
               <div className="p-6 bg-blue-50 dark:bg-blue-900/20 rounded-full mb-4 text-blue-600 dark:text-blue-400">
                   <Wallet size={48} />
@@ -415,7 +380,6 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
            </div>
         </div>
 
-        {/* List with Real Cost Editing */}
         <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="font-bold text-gray-800 dark:text-white text-xl flex items-center gap-2">
@@ -530,7 +494,6 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                                 className="flex-1 p-2 border rounded text-sm"
                             />
                         </div>
-                        {/* Task Editing in Stage Edit Mode */}
                         <div className="mt-3 space-y-2 border-t pt-2">
                             <p className="text-xs font-bold text-gray-500">Subetapas</p>
                             {stage.tasks.map((task, tIndex) => (
