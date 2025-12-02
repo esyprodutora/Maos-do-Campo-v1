@@ -81,7 +81,7 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
   };
   const theme = getTheme(crop.type);
 
-  // Handlers (Shortened for brevity)
+  // Handlers (Shortened for brevity, logic preserved)
   const toggleTask = (stageId: string, taskId: string) => {
     const updatedTimeline = (crop.timeline || []).map(stage => {
       if (stage.id === stageId) {
@@ -157,8 +157,9 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
     const response = await getAssistantResponse(userMsg, context); setChatHistory(prev => [...prev, { role: 'ai', text: response }]); setIsChatLoading(false);
   };
 
-  const generatePDF = () => { /* PDF Logic */ };
+  const generatePDF = () => { /* Handled by Reports component now */ };
 
+  // --- Renderers ---
   const renderOverview = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-slide-up">
        <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 relative overflow-hidden group">
@@ -175,7 +176,13 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
        </div>
        <div className="flex flex-col gap-6">
            <div className={`p-8 rounded-3xl border relative overflow-hidden flex flex-col justify-between ${theme.light} border-${theme.bg}/20 flex-1`}>
-              <div className="relative z-10"><h3 className={`font-bold text-xl mb-4 flex items-center gap-2 ${theme.main}`}><AlertCircle size={24}/> Dica do Tonico</h3><p className="text-gray-700 dark:text-gray-200 italic leading-relaxed text-lg font-medium">"{crop.aiAdvice}"</p></div>
+              <div className="relative z-10">
+                <h3 className={`font-bold text-xl mb-4 flex items-center gap-3 ${theme.main}`}>
+                    <img src="/tonyk.png" className="w-10 h-10 rounded-full border-2 border-white/30 object-cover" alt="Tonico" onError={(e) => (e.currentTarget.src = 'https://cdn-icons-png.flaticon.com/512/4712/4712035.png')} />
+                    <span>Dica do Tonico</span>
+                </h3>
+                <p className="text-gray-700 dark:text-gray-200 italic leading-relaxed text-lg font-medium">"{crop.aiAdvice}"</p>
+              </div>
               <div className="mt-8 relative z-10"><p className={`text-xs font-bold uppercase tracking-wider mb-1 ${theme.main}`}>Colheita Estimada</p><p className="text-3xl font-extrabold text-gray-800 dark:text-white">{new Date(crop.estimatedHarvestDate).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</p></div>
            </div>
            {crop.coordinates && (
@@ -231,7 +238,7 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
       <div className="relative pl-8 border-l-2 border-gray-100 dark:border-slate-700 ml-4 space-y-10">
         {(crop.timeline || []).map((stage, index) => (
           <div key={stage.id} className="relative group">
-             <div className={`absolute -left-[43px] top-0 w-8 h-8 rounded-full border-4 border-white dark:border-slate-800 shadow-md flex items-center justify-center ${stage.status === 'concluido' ? 'bg-agro-green' : 'bg-gray-200'}`} onClick={() => isEditingTimeline ? handleRemoveStage(index) : handleToggleStageStatus(index)}>{isEditingTimeline ? <Trash2 size={12} className="text-red-500"/> : (stage.status === 'concluido' && <CheckCircle size={14} className="text-white"/>)}</div>
+             <div className={`absolute -left-[43px] top-0 w-8 h-8 rounded-full border-4 border-white dark:border-slate-800 shadow-md flex items-center justify-center cursor-pointer ${stage.status === 'concluido' ? 'bg-agro-green' : stage.status === 'em_andamento' ? 'bg-agro-yellow' : 'bg-gray-200 dark:bg-slate-600'}`} onClick={() => isEditingTimeline ? handleRemoveStage(index) : handleToggleStageStatus(index)}>{isEditingTimeline ? <Trash2 size={12} className="text-red-500"/> : (stage.status === 'concluido' && <CheckCircle size={14} className="text-white"/>)}</div>
              <div className="p-6 rounded-2xl border bg-white dark:bg-slate-800 border-gray-100 dark:border-slate-700">
                 {isEditingTimeline ? (
                     <div className="space-y-2"><input value={stage.title} onChange={(e) => handleUpdateStage(index, 'title', e.target.value)} className="w-full p-2 border rounded font-bold"/><textarea value={stage.description} onChange={(e) => handleUpdateStage(index, 'description', e.target.value)} className="w-full p-2 border rounded text-sm"/><div className="mt-3 space-y-2 border-t pt-2"><p className="text-xs font-bold text-gray-500">Subetapas</p>{stage.tasks.map((task, tIndex) => (<div key={task.id} className="flex gap-2"><input value={task.text} onChange={(e) => handleUpdateTaskText(index, tIndex, e.target.value)} className="flex-1 p-1 border rounded text-xs"/><button onClick={() => handleRemoveTaskFromStage(index, tIndex)} className="text-red-400"><Trash2 size={12}/></button></div>))}<button onClick={() => handleAddTaskToStage(index)} className="text-xs text-blue-500 font-bold flex items-center gap-1"><Plus size={12}/> Nova Subetapa</button></div></div>
@@ -264,26 +271,27 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
     <div className="flex flex-col h-[650px] bg-white dark:bg-slate-800 rounded-3xl shadow-lg border border-gray-100 dark:border-slate-700 overflow-hidden animate-slide-up">
        <div className="bg-agro-green p-6 text-white flex items-center gap-4">
          <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-sm">
-            <img src="/tonyk.png" className="w-10 h-10 rounded-full object-cover" alt="Tonico" onError={(e) => (e.currentTarget.src = 'https://cdn-icons-png.flaticon.com/512/4712/4712035.png')} />
+            <img src="/tonyk.png" className="w-12 h-12 rounded-full object-cover border-2 border-white/30" alt="Tonico" onError={(e) => (e.currentTarget.src = 'https://cdn-icons-png.flaticon.com/512/4712/4712035.png')} />
          </div>
          <div>
-           <h3 className="font-bold text-lg">Tonico</h3>
-           <p className="text-sm text-green-100 opacity-90">Seu parceiro no campo</p>
+           <h3 className="font-bold text-xl">Tonico</h3>
+           <p className="text-sm text-green-100 opacity-90 font-medium">Seu parceiro de confiança</p>
          </div>
        </div>
        <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-50/50 dark:bg-slate-900/50">
           {chatHistory.map((msg, idx) => (
             <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+               {msg.role === 'ai' && <img src="/tonyk.png" className="w-8 h-8 rounded-full object-cover mr-2 self-end mb-1" alt="Tonico" onError={(e) => (e.currentTarget.src = 'https://cdn-icons-png.flaticon.com/512/4712/4712035.png')} />}
                <div className={`max-w-[85%] p-5 rounded-2xl text-sm leading-relaxed shadow-sm ${msg.role === 'user' ? 'bg-agro-green text-white rounded-tr-sm' : 'bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 rounded-tl-sm border border-gray-100 dark:border-slate-600'}`}>
                  {msg.text}
                </div>
             </div>
           ))}
-          {isChatLoading && <div className="p-4 text-center text-gray-400">Tonico está pensando...</div>}
+          {isChatLoading && <div className="p-4 text-center text-gray-400 text-sm italic">Tonico está pensando...</div>}
        </div>
        <form onSubmit={handleChatSubmit} className="p-4 bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-slate-700 flex gap-3">
-         <input type="text" value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder="Pergunte ao Tonico..." className="flex-1 p-4 bg-gray-50 dark:bg-slate-900 border rounded-xl" />
-         <button type="submit" disabled={!chatInput.trim() || isChatLoading} className="bg-agro-green text-white p-4 rounded-xl"><Send size={20} /></button>
+         <input type="text" value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder="Pergunte ao Tonico..." className="flex-1 p-4 bg-gray-50 dark:bg-slate-900 border border-transparent focus:bg-white dark:focus:bg-slate-800 focus:border-agro-green rounded-xl outline-none transition-all font-medium dark:text-white shadow-inner" />
+         <button type="submit" disabled={!chatInput.trim() || isChatLoading} className="bg-agro-green text-white p-4 rounded-xl shadow-lg hover:bg-green-700 transition-transform active:scale-95"><Send size={20} /></button>
        </form>
     </div>
   );
@@ -295,21 +303,14 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
          <div className="relative z-20 p-6 pt-8 md:p-8">
             <div className="flex items-start justify-between gap-4">
                <div className="flex items-center gap-3">
-                 <button onClick={onBack} className="p-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-xl text-white transition-all active:scale-95">
-                   <ArrowLeft size={20} />
-                 </button>
-                 <div className="text-white">
-                   <h1 className="text-2xl font-extrabold leading-tight">{crop.name}</h1>
-                   <p className="text-white/90 text-xs font-bold flex items-center gap-1.5 mt-1 bg-black/10 px-2 py-0.5 rounded-lg w-fit">
-                      <Sprout size={10}/> <span className="capitalize">{crop.type}</span> • {crop.areaHa} ha
-                   </p>
-                 </div>
+                 <button onClick={onBack} className="p-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-xl text-white transition-all active:scale-95"><ArrowLeft size={20} /></button>
+                 <div className="text-white"><h1 className="text-2xl font-extrabold leading-tight">{crop.name}</h1><p className="text-white/90 text-xs font-bold flex items-center gap-1.5 mt-1 bg-black/10 px-2 py-0.5 rounded-lg w-fit"><Sprout size={10}/> <span className="capitalize">{crop.type}</span> • {crop.areaHa} ha</p></div>
                </div>
                <div className="flex gap-2">
                    <button onClick={() => setActiveTab('assistant')} className="flex items-center gap-2 px-4 py-2 bg-white text-agro-green rounded-full shadow-lg font-bold text-xs">
-                     <img src="/tonyk.png" className="w-6 h-6 rounded-full object-cover" alt="IA" onError={(e) => (e.currentTarget.src = 'https://cdn-icons-png.flaticon.com/512/4712/4712035.png')} /> <span className="hidden sm:inline">Tonico</span>
+                     <img src="/tonyk.png" className="w-8 h-8 rounded-full object-cover border border-agro-green" alt="IA" onError={(e) => (e.currentTarget.src = 'https://cdn-icons-png.flaticon.com/512/4712/4712035.png')} /> <span className="hidden sm:inline">Tonico</span>
                    </button>
-                   <button onClick={onDeleteCrop} className="p-2 bg-white/10 hover:bg-red-500/80 text-white rounded-xl"><Trash2 size={20} /></button>
+                   <button onClick={onDeleteCrop} className="p-2 bg-white/10 hover:bg-red-500/80 text-white rounded-xl backdrop-blur-sm transition-all active:scale-95 border border-white/10"><Trash2 size={20} /></button>
                </div>
             </div>
             <div className="hidden md:flex overflow-x-auto gap-2 mt-6 pb-2 no-scrollbar">
@@ -320,9 +321,7 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                   { id: 'storage', label: 'Armazenagem', icon: Warehouse },
                   { id: 'reports', label: 'Relatório', icon: FileText }, 
                 ].map((tab) => (
-                  <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`flex items-center gap-2 px-4 py-2.5 rounded-full font-bold text-sm ${activeTab === tab.id ? 'bg-white text-gray-900' : 'bg-white/10 text-white'}`}>
-                    <tab.icon size={16} /> {tab.label}
-                  </button>
+                  <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`flex items-center gap-2 px-4 py-2.5 rounded-full font-bold text-sm ${activeTab === tab.id ? 'bg-white text-gray-900' : 'bg-white/10 text-white'}`}><tab.icon size={16} /> {tab.label}</button>
                 ))}
             </div>
          </div>
