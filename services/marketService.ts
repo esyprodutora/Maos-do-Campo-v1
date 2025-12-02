@@ -4,16 +4,14 @@ export interface MarketData {
   variation: number; // Porcentagem
   trend: 'up' | 'down' | 'neutral';
   lastUpdate: string;
-  history: { day: string; value: number }[]; // Para o gráfico
+  history: { day: string; value: number }[];
 }
 
-// Simula variação histórica para gráficos
 const generateHistory = (basePrice: number, days: number = 7) => {
   return Array.from({ length: days }).map((_, i) => {
     const date = new Date();
     date.setDate(date.getDate() - (days - 1 - i));
-    // Variação aleatória suave para parecer um gráfico real
-    const randomVar = (Math.random() - 0.5) * (basePrice * 0.05); 
+    const randomVar = (Math.random() - 0.5) * (basePrice * 0.03); 
     return {
       day: date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
       value: basePrice + randomVar
@@ -23,70 +21,97 @@ const generateHistory = (basePrice: number, days: number = 7) => {
 
 export const getMarketQuotes = async () => {
   try {
-    // 1. Buscar Dólar Real (API Pública Confiável)
+    // 1. Dólar PTAX (Real Time via AwesomeAPI)
     const dollarRes = await fetch('https://economia.awesomeapi.com.br/last/USD-BRL');
     const dollarJson = await dollarRes.json();
     const usd = dollarJson.USDBRL;
-    
     const usdPrice = parseFloat(usd.bid);
     const usdVar = parseFloat(usd.pctChange);
 
-    // 2. Simular Commodities (Baseadas em médias de mercado + variação aleatória para demo)
-    // Em produção, isso viria de uma API paga como Bloomberg ou CEPEA
-    
-    // Café Arábica (Saca 60kg) - Média ~ R$ 1000 a R$ 1300
-    const coffeeBase = 1250.00;
-    const coffeeVar = (Math.random() * 2) - 1; // -1% a +1%
-    
-    // Soja (Saca 60kg) - Média ~ R$ 120 a R$ 140
-    const soyBase = 128.50;
-    const soyVar = (Math.random() * 1.5) - 0.5;
+    // 2. Commodities Agrícolas (Valores Baseados no CEPEA/B3 - Atualizados)
+    // Como APIs oficiais de commodities (B3) são pagas e complexas, usamos valores base realistas do mercado físico
+    // com variações diárias simuladas para a experiência do MVP.
 
-    // Milho (Saca 60kg) - Média ~ R$ 55 a R$ 65
-    const cornBase = 58.90;
-    const cornVar = (Math.random() * 2) - 1.2;
+    const commodities = [
+      {
+        id: 'cafe',
+        name: 'Café Arábica (Tipo 6)',
+        price: 1320.00, // Base CEPEA
+        unit: 'sc 60kg',
+        color: '#A67C52',
+      },
+      {
+        id: 'soja',
+        name: 'Soja (Paranaguá)',
+        price: 126.50, // Base Paranaguá
+        unit: 'sc 60kg',
+        color: '#F2C94C',
+      },
+      {
+        id: 'milho',
+        name: 'Milho (B3)',
+        price: 59.80, // Base B3
+        unit: 'sc 60kg',
+        color: '#E67E22',
+      },
+      {
+        id: 'boi',
+        name: 'Boi Gordo (B3)',
+        price: 235.00, // Base B3
+        unit: '@',
+        color: '#C0392B',
+      },
+      {
+        id: 'trigo',
+        name: 'Trigo (PR)',
+        price: 1450.00, // Tonelada
+        unit: 'ton',
+        color: '#F39C12',
+      },
+      {
+        id: 'cana',
+        name: 'Cana (ATR)',
+        price: 1.21, // Kg ATR
+        unit: 'kg ATR',
+        color: '#27AE60',
+      },
+      {
+        id: 'algodao',
+        name: 'Algodão (Pluma)',
+        price: 4.15, // Libra-peso
+        unit: 'lp',
+        color: '#95A5A6',
+      }
+    ];
 
+    const formattedCommodities = commodities.map(c => {
+        const variation = (Math.random() * 2.5) - 1.2; // Variação diária simulada (-1.2% a +1.3%)
+        const currentPrice = c.price + (c.price * (variation / 100));
+        return {
+            id: c.id,
+            name: c.name,
+            price: currentPrice,
+            variation: variation,
+            trend: variation >= 0 ? 'up' : 'down',
+            unit: c.unit,
+            color: c.color,
+            history: generateHistory(c.price)
+        };
+    });
+
+    // Adiciona Dólar no início
     return [
       {
         id: 'usd',
-        name: 'Dólar (USD)',
+        name: 'Dólar Comercial',
         price: usdPrice,
         variation: usdVar,
         trend: usdVar >= 0 ? 'up' : 'down',
         unit: 'BRL',
-        color: '#27AE60', // Green
+        color: '#27AE60',
         history: generateHistory(usdPrice)
       },
-      {
-        id: 'cafe',
-        name: 'Café Arábica',
-        price: coffeeBase + (coffeeBase * (coffeeVar / 100)),
-        variation: coffeeVar,
-        trend: coffeeVar >= 0 ? 'up' : 'down',
-        unit: 'sc 60kg',
-        color: '#A67C52', // Coffee Brown
-        history: generateHistory(coffeeBase)
-      },
-      {
-        id: 'soja',
-        name: 'Soja',
-        price: soyBase + (soyBase * (soyVar / 100)),
-        variation: soyVar,
-        trend: soyVar >= 0 ? 'up' : 'down',
-        unit: 'sc 60kg',
-        color: '#F2C94C', // Soy Yellow
-        history: generateHistory(soyBase)
-      },
-      {
-        id: 'milho',
-        name: 'Milho',
-        price: cornBase + (cornBase * (cornVar / 100)),
-        variation: cornVar,
-        trend: cornVar >= 0 ? 'up' : 'down',
-        unit: 'sc 60kg',
-        color: '#E67E22', // Corn Orange
-        history: generateHistory(cornBase)
-      }
+      ...formattedCommodities
     ];
 
   } catch (error) {
@@ -95,10 +120,9 @@ export const getMarketQuotes = async () => {
   }
 };
 
-// Nova função auxiliar para buscar preço específico por tipo de cultura
 export const getCurrentPrice = async (cropType: string): Promise<number> => {
     const quotes = await getMarketQuotes();
     // @ts-ignore
-    const quote = quotes.find(q => q.id === cropType.toLowerCase());
+    const quote = quotes.find(q => q.id === cropType.toLowerCase() || q.name.toLowerCase().includes(cropType.toLowerCase()));
     return quote ? quote.price : 0;
 };
