@@ -59,13 +59,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const totalArea = crops.reduce((acc, c) => acc + c.areaHa, 0);
   const totalCost = crops.reduce((acc, c) => acc + c.estimatedCost, 0);
   
-  // Calculate Total Realized Cost across all crops
-  const totalCostReal = crops.reduce((acc, crop) => {
-      const cropRealCost = (crop.materials || []).reduce((sum, m) => sum + (m.realCost || 0), 0);
-      return acc + cropRealCost;
-  }, 0);
-
-  // Define colors helper first
+   // Define colors helper first
   const getCropColor = (type: string) => {
     switch(type) {
       case 'cafe': return '#A67C52';
