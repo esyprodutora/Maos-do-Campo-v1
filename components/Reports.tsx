@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { CropData } from '../types';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend, LineChart, Line, CartesianGrid } from 'recharts';
-import { Download, DollarSign, Layers, Warehouse, FileText, Filter, ChevronDown, TrendingUp, Calendar, AlertCircle, PieChart as PieIcon } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend, CartesianGrid } from 'recharts';
+import { Download, DollarSign, Layers, Warehouse, PieChart as PieIcon, Filter, ChevronDown, AlertCircle, TrendingUp, Calendar } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -30,14 +30,13 @@ export const Reports: React.FC<ReportsProps> = ({ crop }) => {
   const totalExpected = goalValue * crop.areaHa;
   const harvestProgress = totalExpected > 0 ? (totalHarvested / totalExpected) * 100 : 0;
 
-  // Mock Revenue Calculation (Simplified)
-  // In a real app, we would fetch current price from marketService here or pass as prop
-  const mockPrice = 120; // Example price
+  // Mock Revenue Calculation (Simplified for MVP)
+  const mockPrice = 120; 
   const revenue = totalHarvested * mockPrice;
   const profit = revenue - totalCostReal;
 
   const categoryData = materials.reduce((acc: any[], item) => {
-    const existing = acc.find(i => i.name === item.category);
+    const existing = acc.find((i: any) => i.name === item.category);
     const value = item.realCost || (item.quantity || 0) * (item.unitPriceEstimate || 0);
     if (existing) {
       existing.value += value;
@@ -45,7 +44,7 @@ export const Reports: React.FC<ReportsProps> = ({ crop }) => {
       acc.push({ name: item.category, value: value });
     }
     return acc;
-  }, []).map(i => ({ ...i, name: i.name.charAt(0).toUpperCase() + i.name.slice(1) }));
+  }, []).map((i: any) => ({ ...i, name: i.name.charAt(0).toUpperCase() + i.name.slice(1) }));
 
   const costComparisonData = [
     { name: 'Estimado', valor: totalCostEstimated, color: '#94A3B8' },
@@ -123,12 +122,13 @@ export const Reports: React.FC<ReportsProps> = ({ crop }) => {
             m.name, 
             m.category, 
             `${m.quantity} ${m.unit}`, 
+            `R$ ${m.unitPriceEstimate.toFixed(2)}`,
             `R$ ${m.realCost ? m.realCost.toFixed(2) : '0.00'}`
         ]);
 
         autoTable(doc, {
             startY: currentY,
-            head: [['Item', 'Categoria', 'Qtd', 'Pago Real']],
+            head: [['Item', 'Categoria', 'Qtd', 'Est. Unit', 'Pago Real']],
             body: matData,
             theme: 'grid',
             styles: { fontSize: 8 }
@@ -200,7 +200,6 @@ export const Reports: React.FC<ReportsProps> = ({ crop }) => {
         doc.text(`Total Colhido: ${totalHarvested.toLocaleString('pt-BR')} sc`, 14, currentY);
     }
 
-    // Salvar
     doc.save(`relatorio_${reportType}_${crop.name.replace(/\s+/g, '_').toLowerCase()}.pdf`);
     setIsGenerating(false);
   };
@@ -272,7 +271,7 @@ export const Reports: React.FC<ReportsProps> = ({ crop }) => {
                     <p className="text-[10px] text-gray-400 mt-1 text-right">of {totalCostEstimated.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}</p>
                 </div>
 
-                <div className="bg-white dark:bg-slate-800 p-5 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 relative overflow-hidden">
+                <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 relative overflow-hidden">
                     <p className="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">Etapas</p>
                     <div className="flex items-end gap-2 mt-1">
                         <h3 className="text-2xl font-extrabold text-blue-600 dark:text-blue-400">{stageProgress.toFixed(0)}%</h3>
@@ -285,7 +284,7 @@ export const Reports: React.FC<ReportsProps> = ({ crop }) => {
                     </div>
                 </div>
 
-                <div className="bg-white dark:bg-slate-800 p-5 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 relative overflow-hidden">
+                <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 relative overflow-hidden">
                     <p className="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">Colheita</p>
                     <h3 className="text-2xl font-extrabold text-orange-500 dark:text-orange-400 mt-1">
                         {totalHarvested.toLocaleString('pt-BR')} <span className="text-sm font-medium text-gray-400">sc</span>
@@ -295,7 +294,7 @@ export const Reports: React.FC<ReportsProps> = ({ crop }) => {
                     </p>
                 </div>
 
-                <div className="bg-white dark:bg-slate-800 p-5 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 relative overflow-hidden">
+                <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 relative overflow-hidden">
                     <p className="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">Lucro Est.</p>
                     <h3 className={`text-2xl font-extrabold mt-1 ${profit >= 0 ? 'text-green-600' : 'text-red-500'}`}>
                         {profit.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}
@@ -304,9 +303,9 @@ export const Reports: React.FC<ReportsProps> = ({ crop }) => {
                 </div>
             </div>
 
-            {/* Overview Chart */}
+            {/* General Chart */}
             <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700">
-                <h3 className="font-bold text-gray-800 dark:text-white mb-6 flex items-center gap-2">
+                <h3 className="font-bold text-gray-800 dark:text-white mb-6 text-lg flex items-center gap-2">
                     <TrendingUp className="text-blue-500" size={20}/> Burn Down (Gastos)
                 </h3>
                 <div className="h-72 w-full">
@@ -353,9 +352,8 @@ export const Reports: React.FC<ReportsProps> = ({ crop }) => {
                                     outerRadius={80}
                                     paddingAngle={5}
                                     dataKey="value"
-                                    stroke="none"
                                 >
-                                    {categoryData.map((entry, index) => (
+                                    {categoryData.map((entry: any, index: number) => (
                                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                     ))}
                                 </Pie>
@@ -366,7 +364,7 @@ export const Reports: React.FC<ReportsProps> = ({ crop }) => {
                     </div>
                     
                     <div className="w-full lg:w-1/2 space-y-3">
-                        {categoryData.map((item, idx) => (
+                        {categoryData.map((item: any, idx: number) => (
                             <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-700/50 rounded-xl">
                                 <div className="flex items-center gap-2">
                                     <div className="w-3 h-3 rounded-full" style={{backgroundColor: COLORS[idx % COLORS.length]}}></div>
@@ -387,7 +385,7 @@ export const Reports: React.FC<ReportsProps> = ({ crop }) => {
                     <div>
                         <h4 className="font-bold text-blue-700 dark:text-blue-300 mb-1">Análise de Fluxo</h4>
                         <p className="text-sm text-blue-600 dark:text-blue-400 leading-relaxed">
-                            Seus custos com {categoryData.sort((a,b) => b.value - a.value)[0]?.name} representam a maior fatia do orçamento. 
+                            Seus custos com {categoryData.sort((a: any,b: any) => b.value - a.value)[0]?.name} representam a maior fatia do orçamento. 
                             Considere cotar fornecedores alternativos para a próxima safra.
                         </p>
                     </div>
@@ -399,7 +397,7 @@ export const Reports: React.FC<ReportsProps> = ({ crop }) => {
       {/* 3. RELATÓRIO DE ETAPAS */}
       {reportType === 'stages' && (
           <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 animate-fade-in">
-              <h3 className="font-bold text-gray-800 dark:text-white mb-6 flex items-center gap-2">
+              <h3 className="font-bold text-gray-800 dark:text-white mb-6 text-lg flex items-center gap-2">
                   <Layers className="text-blue-500"/> Cronograma de Atividades
               </h3>
               <div className="space-y-8 relative pl-6 border-l-2 border-gray-100 dark:border-slate-700 ml-2">
@@ -429,8 +427,8 @@ export const Reports: React.FC<ReportsProps> = ({ crop }) => {
       {reportType === 'storage' && (
           <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 animate-fade-in">
                <div className="flex justify-between items-center mb-6">
-                   <h3 className="font-bold text-gray-800 dark:text-white text-lg flex items-center gap-2">
-                        <Warehouse className="text-orange-500"/> Evolução da Colheita
+                   <h3 className="font-bold text-gray-800 dark:text-white mb-6 text-lg flex items-center gap-2">
+                        <Warehouse className="text-orange-500"/> Colheita Acumulada
                    </h3>
                    <div className="text-right">
                        <p className="text-xs text-gray-400 uppercase font-bold">Total</p>
