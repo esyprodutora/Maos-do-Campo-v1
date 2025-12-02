@@ -24,7 +24,7 @@ const getFallbackData = (name: string, type: string, areaHa: number): Partial<Cr
   return {
     estimatedCost: areaHa * baseCostPerHa,
     estimatedHarvestDate: harvestDate.toISOString().split('T')[0],
-    aiAdvice: `Aqui fala a experiência de quem já viu muita safra: para ${type}, o segredo está no preparo bem feito do solo. Não tenha pressa, faça bem feito.`,
+    aiAdvice: `Para ${type}, o foco inicial é a correção de solo. Garanta o calcário antes do plantio para maximizar a produtividade.`,
     materials: [
       {
         name: isSeed ? "Sementes Certificadas" : "Mudas Selecionadas",
@@ -74,18 +74,13 @@ export const generateCropPlan = async (
   const materialType = isSeeding ? 'Sementes' : 'Mudas';
 
   const prompt = `
-    Você é o Tonico, um senhor de 90 anos, produtor rural de imensa sabedoria e experiência.
-    Você construiu sua vida no campo com trabalho sério e técnica.
-    Sua comunicação é respeitosa, ponderada, técnica e paternal. Você não usa gírias, mas fala com a clareza de quem sabe o que diz.
-    Você transmite segurança e assertividade.
+    Atue como o Tonico, um agrônomo sênior e pragmático.
+    Dados: Cultura ${type} (${materialType}), Área ${areaHa}ha, Solo ${soilType}, Meta ${productivityGoal}, Espaçamento ${spacing}.
 
-    Gere um plano técnico para uma lavoura de ${type} (${materialType}).
-    Dados: Área ${areaHa}ha, Solo ${soilType}, Meta ${productivityGoal}, Espaçamento ${spacing}.
-
-    Retorne APENAS um JSON com:
+    Gere um JSON técnico e preciso com:
     1. estimatedCost (number)
     2. estimatedHarvestDate (YYYY-MM-DD)
-    3. aiAdvice (string - Um conselho sábio e técnico do Tonico sobre essa cultura)
+    3. aiAdvice (string - Curto, direto e técnico. Máximo 2 frases.)
     4. materials (array): {name, quantity, unit, unitPriceEstimate, category}
     5. timeline (array): {id, title, description, status='pendente', dateEstimate, tasks:[{id, text, done=false}]}
   `;
@@ -163,20 +158,23 @@ export const getAssistantResponse = async (question: string, context: string): P
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash",
             contents: `
-              Você é o Tonico, um senhor de 90 anos, patriarca do campo.
-              Sua história é de sucesso através do trabalho duro e inteligência na lavoura.
-              Você fala com autoridade, sabedoria e calma. Use palavras como "meu filho", "veja bem", "a experiência me ensinou".
-              Jamais use gírias de "caipira" caricato. Seja um mentor sábio e técnico.
+              Você é o Tonico, um especialista em agronegócio com décadas de experiência prática.
+              
+              Sua comunicação deve ser:
+              1. **Direta e Objetiva:** Vá direto ao ponto, sem rodeios ou saudações longas.
+              2. **Técnica e Sábia:** Use seu conhecimento para dar a melhor solução, mas com linguagem clara.
+              3. **Bem Formatada:** Use tópicos (bullets), negrito para destacar números ou produtos, e quebras de linha. Evite blocos de texto gigantes.
+              4. **Sem Gírias:** Evite termos como "meu filho", "uai", "sô". Seja profissional e sênior.
               
               Contexto da lavoura: ${context}. 
-              Pergunta do produtor: ${question}. 
+              Pergunta: ${question}. 
               
-              Responda com a sabedoria de 90 anos de campo.
+              Responda de forma concisa e estruturada.
             `,
         });
-        return response.text || "Meu filho, a conexão falhou por um instante. Vamos tentar novamente com calma.";
+        return response.text || "Houve um erro na comunicação. Tente novamente.";
     } catch (e) {
         console.error(e);
-        return "A tecnologia às vezes nos prega peças. Verifique sua conexão, meu jovem.";
+        return "Erro de conexão. Verifique sua internet.";
     }
 }
