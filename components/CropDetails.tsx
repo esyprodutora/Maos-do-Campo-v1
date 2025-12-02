@@ -19,9 +19,12 @@ interface CropDetailsProps {
 export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdateCrop, onDeleteCrop }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'finance' | 'timeline' | 'storage' | 'assistant' | 'reports'>('overview');
   const [chatInput, setChatInput] = useState('');
+  
+  // Initial Chat Message from Tonico
   const [chatHistory, setChatHistory] = useState<{role: 'user' | 'ai', text: string}[]>([
-    { role: 'ai', text: `Olá! Sou seu assistente para a lavoura ${crop.name}. Como posso ajudar hoje?` }
+    { role: 'ai', text: `Opa, tudo bem? Eu sou o Tonico! 🤠\n\nTô aqui pra te ajudar com a lavoura de ${crop.name}. Pode perguntar sobre pragas, adubação ou clima que a gente resolve!` }
   ]);
+  
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   
@@ -66,32 +69,19 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
       case 'cafe': return { main: 'text-[#A67C52]', bg: 'bg-[#A67C52]', bgGlass: 'bg-[#A67C52]/85', bgSoft: 'bg-[#A67C52]/10', border: 'border-[#A67C52]/20', light: 'bg-[#FAF3E0] dark:bg-[#A67C52]/20', gradient: 'from-[#A67C52] to-[#8B6642]' };
       case 'milho': return { main: 'text-orange-500', bg: 'bg-orange-500', bgGlass: 'bg-orange-500/85', bgSoft: 'bg-orange-500/10', border: 'border-orange-500/20', light: 'bg-orange-50 dark:bg-orange-500/20', gradient: 'from-orange-500 to-orange-600' };
       case 'soja': return { main: 'text-yellow-500', bg: 'bg-yellow-500', bgGlass: 'bg-yellow-500/85', bgSoft: 'bg-yellow-500/10', border: 'border-yellow-500/20', light: 'bg-yellow-50 dark:bg-yellow-500/20', gradient: 'from-yellow-500 to-yellow-600' };
+      case 'cana': return { main: 'text-green-600', bg: 'bg-green-600', bgGlass: 'bg-green-600/85', bgSoft: 'bg-green-600/10', border: 'border-green-600/20', light: 'bg-green-100 dark:bg-green-600/20', gradient: 'from-green-600 to-green-700' };
+      case 'algodao': return { main: 'text-slate-500 dark:text-slate-300', bg: 'bg-slate-500', bgGlass: 'bg-slate-500/85', bgSoft: 'bg-slate-500/10', border: 'border-slate-500/20', light: 'bg-slate-100 dark:bg-slate-500/20', gradient: 'from-slate-500 to-slate-600' };
+      case 'arroz': return { main: 'text-yellow-600', bg: 'bg-yellow-400', bgGlass: 'bg-yellow-400/85', bgSoft: 'bg-yellow-400/10', border: 'border-yellow-400/20', light: 'bg-yellow-50 dark:bg-yellow-400/20', gradient: 'from-yellow-400 to-yellow-500' };
+      case 'feijao': return { main: 'text-red-700', bg: 'bg-red-700', bgGlass: 'bg-red-700/85', bgSoft: 'bg-red-700/10', border: 'border-red-700/20', light: 'bg-red-50 dark:bg-red-700/20', gradient: 'from-red-700 to-red-800' };
+      case 'trigo': return { main: 'text-amber-500', bg: 'bg-amber-500', bgGlass: 'bg-amber-500/85', bgSoft: 'bg-amber-500/10', border: 'border-amber-500/20', light: 'bg-amber-50 dark:bg-amber-500/20', gradient: 'from-amber-500 to-amber-600' };
+      case 'laranja': return { main: 'text-orange-600', bg: 'bg-orange-600', bgGlass: 'bg-orange-600/85', bgSoft: 'bg-orange-600/10', border: 'border-orange-600/20', light: 'bg-orange-100 dark:bg-orange-600/20', gradient: 'from-orange-600 to-orange-700' };
+      case 'mandioca': return { main: 'text-amber-800', bg: 'bg-amber-800', bgGlass: 'bg-amber-800/85', bgSoft: 'bg-amber-800/10', border: 'border-amber-800/20', light: 'bg-amber-100 dark:bg-amber-800/20', gradient: 'from-amber-800 to-amber-900' };
       default: return { main: 'text-agro-green', bg: 'bg-agro-green', bgGlass: 'bg-agro-green/85', bgSoft: 'bg-agro-green/10', border: 'border-agro-green/20', light: 'bg-green-50 dark:bg-green-900/20', gradient: 'from-agro-green to-green-700' };
     }
   };
   const theme = getTheme(crop.type);
 
-  // --- Timeline Handlers ---
-  const handleToggleStageStatus = (index: number) => {
-    const updatedTimeline = [...(crop.timeline || [])];
-    const stage = updatedTimeline[index];
-    let newStatus: 'pendente' | 'em_andamento' | 'concluido' = 'pendente';
-    let newTasks = [...stage.tasks];
-    
-    if (stage.status === 'pendente') {
-        newStatus = 'em_andamento';
-    } else if (stage.status === 'em_andamento') {
-        newStatus = 'concluido';
-        newTasks = newTasks.map(t => ({ ...t, done: true }));
-    } else {
-        newStatus = 'pendente';
-        newTasks = newTasks.map(t => ({ ...t, done: false }));
-    }
-    
-    updatedTimeline[index] = { ...stage, status: newStatus, tasks: newTasks };
-    onUpdateCrop({ ...crop, timeline: updatedTimeline });
-  };
-
+  // --- Handlers (Mantidos iguais) ---
   const toggleTask = (stageId: string, taskId: string) => {
     const updatedTimeline = (crop.timeline || []).map(stage => {
       if (stage.id === stageId) {
@@ -107,6 +97,24 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
       }
       return stage;
     });
+    onUpdateCrop({ ...crop, timeline: updatedTimeline });
+  };
+
+  const handleToggleStageStatus = (index: number) => {
+    const updatedTimeline = [...(crop.timeline || [])];
+    const stage = updatedTimeline[index];
+    let newStatus: 'pendente' | 'em_andamento' | 'concluido' = 'pendente';
+    let newTasks = [...stage.tasks];
+    if (stage.status === 'pendente') {
+        newStatus = 'em_andamento';
+    } else if (stage.status === 'em_andamento') {
+        newStatus = 'concluido';
+        newTasks = newTasks.map(t => ({ ...t, done: true }));
+    } else {
+        newStatus = 'pendente';
+        newTasks = newTasks.map(t => ({ ...t, done: false }));
+    }
+    updatedTimeline[index] = { ...stage, status: newStatus, tasks: newTasks };
     onUpdateCrop({ ...crop, timeline: updatedTimeline });
   };
 
@@ -157,16 +165,13 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
     onUpdateCrop({ ...crop, timeline: updatedTimeline });
   };
 
-  // --- Finance Handlers ---
   const handleUpdateMaterial = (index: number, field: 'quantity' | 'unitPriceEstimate' | 'realCost', value: string) => {
     const numValue = parseFloat(value);
     const updatedMaterials = [...(crop.materials || [])];
     if (!updatedMaterials[index]) return;
-
     const item = { ...updatedMaterials[index] };
     item[field] = isNaN(numValue) ? 0 : numValue;
     updatedMaterials[index] = item;
-
     const newTotalCost = updatedMaterials.reduce((acc, m) => acc + (m.quantity * m.unitPriceEstimate), 0);
     onUpdateCrop({ ...crop, materials: updatedMaterials, estimatedCost: newTotalCost });
   };
@@ -188,7 +193,6 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
     setIsAddingItem(false);
   };
 
-  // --- Storage Handlers ---
   const handleSaveHarvest = () => {
       if(harvestForm.quantity <= 0) return alert("Quantidade deve ser maior que zero.");
       let updatedLogs = [...(crop.harvestLogs || [])];
@@ -230,30 +234,7 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
     setIsChatLoading(false);
   };
 
-  const generatePDF = () => {
-    setIsGeneratingPdf(true);
-    const doc = new jsPDF();
-    doc.setFillColor(39, 174, 96);
-    doc.rect(0, 0, 210, 30, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(22);
-    doc.text('MÃOS DO CAMPO', 105, 15, { align: 'center' });
-    doc.setFontSize(10);
-    doc.text('Relatório de Planejamento de Safra', 105, 22, { align: 'center' });
-    doc.setTextColor(40, 40, 40);
-    doc.setFontSize(14);
-    doc.text(`Lavoura: ${crop.name}`, 14, 45);
-    const materials = crop.materials || [];
-    const tableData = materials.map(m => [
-      m.name, m.category, `${m.quantity} ${m.unit}`, 
-      `R$ ${m.unitPriceEstimate.toFixed(2)} (Est)`, 
-      m.realCost ? `R$ ${m.realCost.toFixed(2)} (Real)` : '-'
-    ]);
-    autoTable(doc, { startY: 75, head: [['Item', 'Categoria', 'Qtd', 'Preço Est.', 'Pago Real']], body: tableData });
-    doc.save(`plano_${crop.name}.pdf`);
-    setIsGeneratingPdf(false);
-  };
-
+  // Renders...
   const renderOverview = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-slide-up">
        <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 relative overflow-hidden group">
@@ -322,17 +303,8 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                     <div className="w-full h-40 bg-gray-100 dark:bg-slate-700 rounded-xl mb-4 flex items-center justify-center flex-col text-gray-400 p-4 text-center">
                         <MapPin size={32} className="mb-2 opacity-50"/>
                         <p className="text-xs font-medium">Mapa indisponível</p>
-                        <p className="text-[10px] opacity-70">Chave de API não configurada</p>
                     </div>
                 )}
-                <a 
-                   href={`https://www.waze.com/ul?ll=${crop.coordinates.lat},${crop.coordinates.lng}&navigate=yes`}
-                   target="_blank"
-                   rel="noreferrer"
-                   className="flex items-center justify-center gap-2 w-full py-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-bold rounded-xl hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
-                >
-                   <Navigation size={18} /> Abrir no GPS
-                </a>
              </div>
            )}
        </div>
@@ -356,7 +328,6 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
     return (
       <div className="space-y-6 animate-slide-up">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-           {/* Chart Card */}
            <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700">
              <h3 className="font-bold text-gray-800 dark:text-white mb-6 text-xl">Estimado (IA)</h3>
              <div className="h-64 w-full">
@@ -382,7 +353,6 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
              </div>
            </div>
 
-            {/* Realized Cost Card */}
            <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col justify-center items-center text-center">
               <div className="p-6 bg-blue-50 dark:bg-blue-900/20 rounded-full mb-4 text-blue-600 dark:text-blue-400">
                   <Wallet size={48} />
@@ -391,10 +361,12 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
               <p className="text-4xl font-extrabold text-gray-900 dark:text-white mt-2">
                   {totalRealCost.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
               </p>
+              <p className="text-xs text-gray-400 mt-4">
+                  Preencha o "Valor Pago" na lista abaixo para atualizar.
+              </p>
            </div>
         </div>
 
-        {/* List with Real Cost Editing */}
         <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="font-bold text-gray-800 dark:text-white text-xl flex items-center gap-2">
@@ -652,11 +624,10 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
             <MessageSquare size={28} />
          </div>
          <div>
-           <h3 className="font-bold text-lg">Assistente Rural IA</h3>
-           <p className="text-sm text-green-100 opacity-90">Especialista em {crop.type}</p>
+           <h3 className="font-bold text-lg">Tonico</h3>
+           <p className="text-sm text-green-100 opacity-90">Seu parceiro no campo</p>
          </div>
        </div>
-
        <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-50/50 dark:bg-slate-900/50">
           {chatHistory.map((msg, idx) => (
             <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -665,48 +636,23 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                </div>
             </div>
           ))}
-          {isChatLoading && (
-            <div className="flex justify-start">
-               <div className="bg-white dark:bg-slate-700 p-4 rounded-2xl rounded-tl-sm shadow-sm flex gap-2 border border-gray-100 dark:border-slate-600">
-                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-75"></div>
-                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-150"></div>
-               </div>
-            </div>
-          )}
+          {isChatLoading && <div className="p-4 text-center text-gray-400">Tonico está digitando...</div>}
        </div>
-
        <form onSubmit={handleChatSubmit} className="p-4 bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-slate-700 flex gap-3">
-         <input 
-           type="text" 
-           value={chatInput}
-           onChange={(e) => setChatInput(e.target.value)}
-           placeholder="Digite sua dúvida..."
-           className="flex-1 p-4 bg-gray-50 dark:bg-slate-900 border border-transparent focus:bg-white dark:focus:bg-slate-800 focus:border-agro-green rounded-xl outline-none transition-all font-medium dark:text-white"
-         />
-         <button 
-           type="submit" 
-           disabled={!chatInput.trim() || isChatLoading}
-           className="bg-agro-green text-white p-4 rounded-xl hover:bg-green-700 disabled:opacity-50 transition-transform active:scale-95 shadow-lg shadow-green-600/20"
-         >
-           <Send size={20} />
-         </button>
+         <input type="text" value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder="Pergunte ao Tonico..." className="flex-1 p-4 bg-gray-50 dark:bg-slate-900 border rounded-xl" />
+         <button type="submit" disabled={!chatInput.trim() || isChatLoading} className="bg-agro-green text-white p-4 rounded-xl"><Send size={20} /></button>
        </form>
     </div>
   );
 
   return (
     <div className="space-y-6 pb-24 md:pb-8">
-      {/* Header with Dynamic Background */}
-      <div className={`rounded-b-3xl md:rounded-3xl shadow-xl relative overflow-hidden transition-all duration-500 bg-gradient-to-br ${theme.gradient}`}>
-         
+      {/* Header */}
+      <div className={`rounded-b-3xl md:rounded-3xl shadow-xl relative overflow-hidden transition-all duration-500 ${theme.bgGlass} backdrop-blur-xl`}>
          <div className="relative z-20 p-6 pt-8 md:p-8">
             <div className="flex items-start justify-between gap-4">
                <div className="flex items-center gap-3">
-                 <button 
-                   onClick={onBack} 
-                   className="p-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-xl text-white transition-all active:scale-95"
-                 >
+                 <button onClick={onBack} className="p-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-xl text-white transition-all active:scale-95">
                    <ArrowLeft size={20} />
                  </button>
                  <div className="text-white">
@@ -716,30 +662,13 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                    </p>
                  </div>
                </div>
-
                <div className="flex gap-2">
-                   {/* Botão IA no Topo */}
-                   <button 
-                     onClick={() => setActiveTab('assistant')}
-                     className="flex items-center gap-2 px-4 py-2 bg-white text-agro-green rounded-full shadow-lg transition-all active:scale-95 hover:scale-105 border border-white/20 animate-pulse-slow font-bold text-xs"
-                     title="Assistente IA"
-                   >
-                     <MessageSquare size={18} fill="currentColor" className="text-agro-green" />
-                     <span className="hidden sm:inline">Assistente IA</span>
-                     <span className="sm:hidden">Assistente IA</span>
+                   <button onClick={() => setActiveTab('assistant')} className="flex items-center gap-2 px-4 py-2 bg-white text-agro-green rounded-full shadow-lg font-bold text-xs">
+                     <MessageSquare size={18} fill="currentColor" /> <span className="hidden sm:inline">Tonico</span>
                    </button>
-
-                   <button 
-                     onClick={onDeleteCrop}
-                     className="p-2 bg-white/10 hover:bg-red-500/80 text-white rounded-xl backdrop-blur-sm transition-all active:scale-95 border border-white/10"
-                     title="Excluir Lavoura"
-                   >
-                     <Trash2 size={20} />
-                   </button>
+                   <button onClick={onDeleteCrop} className="p-2 bg-white/10 hover:bg-red-500/80 text-white rounded-xl"><Trash2 size={20} /></button>
                </div>
             </div>
-
-            {/* Desktop Tabs */}
             <div className="hidden md:flex overflow-x-auto gap-2 mt-6 pb-2 no-scrollbar">
                 {[
                   { id: 'overview', label: 'Home', icon: Home },
@@ -748,27 +677,15 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                   { id: 'storage', label: 'Armazenagem', icon: Warehouse },
                   { id: 'reports', label: 'Relatório', icon: FileText }, 
                 ].map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id as any)}
-                    className={`
-                      flex items-center gap-2 px-4 py-2.5 rounded-full font-bold text-sm whitespace-nowrap transition-all shadow-sm
-                      ${activeTab === tab.id 
-                        ? 'bg-white text-gray-900 scale-105 ring-2 ring-white/50' 
-                        : 'bg-white/10 text-white hover:bg-white/20'}
-                    `}
-                  >
-                    <tab.icon size={16} />
-                    {tab.label}
+                  <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`flex items-center gap-2 px-4 py-2.5 rounded-full font-bold text-sm ${activeTab === tab.id ? 'bg-white text-gray-900' : 'bg-white/10 text-white'}`}>
+                    <tab.icon size={16} /> {tab.label}
                   </button>
                 ))}
             </div>
          </div>
-         <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
       </div>
 
-      {/* Content Area */}
-      <div className="min-h-[500px] animate-slide-up px-1 pb-24">
+      <div className="min-h-[500px] px-1 pb-24">
         {activeTab === 'overview' && renderOverview()}
         {activeTab === 'finance' && renderFinance()}
         {activeTab === 'timeline' && renderTimeline()}
@@ -777,7 +694,6 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
         {activeTab === 'reports' && <Reports crop={crop} />}
       </div>
 
-      {/* MOBILE BOTTOM NAVIGATION BAR */}
       <div className="md:hidden fixed bottom-4 left-4 right-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-gray-200/50 dark:border-slate-700/50 rounded-2xl shadow-2xl shadow-black/10 z-50 flex justify-around items-center py-3 px-1 ring-1 ring-black/5 overflow-x-auto">
          {[
             { id: 'overview', label: 'Home', icon: Home },
@@ -785,25 +701,13 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
             { id: 'timeline', label: 'Etapas', icon: ListTodo },
             { id: 'storage', label: 'Silo', icon: Warehouse },
             { id: 'reports', label: 'Relatório', icon: FileText },
-         ].map((tab) => {
-            const isActive = activeTab === tab.id;
-            return (
-               <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
-                  className={`
-                    relative flex flex-col items-center gap-1 px-3 py-1 transition-all duration-300 rounded-xl min-w-[60px]
-                    ${isActive ? 'text-agro-green scale-105' : 'text-gray-400 dark:text-gray-500 hover:text-gray-600'}
-                  `}
-               >
-                  {isActive && (
-                     <div className="absolute inset-0 bg-green-50 dark:bg-green-900/20 rounded-xl -z-10 scale-110 opacity-100 transition-all"></div>
-                  )}
-                  <tab.icon size={22} strokeWidth={isActive ? 2.5 : 2} />
-                  <span className="text-[9px] font-bold tracking-tight">{tab.label}</span>
-               </button>
-            )
-         })}
+         ].map((tab) => (
+            <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`relative flex flex-col items-center gap-1 px-3 py-1 rounded-xl min-w-[60px] ${activeTab === tab.id ? 'text-agro-green scale-105' : 'text-gray-400'}`}>
+               {activeTab === tab.id && <div className="absolute inset-0 bg-green-50 dark:bg-green-900/20 rounded-xl -z-10 scale-110"></div>}
+               <tab.icon size={22} strokeWidth={activeTab === tab.id ? 2.5 : 2} />
+               <span className="text-[9px] font-bold">{tab.label}</span>
+            </button>
+         ))}
       </div>
     </div>
   );
