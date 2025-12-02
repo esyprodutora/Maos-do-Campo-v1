@@ -12,21 +12,49 @@ interface DashboardProps {
   toggleTheme: () => void;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNewCrop, theme, toggleTheme }) => {
+export const Dashboard: React.FC<DashboardProps> = ({
+  crops,
+  onSelectCrop,
+  onNewCrop,
+  theme,
+  toggleTheme
+}) => {
   
   const [weather, setWeather] = useState<WeatherData | null>(null);
 
+  // 🔢 Garantir que sempre temos um array válido
+  const safeCrops = crops || [];
+
+  // 💰 Soma de todos os custos estimados das lavouras
+  const totalCostEstimated = safeCrops.reduce((acc, crop) => {
+    const estimated = crop?.estimatedCost || 0;
+    return acc + estimated;
+  }, 0);
+
+  // 💰 (Opcional) Soma total dos custos reais de materiais
+  const totalCostReal = safeCrops.reduce((acc, crop) => {
+    const materials = crop?.materials || [];
+    const matCost = materials.reduce((mAcc, m) => mAcc + (m.realCost || 0), 0);
+    return acc + matCost;
+  }, 0);
+
   useEffect(() => {
     const loadWeather = async () => {
-        const firstCrop = crops[0];
-        const lat = firstCrop?.coordinates?.lat;
-        const lng = firstCrop?.coordinates?.lng;
-        
-        const data = await getWeatherData(lat, lng);
-        setWeather(data);
+      const firstCrop = crops[0];
+      const lat = firstCrop?.coordinates?.lat;
+      const lng = firstCrop?.coordinates?.lng;
+
+      if (!lat || !lng) return;
+
+      const data = await getWeatherData(lat, lng);
+      setWeather(data);
     };
+
     loadWeather();
   }, [crops]);
+
+  // ...continua o restante do componente
+
 
   const totalArea = crops.reduce((acc, c) => acc + c.areaHa, 0);
   const totalCost = crops.reduce((acc, c) => acc + c.estimatedCost, 0);
