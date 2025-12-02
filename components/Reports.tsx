@@ -1,15 +1,8 @@
 import React, { useState } from 'react';
 import { CropData } from '../types';
-import { 
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, 
-  PieChart, Pie, Legend, CartesianGrid 
-} from 'recharts';
-import { 
-  Download, DollarSign, Layers, Warehouse, PieChart as PieIcon, 
-  Filter, ChevronDown, AlertCircle, TrendingUp, Loader2 
-} from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend, CartesianGrid } from 'recharts';
+import { Download, DollarSign, Layers, Warehouse, PieChart as PieIcon, Filter, ChevronDown, AlertCircle, TrendingUp, Calendar, Loader2 } from 'lucide-react';
 import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 
 interface ReportsProps {
   crop: CropData;
@@ -18,9 +11,9 @@ interface ReportsProps {
 export const Reports: React.FC<ReportsProps> = ({ crop }) => {
   const [reportType, setReportType] = useState<'general' | 'financial' | 'stages' | 'storage'>('general');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [period, setPeriod] = useState('safra'); // Simplificado
+  const [period, setPeriod] = useState('safra');
 
-  // --- Data Processing (Safe Checks) ---
+  // --- Data Processing ---
   const materials = crop.materials || [];
   const totalCostEstimated = crop.estimatedCost || 0;
   const totalCostReal = materials.reduce((acc, m) => acc + (m.realCost || 0), 0);
@@ -55,7 +48,6 @@ export const Reports: React.FC<ReportsProps> = ({ crop }) => {
       name: (i.name.charAt(0).toUpperCase() + i.name.slice(1)) 
   }));
 
-  // Fallback if empty
   if (categoryData.length === 0) {
       categoryData.push({ name: 'Sem dados', value: 1 });
   }
@@ -72,7 +64,7 @@ export const Reports: React.FC<ReportsProps> = ({ crop }) => {
 
   const COLORS = ['#27AE60', '#F2C94C', '#E67E22', '#2C3E50', '#8E44AD'];
 
-  // --- Export PDF Logic ---
+  // --- Export PDF Logic (Simplified for Stability) ---
   const generatePDF = () => {
     setIsGenerating(true);
     try {
@@ -94,24 +86,15 @@ export const Reports: React.FC<ReportsProps> = ({ crop }) => {
         doc.text(`Lavoura: ${crop.name}`, 14, 50);
         doc.text(`Emissão: ${new Date().toLocaleDateString()}`, 14, 56);
 
-        let currentY = 70;
-
-        // Table based on current view
-        if (reportType === 'general' || reportType === 'financial') {
-            doc.text("Resumo Financeiro", 14, currentY);
-            currentY += 10;
-            
-            autoTable(doc, {
-                startY: currentY,
-                head: [['Item', 'Valor']],
-                body: [
-                    ['Estimado', `R$ ${totalCostEstimated.toLocaleString('pt-BR')}`],
-                    ['Realizado', `R$ ${totalCostReal.toLocaleString('pt-BR')}`]
-                ]
-            });
-             // @ts-ignore
-            currentY = doc.lastAutoTable.finalY + 20;
-        }
+        // Basic Text Content (Fallback for Table)
+        doc.setFontSize(14);
+        doc.setTextColor(39, 174, 96);
+        doc.text("Resumo Financeiro", 14, 70);
+        
+        doc.setTextColor(0);
+        doc.setFontSize(10);
+        doc.text(`Custo Estimado: R$ ${totalCostEstimated.toLocaleString('pt-BR')}`, 14, 80);
+        doc.text(`Custo Realizado: R$ ${totalCostReal.toLocaleString('pt-BR')}`, 14, 86);
 
         doc.save(`relatorio_${crop.name}.pdf`);
     } catch (e) {
@@ -198,7 +181,11 @@ export const Reports: React.FC<ReportsProps> = ({ crop }) => {
                             <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E2E8F0" />
                             <XAxis type="number" hide />
                             <YAxis dataKey="name" type="category" tick={{fontSize: 12}} width={70} />
-                            <Tooltip />
+                            <Tooltip 
+                                cursor={{fill: 'transparent'}}
+                                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                                formatter={(value: number) => `R$ ${value.toLocaleString('pt-BR')}`}
+                            />
                             <Bar dataKey="valor" radius={[0, 4, 4, 0]} barSize={30}>
                                 {costComparisonData.map((entry, index) => (
                                     <Cell key={`cell-${index}`} fill={entry.color} />
