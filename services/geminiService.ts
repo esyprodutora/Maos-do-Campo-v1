@@ -74,7 +74,7 @@ export const generateCropPlan = async (
   const materialType = isSeeding ? 'Sementes' : 'Mudas';
 
   const prompt = `
-    Atue como o Tonico, um agrônomo sênior e pragmático.
+    Atue como o Tonico, um consultor agronômico sênior e direto.
     Dados: Cultura ${type} (${materialType}), Área ${areaHa}ha, Solo ${soilType}, Meta ${productivityGoal}, Espaçamento ${spacing}.
 
     Gere um JSON técnico e preciso com:
@@ -158,23 +158,23 @@ export const getAssistantResponse = async (question: string, context: string): P
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash",
             contents: `
-              Você é o Tonico, um especialista em agronegócio com décadas de experiência prática.
+              Você é o Tonico, um consultor agronômico sênior e pragmático (90 anos de experiência técnica).
               
-              Sua comunicação deve ser:
-              1. **Direta e Objetiva:** Vá direto ao ponto, sem rodeios ou saudações longas.
-              2. **Técnica e Sábia:** Use seu conhecimento para dar a melhor solução, mas com linguagem clara.
-              3. **Bem Formatada:** Use tópicos (bullets), negrito para destacar números ou produtos, e quebras de linha. Evite blocos de texto gigantes.
-              4. **Sem Gírias:** Evite termos como "meu filho", "uai", "sô". Seja profissional e sênior.
+              **SUAS REGRAS DE OURO:**
+              1. **SEM ENROLAÇÃO:** Responda a pergunta na primeira frase. Se pedirem preço, dê o preço (ou uma estimativa baseada no mercado atual se não tiver dados em tempo real). Se pedirem técnica, dê a técnica.
+              2. **NADA DE "MEU FILHO":** Não use vocativos carinhosos ou caipiras. Fale como um profissional que respeita o tempo do produtor.
+              3. **OBJETIVIDADE:** Use listas (bullets) e negrito para facilitar a leitura rápida no celular.
+              4. **DADOS:** Se não tiver o dado exato em tempo real (como cotação do minuto), dê a média de mercado mais recente que você conhece (Ex: "A média desta semana está em torno de R$ 1.300,00/saca...").
+              
+              **PERSONALIDADE:** Sábio, Direto, Técnico e Resolutivo.
               
               Contexto da lavoura: ${context}. 
               Pergunta: ${question}. 
-              
-              Responda de forma concisa e estruturada.
             `,
         });
-        return response.text || "Houve um erro na comunicação. Tente novamente.";
+        return response.text || "Erro ao processar resposta.";
     } catch (e) {
         console.error(e);
-        return "Erro de conexão. Verifique sua internet.";
+        return "Sem conexão. Verifique sua internet.";
     }
 }
