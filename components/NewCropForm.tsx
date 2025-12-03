@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { CropType, SoilType, CropData, Coordinates } from '../types';
 import { generateCropPlan } from '../services/geminiService';
@@ -12,17 +13,17 @@ interface NewCropFormProps {
 }
 
 // Configuração visual das 10 culturas
-const CROP_OPTIONS: { id: CropType; label: string; icon: string; color: string; ring: string; type: 'semente' | 'muda' }[] = [
-  { id: 'soja', label: 'Soja', icon: '🌱', color: 'bg-yellow-500', ring: 'ring-yellow-500', type: 'semente' },
-  { id: 'milho', label: 'Milho', icon: '🌽', color: 'bg-orange-500', ring: 'ring-orange-500', type: 'semente' },
-  { id: 'cafe', label: 'Café', icon: '☕', color: 'bg-[#A67C52]', ring: 'ring-[#A67C52]', type: 'muda' },
-  { id: 'cana', label: 'Cana', icon: '🎋', color: 'bg-green-600', ring: 'ring-green-600', type: 'muda' },
-  { id: 'algodao', label: 'Algodão', icon: '☁️', color: 'bg-slate-400', ring: 'ring-slate-400', type: 'semente' },
-  { id: 'arroz', label: 'Arroz', icon: '🌾', color: 'bg-yellow-400', ring: 'ring-yellow-400', type: 'semente' },
-  { id: 'feijao', label: 'Feijão', icon: '🫘', color: 'bg-red-800', ring: 'ring-red-800', type: 'semente' },
-  { id: 'trigo', label: 'Trigo', icon: '🥖', color: 'bg-amber-300', ring: 'ring-amber-300', type: 'semente' },
-  { id: 'laranja', label: 'Laranja', icon: '🍊', color: 'bg-orange-600', ring: 'ring-orange-600', type: 'muda' },
-  { id: 'mandioca', label: 'Mandioca', icon: '🥔', color: 'bg-amber-800', ring: 'ring-amber-800', type: 'muda' },
+const CROP_OPTIONS: { id: CropType; label: string; icon: string; color: string; ring: string }[] = [
+  { id: 'soja', label: 'Soja', icon: '🌱', color: 'bg-yellow-500', ring: 'ring-yellow-500' },
+  { id: 'milho', label: 'Milho', icon: '🌽', color: 'bg-orange-500', ring: 'ring-orange-500' },
+  { id: 'cafe', label: 'Café', icon: '☕', color: 'bg-[#A67C52]', ring: 'ring-[#A67C52]' },
+  { id: 'cana', label: 'Cana', icon: '🎋', color: 'bg-green-600', ring: 'ring-green-600' },
+  { id: 'algodao', label: 'Algodão', icon: '☁️', color: 'bg-slate-400', ring: 'ring-slate-400' },
+  { id: 'arroz', label: 'Arroz', icon: '🌾', color: 'bg-yellow-400', ring: 'ring-yellow-400' },
+  { id: 'feijao', label: 'Feijão', icon: '🫘', color: 'bg-red-800', ring: 'ring-red-800' },
+  { id: 'trigo', label: 'Trigo', icon: '🥖', color: 'bg-amber-300', ring: 'ring-amber-300' },
+  { id: 'laranja', label: 'Laranja', icon: '🍊', color: 'bg-orange-600', ring: 'ring-orange-600' },
+  { id: 'mandioca', label: 'Mandioca', icon: '🥔', color: 'bg-amber-800', ring: 'ring-amber-800' },
 ];
 
 export const NewCropForm: React.FC<NewCropFormProps> = ({ onSave, onCancel }) => {
@@ -44,9 +45,6 @@ export const NewCropForm: React.FC<NewCropFormProps> = ({ onSave, onCancel }) =>
     setIsLoading(true);
     try {
       if (!formData.type) throw new Error("Selecione uma cultura");
-
-      const cropConfig = CROP_OPTIONS.find(c => c.id === formData.type);
-      const plantingType = cropConfig?.type === 'muda' ? 'mudas' : 'sementes';
 
       const plan = await generateCropPlan(
         formData.name,
@@ -71,7 +69,7 @@ export const NewCropForm: React.FC<NewCropFormProps> = ({ onSave, onCancel }) =>
         estimatedHarvestDate: plan.estimatedHarvestDate || new Date().toISOString(),
         materials: plan.materials || [],
         timeline: plan.timeline || [],
-        aiAdvice: plan.aiAdvice || `Para o plantio de ${plantingType} de ${formData.type}, atente-se à qualidade genética e sanidade.`
+        aiAdvice: plan.aiAdvice || "Boa sorte com a lavoura!"
       };
 
       onSave(newCrop);
@@ -159,9 +157,7 @@ export const NewCropForm: React.FC<NewCropFormProps> = ({ onSave, onCancel }) =>
                                 </div>
                                 <div className="text-left">
                                 <span className="block font-extrabold text-gray-900 dark:text-white text-lg">{selectedCropConfig.label}</span>
-                                <span className="block text-xs text-gray-500 dark:text-gray-400 font-medium">
-                                    Plantio via {selectedCropConfig.type === 'muda' ? 'Mudas' : 'Sementes'}
-                                </span>
+                                <span className="block text-xs text-gray-500 dark:text-gray-400 font-medium">Toque para alterar</span>
                                 </div>
                             </>
                         ) : (

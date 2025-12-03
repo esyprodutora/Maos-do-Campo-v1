@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { CropData } from '../types';
-import { TrendingUp, Droplets, Sun, Wind, ChevronRight, DollarSign, Calendar, Sprout, ArrowRight, Moon, MapPin, CloudRain, Cloud } from 'lucide-react';
+import { TrendingUp, Droplets, Sun, Wind, ChevronRight, DollarSign, Calendar, Sprout, ArrowRight, Moon } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
-import { getWeatherData, WeatherData } from '../services/weatherService';
 
 interface DashboardProps {
   crops: CropData[];
@@ -12,54 +11,14 @@ interface DashboardProps {
   toggleTheme: () => void;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({
-  crops,
-  onSelectCrop,
-  onNewCrop,
-  theme,
-  toggleTheme
-}) => {
-  
-  const [weather, setWeather] = useState<WeatherData | null>(null);
-
-  // 🔢 Garantir que sempre temos um array válido
-  const safeCrops = crops || [];
-
-  // 💰 Soma de todos os custos estimados das lavouras
-  const totalCostEstimated = safeCrops.reduce((acc, crop) => {
-    const estimated = crop?.estimatedCost || 0;
-    return acc + estimated;
-  }, 0);
-
-  // 💰 (Opcional) Soma total dos custos reais de materiais
-  const totalCostReal = safeCrops.reduce((acc, crop) => {
-    const materials = crop?.materials || [];
-    const matCost = materials.reduce((mAcc, m) => mAcc + (m.realCost || 0), 0);
-    return acc + matCost;
-  }, 0);
-
-  useEffect(() => {
-    const loadWeather = async () => {
-      const firstCrop = crops[0];
-      const lat = firstCrop?.coordinates?.lat;
-      const lng = firstCrop?.coordinates?.lng;
-
-      if (!lat || !lng) return;
-
-      const data = await getWeatherData(lat, lng);
-      setWeather(data);
-    };
-
-    loadWeather();
-  }, [crops]);
-
-  // ...continua o restante do componente
-
+export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNewCrop, theme, toggleTheme }) => {
+  // Mock Weather Data
+  const weather = { temp: 28, condition: 'Ensolarado', humidity: 62, wind: 14, location: 'Fazenda Santa Rita' };
 
   const totalArea = crops.reduce((acc, c) => acc + c.areaHa, 0);
   const totalCost = crops.reduce((acc, c) => acc + c.estimatedCost, 0);
-  
-   // Define colors helper first
+
+  // Define colors helper first
   const getCropColor = (type: string) => {
     switch(type) {
       case 'cafe': return '#A67C52';
@@ -104,14 +63,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
     }
   };
 
-  const getWeatherIcon = (condition: string, isDay: boolean) => {
-      if (!condition) return <Sun size={32} className="text-yellow-300 animate-pulse-slow" />;
-      const lower = condition.toLowerCase();
-      if (lower.includes('chuva') || lower.includes('tempestade') || lower.includes('pancadas')) return <CloudRain size={32} className="text-blue-300" />;
-      if (lower.includes('nublado') || lower.includes('nevoeiro')) return <Cloud size={32} className="text-gray-300" />;
-      return isDay ? <Sun size={32} className="text-yellow-300 animate-pulse-slow" /> : <Moon size={32} className="text-blue-200" />;
-  };
-
   return (
     <div className="space-y-8 animate-fade-in pb-24 md:pb-0">
       {/* Header */}
@@ -145,55 +96,39 @@ export const Dashboard: React.FC<DashboardProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Weather Widget */}
-        <div className={`
-            relative overflow-hidden rounded-3xl shadow-xl p-6 flex flex-col justify-between min-h-[180px] transition-all duration-500
-            ${weather?.isDay === false ? 'bg-gradient-to-br from-indigo-900 to-slate-900 shadow-indigo-900/20' : 'bg-gradient-to-br from-blue-500 to-indigo-600 shadow-blue-500/20'}
-            text-white
-        `}>
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-xl shadow-blue-500/20 p-6 flex flex-col justify-between min-h-[180px]">
            <div className="absolute top-0 right-0 -mt-8 -mr-8 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
            <div className="absolute bottom-0 left-0 -mb-8 -ml-8 w-32 h-32 bg-blue-400/20 rounded-full blur-2xl"></div>
            
-           {weather ? (
-               <>
-                <div className="relative z-10 flex justify-between items-start">
-                    <div>
-                    <div className="flex items-center gap-2 text-blue-100 text-sm font-medium mb-1">
-                        <MapPin size={14} /> {weather.location}
-                    </div>
-                    <h3 className="text-4xl font-bold">{weather.temp}°C</h3>
-                    <p className="opacity-90 font-medium">{weather.condition}</p>
-                    </div>
-                    <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-sm">
-                        {getWeatherIcon(weather.condition, weather.isDay)}
-                    </div>
-                </div>
-
-                <div className="relative z-10 grid grid-cols-2 gap-4 mt-4 pt-2 border-t border-white/10">
-                    <div className="flex items-center gap-2">
-                        <div className="bg-black/20 p-1.5 rounded-lg">
-                            <Droplets size={16} className="text-blue-200"/>
-                        </div>
-                        <div>
-                            <p className="text-[10px] text-blue-200 uppercase tracking-wide">Umidade</p>
-                            <p className="font-bold text-sm">{weather.humidity}%</p>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="bg-black/20 p-1.5 rounded-lg">
-                            <Wind size={16} className="text-blue-200"/>
-                        </div>
-                        <div>
-                            <p className="text-[10px] text-blue-200 uppercase tracking-wide">Vento</p>
-                            <p className="font-bold text-sm">{weather.wind} km/h</p>
-                        </div>
-                    </div>
-                </div>
-               </>
-           ) : (
-               <div className="flex items-center justify-center h-full">
-                   <p className="animate-pulse text-blue-200 flex items-center gap-2"><Sun size={20} className="animate-spin"/> Carregando clima...</p>
+           <div className="relative z-10 flex justify-between items-start">
+             <div>
+               <div className="flex items-center gap-2 text-blue-100 text-sm font-medium mb-1">
+                 <MapPinIcon size={14} /> {weather.location}
                </div>
-           )}
+               <h3 className="text-4xl font-bold">{weather.temp}°C</h3>
+               <p className="opacity-90 font-medium">{weather.condition}</p>
+             </div>
+             <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-sm">
+                <Sun size={32} className="text-yellow-300 animate-pulse-slow" />
+             </div>
+           </div>
+
+           <div className="relative z-10 grid grid-cols-2 gap-4 mt-4">
+             <div className="bg-black/10 rounded-xl p-2 flex items-center gap-2 backdrop-blur-sm">
+               <Droplets size={18} className="text-blue-200"/>
+               <div>
+                 <p className="text-xs text-blue-200">Umidade</p>
+                 <p className="font-bold">{weather.humidity}%</p>
+               </div>
+             </div>
+             <div className="bg-black/10 rounded-xl p-2 flex items-center gap-2 backdrop-blur-sm">
+               <Wind size={18} className="text-blue-200"/>
+               <div>
+                 <p className="text-xs text-blue-200">Vento</p>
+                 <p className="font-bold">{weather.wind}km/h</p>
+               </div>
+             </div>
+           </div>
         </div>
 
         {/* Quick Stats Grid */}
@@ -212,25 +147,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
 
           <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow border border-gray-200 dark:border-slate-700 flex flex-col justify-between hover:shadow-md transition-shadow">
-            <div className="flex justify-between items-start mb-2">
+            <div className="flex justify-between items-start mb-4">
                <div className="p-3 bg-yellow-50 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 rounded-2xl">
                  <DollarSign size={24} />
                </div>
             </div>
             <div>
-              <p className="text-gray-500 dark:text-gray-400 font-medium text-xs uppercase tracking-wide">Custo Previsto vs Real</p>
-              <div className="flex items-baseline gap-2 mt-1">
-                  <h3 className="text-xl font-extrabold text-gray-900 dark:text-white" title="Previsto">
-                    {totalCostEstimated.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}
-                  </h3>
-                  <span className="text-xs text-gray-400">Est.</span>
-              </div>
-              <div className="flex items-baseline gap-2">
-                  <h3 className="text-lg font-bold text-green-600 dark:text-green-400" title="Realizado">
-                    {totalCostReal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}
-                  </h3>
-                  <span className="text-xs text-gray-400">Real</span>
-              </div>
+              <p className="text-gray-500 dark:text-gray-400 font-medium text-sm">Custo Previsto</p>
+              <h3 className="text-2xl font-extrabold text-gray-900 dark:text-white mt-1 truncate" title={totalCost.toString()}>
+                {totalCost.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}
+              </h3>
             </div>
           </div>
 
@@ -326,15 +252,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
            <div className="bg-white dark:bg-slate-800 rounded-3xl shadow border border-gray-200 dark:border-slate-700 p-6">
              <h3 className="font-bold text-gray-800 dark:text-white mb-6">Distribuição de Culturas</h3>
              {cropTypeData.length > 0 ? (
-               <div className="relative h-80"> {/* Height increased for legend space */}
+               <div className="relative h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
                         data={cropTypeData}
                         cx="50%"
-                        cy="40%"
-                        innerRadius={50}
-                        outerRadius={70}
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={80}
                         paddingAngle={5}
                         dataKey="value"
                         stroke="none"
@@ -348,13 +274,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       />
                     </PieChart>
                   </ResponsiveContainer>
-                  
-                  {/* Legend positioned absolutely at bottom within relative container */}
-                  <div className="absolute bottom-0 left-0 right-0 flex flex-wrap justify-center gap-2 max-h-24 overflow-y-auto px-2 pb-2">
+                  {/* Legend */}
+                  <div className="flex flex-wrap justify-center gap-3 mt-4">
                     {cropTypeData.map((d, i) => (
-                      <div key={i} className="flex items-center gap-1.5 bg-gray-50 dark:bg-slate-700 px-2 py-1 rounded-md border border-gray-100 dark:border-slate-600">
+                      <div key={i} className="flex items-center gap-2 bg-gray-50 dark:bg-slate-700 px-3 py-1 rounded-full border border-gray-100 dark:border-slate-600">
                         <div className="w-2 h-2 rounded-full" style={{ backgroundColor: d.color }}></div>
-                        <span className="text-[10px] font-bold text-gray-600 dark:text-gray-300 capitalize">{d.name}</span>
+                        <span className="text-xs font-bold text-gray-600 dark:text-gray-300 capitalize">{d.name}</span>
                       </div>
                     ))}
                   </div>
@@ -391,3 +316,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
     </div>
   );
 };
+
+// Icon Helper
+const MapPinIcon = ({size}: {size: number}) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
+    <circle cx="12" cy="10" r="3"/>
+  </svg>
+);

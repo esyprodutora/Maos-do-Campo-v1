@@ -1,3 +1,4 @@
+
 export interface MarketData {
   currency: string;
   price: number;
@@ -31,18 +32,19 @@ export const getMarketQuotes = async () => {
     const usdPrice = parseFloat(usd.bid);
     const usdVar = parseFloat(usd.pctChange);
 
-    // 2. Simular Commodities (Baseadas em médias de mercado reais - Atualizado Dez/2025)
+    // 2. Simular Commodities (Baseadas em médias de mercado + variação aleatória para demo)
+    // Em produção, isso viria de uma API paga como Bloomberg ou CEPEA
     
-    // Café Arábica (Saca 60kg) - Base CEPEA/ESALQ
-    const coffeeBase = 2233.34; 
-    const coffeeVar = -0.87; // Variação real
+    // Café Arábica (Saca 60kg) - Média ~ R$ 1000 a R$ 1300
+    const coffeeBase = 1250.00;
+    const coffeeVar = (Math.random() * 2) - 1; // -1% a +1%
     
-    // Soja (Saca 60kg) - Base Paranaguá (~R$ 135 - R$ 145)
-    const soyBase = 138.50;
+    // Soja (Saca 60kg) - Média ~ R$ 120 a R$ 140
+    const soyBase = 128.50;
     const soyVar = (Math.random() * 1.5) - 0.5;
 
-    // Milho (Saca 60kg) - Base B3 (~R$ 60 - R$ 70)
-    const cornBase = 68.90;
+    // Milho (Saca 60kg) - Média ~ R$ 55 a R$ 65
+    const cornBase = 58.90;
     const cornVar = (Math.random() * 2) - 1.2;
 
     return [
@@ -59,7 +61,7 @@ export const getMarketQuotes = async () => {
       {
         id: 'cafe',
         name: 'Café Arábica',
-        price: coffeeBase,
+        price: coffeeBase + (coffeeBase * (coffeeVar / 100)),
         variation: coffeeVar,
         trend: coffeeVar >= 0 ? 'up' : 'down',
         unit: 'sc 60kg',
@@ -69,7 +71,7 @@ export const getMarketQuotes = async () => {
       {
         id: 'soja',
         name: 'Soja',
-        price: soyBase,
+        price: soyBase + (soyBase * (soyVar / 100)),
         variation: soyVar,
         trend: soyVar >= 0 ? 'up' : 'down',
         unit: 'sc 60kg',
@@ -79,7 +81,7 @@ export const getMarketQuotes = async () => {
       {
         id: 'milho',
         name: 'Milho',
-        price: cornBase,
+        price: cornBase + (cornBase * (cornVar / 100)),
         variation: cornVar,
         trend: cornVar >= 0 ? 'up' : 'down',
         unit: 'sc 60kg',
@@ -92,11 +94,4 @@ export const getMarketQuotes = async () => {
     console.error("Erro ao buscar cotações", error);
     return [];
   }
-};
-
-export const getCurrentPrice = async (cropType: string): Promise<number> => {
-    const quotes = await getMarketQuotes();
-    // @ts-ignore
-    const quote = quotes.find(q => q.id === cropType.toLowerCase() || q.name.toLowerCase().includes(cropType.toLowerCase()));
-    return quote ? quote.price : 0;
 };

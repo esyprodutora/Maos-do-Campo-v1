@@ -1,64 +1,15 @@
 // @ts-ignore
 import { GoogleGenAI, Type } from "@google/genai";
 import { CropData, CropType, SoilType } from "../types";
-import { GEMINI_API_KEY } from "../config/env";
 
-// Lazy initialization
+// Lazy initialization to prevent crashes on initial load if env is missing
 const getAiClient = () => {
-  if (!GEMINI_API_KEY) {
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) {
     console.warn("API Key não encontrada. Verifique as variáveis de ambiente.");
     throw new Error("Chave de API não configurada");
   }
-  return new GoogleGenAI({ apiKey: GEMINI_API_KEY });
-};
-
-// Fallback robusto
-const getFallbackData = (name: string, type: string, areaHa: number): Partial<CropData> => {
-  const today = new Date();
-  const harvestDate = new Date(today);
-  harvestDate.setDate(today.getDate() + 120); 
-
-  const baseCostPerHa = 3500; 
-  const isSeed = ['soja', 'milho', 'arroz', 'trigo', 'feijao', 'algodao'].includes(type);
-  
-  return {
-    estimatedCost: areaHa * baseCostPerHa,
-    estimatedHarvestDate: harvestDate.toISOString().split('T')[0],
-    aiAdvice: `Para ${type}, o foco inicial é a correção de solo. Garanta o calcário antes do plantio para maximizar a produtividade.`,
-    materials: [
-      {
-        name: isSeed ? "Sementes Certificadas" : "Mudas Selecionadas",
-        quantity: areaHa * (isSeed ? 60 : 3500),
-        unit: isSeed ? "kg" : "und",
-        unitPriceEstimate: isSeed ? 25.00 : 1.50,
-        category: "semente"
-      },
-      {
-        name: "NPK 04-14-08",
-        quantity: areaHa * 4, 
-        unit: "sc 50kg",
-        unitPriceEstimate: 180.00,
-        category: "fertilizante"
-      },
-      {
-        name: "Defensivo Geral",
-        quantity: areaHa * 2,
-        unit: "litros",
-        unitPriceEstimate: 85.00,
-        category: "defensivo"
-      }
-    ],
-    timeline: [
-      {
-        id: "1",
-        title: "Preparo do Solo",
-        description: "Amostragem e correção.",
-        status: "pendente",
-        dateEstimate: new Date().toLocaleDateString('pt-BR'),
-        tasks: [{ id: "t1", text: "Análise de solo", done: false }]
-      }
-    ]
-  };
+  return new GoogleGenAI({ apiKey });
 };
 
 export const generateCropPlan = async (
@@ -70,19 +21,22 @@ export const generateCropPlan = async (
   spacing: string
 ): Promise<Partial<CropData>> => {
   
-  const isSeeding = ['soja', 'milho', 'algodao', 'arroz', 'feijao', 'trigo'].includes(type);
-  const materialType = isSeeding ? 'Sementes' : 'Mudas';
-
   const prompt = `
-    Atue como o Tonico, um consultor agronômico sênior e direto.
-    Dados: Cultura ${type} (${materialType}), Área ${areaHa}ha, Solo ${soilType}, Meta ${productivityGoal}, Espaçamento ${spacing}.
+    Atue como um engenheiro agrônomo especialista. Vou fornecer dados de uma nova lavoura e preciso de um planejamento completo.
+    
+    Dados:
+    - Cultura: ${type}
+    - Área: ${areaHa} hectares
+    - Tipo de Solo: ${soilType}
+    - Meta de Produtividade: ${productivityGoal}
+    - Espaçamento: ${spacing}
 
-    Gere um JSON técnico e preciso com:
-    1. estimatedCost (number)
-    2. estimatedHarvestDate (YYYY-MM-DD)
-    3. aiAdvice (string - Curto, direto e técnico. Máximo 2 frases.)
-    4. materials (array): {name, quantity, unit, unitPriceEstimate, category}
-    5. timeline (array): {id, title, description, status='pendente', dateEstimate, tasks:[{id, text, done=false}]}
+    Gere um plano técnico contendo:
+    1. Uma lista de materiais estimados (insumos) para o ciclo completo (NPK, Calcário, Sementes, Defensivos), com preços médios de mercado no Brasil (em R$).
+    2. Um custo total estimado da lavoura.
+    3. Uma data prevista de colheita (considerando plantio hoje).
+    4. Um cronograma (timeline) com 5 a 7 etapas principais do ciclo, com checklists de tarefas.
+    5. Um conselho técnico resumido (aiAdvice) sobre cuidados específicos para esse cenário.
   `;
 
   try {
@@ -95,9 +49,9 @@ export const generateCropPlan = async (
         responseSchema: {
           type: Type.OBJECT,
           properties: {
-            estimatedCost: { type: Type.NUMBER },
-            estimatedHarvestDate: { type: Type.STRING },
-            aiAdvice: { type: Type.STRING },
+            estimatedCost: { type: Type.NUMBER, description: "Custo total estimado em Reais" },
+            estimatedHarvestDate: { type: Type.STRING, description: "Data formato YYYY-MM-DD" },
+            aiAdvice: { type: Type.STRING, description: "Conselho técnico curto e prático" },
             materials: {
               type: Type.ARRAY,
               items: {
@@ -105,7 +59,7 @@ export const generateCropPlan = async (
                 properties: {
                   name: { type: Type.STRING },
                   quantity: { type: Type.NUMBER },
-                  unit: { type: Type.STRING },
+                  unit: { type: Type.STRING, description: "kg, sc, litros, ton" },
                   unitPriceEstimate: { type: Type.NUMBER },
                   category: { type: Type.STRING, enum: ['fertilizante', 'semente', 'defensivo', 'corretivo', 'outros'] }
                 }
@@ -119,7 +73,7 @@ export const generateCropPlan = async (
                   id: { type: Type.STRING },
                   title: { type: Type.STRING },
                   description: { type: Type.STRING },
-                  status: { type: Type.STRING, enum: ['pendente'] },
+                  status: { type: Type.STRING, enum: ['pendente'] }, // Start all as pending
                   dateEstimate: { type: Type.STRING },
                   tasks: {
                     type: Type.ARRAY,
@@ -142,13 +96,19 @@ export const generateCropPlan = async (
 
     if (response.text) {
       const data = JSON.parse(response.text);
-      if (!data.materials?.length || !data.timeline?.length) throw new Error("Dados incompletos");
       return data;
     }
     throw new Error("Falha ao gerar dados");
   } catch (error) {
     console.error("Erro na IA:", error);
-    return getFallbackData(name, type, areaHa);
+    // Fallback básico para não quebrar o app se a API falhar ou chave for inválida
+    return {
+      estimatedCost: areaHa * 5000,
+      estimatedHarvestDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 120).toISOString().split('T')[0],
+      aiAdvice: "Verifique a análise de solo antes de iniciar.",
+      materials: [],
+      timeline: []
+    };
   }
 };
 
@@ -157,24 +117,11 @@ export const getAssistantResponse = async (question: string, context: string): P
         const ai = getAiClient();
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash",
-            contents: `
-              Você é o Tonico, um consultor agronômico sênior e pragmático (90 anos de experiência técnica).
-              
-              **SUAS REGRAS DE OURO:**
-              1. **SEM ENROLAÇÃO:** Responda a pergunta na primeira frase. Se pedirem preço, dê o preço (ou uma estimativa baseada no mercado atual se não tiver dados em tempo real). Se pedirem técnica, dê a técnica.
-              2. **NADA DE "MEU FILHO":** Não use vocativos carinhosos ou caipiras. Fale como um profissional que respeita o tempo do produtor.
-              3. **OBJETIVIDADE:** Use listas (bullets) e negrito para facilitar a leitura rápida no celular.
-              4. **DADOS:** Se não tiver o dado exato em tempo real (como cotação do minuto), dê a média de mercado mais recente que você conhece (Ex: "A média desta semana está em torno de R$ 1.300,00/saca...").
-              
-              **PERSONALIDADE:** Sábio, Direto, Técnico e Resolutivo.
-              
-              Contexto da lavoura: ${context}. 
-              Pergunta: ${question}. 
-            `,
+            contents: `Contexto da lavoura: ${context}. \nPergunta do produtor: ${question}. \nResponda de forma curta, prática e amigável, como um técnico agrícola.`,
         });
-        return response.text || "Erro ao processar resposta.";
+        return response.text || "Desculpe, não consegui processar sua pergunta no momento.";
     } catch (e) {
         console.error(e);
-        return "Sem conexão. Verifique sua internet.";
+        return "Erro de conexão com o assistente ou chave de API inválida.";
     }
 }
