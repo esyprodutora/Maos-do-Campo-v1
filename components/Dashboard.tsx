@@ -1,6 +1,7 @@
+
 import React from 'react';
 import { CropData } from '../types';
-import { TrendingUp, Droplets, Sun, Wind, ChevronRight, DollarSign, Calendar, Sprout, ArrowRight, Moon } from 'lucide-react';
+import { TrendingUp, Droplets, Sun, Wind, DollarSign, Calendar, Sprout, ArrowRight, Moon, AlertTriangle, MapPin as MapPinIcon } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface DashboardProps {
@@ -200,7 +201,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNew
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {crops.map((crop) => {
                 const styles = getCropStyle(crop.type);
-                const percentDone = Math.random() * 60 + 20; // Mock progress for UI demo
+                const currentStage = crop.timeline?.find(s => s.status === 'em_andamento') || crop.timeline?.find(s => s.status === 'pendente');
+                const stageIndex = crop.timeline?.findIndex(s => s.id === currentStage?.id) || 0;
+                const totalStages = crop.timeline?.length || 1;
+                const progress = ((stageIndex) / totalStages) * 100;
                 
                 return (
                   <div 
@@ -225,14 +229,22 @@ export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNew
                     </div>
 
                     <div className="pl-3 mt-4">
-                      <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1 font-medium">
-                        <span>Progresso do Ciclo</span>
-                        <span>{Math.round(percentDone)}%</span>
+                      <div className="flex justify-between items-center mb-2">
+                         <div className="flex items-center gap-2">
+                            {currentStage ? (
+                                <div className="text-xs font-bold text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-slate-700 px-2 py-1 rounded-md max-w-[150px] truncate">
+                                    {currentStage.title}
+                                </div>
+                            ) : (
+                                <div className="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-md">Concluído</div>
+                            )}
+                         </div>
+                         <span className="text-xs font-bold text-gray-400">{Math.round(progress)}%</span>
                       </div>
                       <div className="w-full bg-gray-100 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
                         <div 
                           className={`h-full rounded-full ${styles.bg}`} 
-                          style={{ width: `${percentDone}%` }}
+                          style={{ width: `${progress}%` }}
                         ></div>
                       </div>
                       <div className="mt-4 pt-4 border-t border-gray-50 dark:border-slate-700 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
@@ -316,11 +328,3 @@ export const Dashboard: React.FC<DashboardProps> = ({ crops, onSelectCrop, onNew
     </div>
   );
 };
-
-// Icon Helper
-const MapPinIcon = ({size}: {size: number}) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
-    <circle cx="12" cy="10" r="3"/>
-  </svg>
-);

@@ -11,7 +11,7 @@ import {
   TrendingUp, TrendingDown, Warehouse, AlertCircle, 
   ChevronDown, ChevronUp, Leaf, Truck, CheckCircle2,
   Sprout, Wallet, MessageCircle, FileText, X, Save, Clock,
-  PlayCircle, StopCircle
+  PlayCircle, StopCircle, Hammer
 } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
@@ -48,9 +48,11 @@ export const CropDetails = ({ crop, onBack, onUpdateCrop, onDeleteCrop }: CropDe
     loadMarket();
   }, [crop.type]);
 
-  // --- LÓGICA DO CRONOGRAMA (Simplificada) ---
+  // --- LÓGICA DO CRONOGRAMA ---
   const [expandedStageId, setExpandedStageId] = useState<string | null>(crop.timeline?.[0]?.id || null);
-  
+  // Controla qual aba interna do card está ativa (tasks ou resources)
+  const [stageTab, setStageTab] = useState<'tasks' | 'resources'>('tasks');
+
   // Controle do Modal de Edição (Pop-up)
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalStageId, setModalStageId] = useState<string | null>(null);
@@ -254,89 +256,29 @@ export const CropDetails = ({ crop, onBack, onUpdateCrop, onDeleteCrop }: CropDe
 
   // --- COMPONENTES VISUAIS AUXILIARES ---
 
-  const ResourceCard = ({ resource, onDelete, onEdit }: { resource: StageResource, onDelete: () => void, onEdit: () => void }) => {
-      const isMachine = resource.type === 'maquinario';
-      const isLabor = resource.type === 'mao_de_obra';
-      const isInput = resource.type === 'insumo';
-
-      let bgColor = "bg-white";
-      let borderColor = "border-gray-200";
-      let iconColor = "text-gray-500";
-      let iconBg = "bg-gray-100";
-      let Icon = Package;
-
-      if(isInput) {
-          borderColor = "border-green-200";
-          iconColor = "text-green-600";
-          iconBg = "bg-green-100";
-          Icon = Beaker;
-      } else if (isMachine) {
-          borderColor = "border-orange-200";
-          iconColor = "text-orange-600";
-          iconBg = "bg-orange-100";
-          Icon = Tractor;
-      } else if (isLabor) {
-          borderColor = "border-blue-200";
-          iconColor = "text-blue-600";
-          iconBg = "bg-blue-100";
-          Icon = User;
-      }
-
-      return (
-          <div className={`relative flex items-center p-4 rounded-2xl border-2 ${borderColor} ${bgColor} shadow-sm mb-3`}>
-              <div className={`w-12 h-12 rounded-xl ${iconBg} flex items-center justify-center mr-4 shrink-0`}>
-                  <Icon size={24} className={iconColor} />
-              </div>
-              <div className="flex-1">
-                  <h4 className="font-bold text-gray-800 dark:text-white text-base">{resource.name}</h4>
-                  <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
-                      <span className="font-medium bg-gray-100 dark:bg-slate-700 px-2 py-0.5 rounded text-gray-700 dark:text-gray-300">
-                          {resource.quantity} {resource.unit}
-                      </span>
-                      <span>x</span>
-                      <span>{resource.unitCost.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</span>
-                  </div>
-              </div>
-              <div className="text-right">
-                  <p className="font-extrabold text-gray-900 dark:text-white text-lg">
-                      {resource.totalCost.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}
-                  </p>
-                  <div className="flex justify-end gap-2 mt-2">
-                      <button onClick={onEdit} className="p-2 bg-gray-100 dark:bg-slate-700 rounded-lg hover:bg-gray-200 text-blue-600">
-                          <Edit2 size={16} />
-                      </button>
-                      <button onClick={onDelete} className="p-2 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 text-red-500">
-                          <Trash2 size={16} />
-                      </button>
-                  </div>
-              </div>
-          </div>
-      );
-  };
-
   const renderTimeline = () => (
     <div className="space-y-8 animate-slide-up pb-24">
       {/* Modal de Formulário (Overlay) */}
       {isModalOpen && (
           <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-              <div className="bg-white dark:bg-slate-800 w-full max-w-lg rounded-3xl p-6 shadow-2xl animate-slide-up">
+              <div className="bg-white dark:bg-slate-800 w-full max-w-lg rounded-3xl p-6 shadow-2xl animate-slide-up border border-gray-100 dark:border-slate-700">
                   <div className="flex justify-between items-center mb-6 border-b border-gray-100 dark:border-slate-700 pb-4">
                       <h3 className="text-xl font-extrabold text-gray-800 dark:text-white flex items-center gap-2">
                           {editingResourceId ? <Edit2 className="text-agro-green"/> : <Plus className="text-agro-green"/>}
                           {editingResourceId ? 'Editar Item' : 'Adicionar Novo Item'}
                       </h3>
-                      <button onClick={() => setIsModalOpen(false)} className="p-2 bg-gray-100 dark:bg-slate-700 rounded-full text-gray-500">
+                      <button onClick={() => setIsModalOpen(false)} className="p-3 bg-gray-100 dark:bg-slate-700 rounded-full text-gray-500 hover:bg-gray-200">
                           <X size={24} />
                       </button>
                   </div>
 
-                  <div className="space-y-5">
+                  <div className="space-y-6">
                       <div>
-                          <label className="block text-sm font-bold text-gray-500 mb-1">Nome do Item</label>
+                          <label className="block text-sm font-bold text-gray-500 mb-2">O que você vai usar?</label>
                           <input 
                               autoFocus
                               className="w-full p-4 text-lg bg-gray-50 dark:bg-slate-900 border-2 border-gray-200 dark:border-slate-700 rounded-2xl focus:border-agro-green outline-none font-bold text-gray-800 dark:text-white placeholder:font-normal"
-                              placeholder="Ex: Adubo NPK"
+                              placeholder="Ex: Adubo, Trator, Diária..."
                               value={resourceForm.name}
                               onChange={e => setResourceForm({...resourceForm, name: e.target.value})}
                           />
@@ -344,7 +286,7 @@ export const CropDetails = ({ crop, onBack, onUpdateCrop, onDeleteCrop }: CropDe
 
                       <div className="grid grid-cols-2 gap-4">
                           <div>
-                              <label className="block text-sm font-bold text-gray-500 mb-1">Quantidade</label>
+                              <label className="block text-sm font-bold text-gray-500 mb-2">Quanto?</label>
                               <input 
                                   type="number"
                                   className="w-full p-4 text-lg bg-gray-50 dark:bg-slate-900 border-2 border-gray-200 dark:border-slate-700 rounded-2xl focus:border-agro-green outline-none font-bold text-gray-800 dark:text-white"
@@ -354,7 +296,7 @@ export const CropDetails = ({ crop, onBack, onUpdateCrop, onDeleteCrop }: CropDe
                               />
                           </div>
                           <div>
-                              <label className="block text-sm font-bold text-gray-500 mb-1">Unidade</label>
+                              <label className="block text-sm font-bold text-gray-500 mb-2">Unidade</label>
                               <input 
                                   className="w-full p-4 text-lg bg-gray-50 dark:bg-slate-900 border-2 border-gray-200 dark:border-slate-700 rounded-2xl focus:border-agro-green outline-none font-bold text-gray-800 dark:text-white"
                                   placeholder="kg, lt, un"
@@ -365,7 +307,7 @@ export const CropDetails = ({ crop, onBack, onUpdateCrop, onDeleteCrop }: CropDe
                       </div>
 
                       <div>
-                          <label className="block text-sm font-bold text-gray-500 mb-1">Custo Unitário (R$)</label>
+                          <label className="block text-sm font-bold text-gray-500 mb-2">Preço por Unidade (R$)</label>
                           <input 
                               type="number"
                               className="w-full p-4 text-lg bg-gray-50 dark:bg-slate-900 border-2 border-gray-200 dark:border-slate-700 rounded-2xl focus:border-agro-green outline-none font-bold text-gray-800 dark:text-white"
@@ -375,193 +317,246 @@ export const CropDetails = ({ crop, onBack, onUpdateCrop, onDeleteCrop }: CropDe
                           />
                       </div>
 
-                      <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-2xl flex justify-between items-center">
-                          <span className="font-bold text-green-800 dark:text-green-300">Custo Total Previsto:</span>
-                          <span className="text-2xl font-black text-green-600 dark:text-green-400">
+                      <div className="bg-green-50 dark:bg-green-900/20 p-5 rounded-2xl flex justify-between items-center border border-green-100 dark:border-green-900/30">
+                          <span className="font-bold text-green-800 dark:text-green-300">Total Previsto:</span>
+                          <span className="text-3xl font-black text-green-600 dark:text-green-400">
                               {((Number(resourceForm.quantity) || 0) * (Number(resourceForm.unitCost) || 0)).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}
                           </span>
                       </div>
 
                       <button 
                           onClick={handleSaveResource}
-                          className="w-full py-4 bg-agro-green text-white font-bold text-lg rounded-2xl shadow-lg shadow-green-600/30 active:scale-95 transition-transform"
+                          className="w-full py-4 bg-agro-green text-white font-bold text-lg rounded-2xl shadow-lg shadow-green-600/30 active:scale-95 transition-transform hover:bg-green-700"
                       >
-                          Salvar Item
+                          Confirmar e Salvar
                       </button>
                   </div>
               </div>
           </div>
       )}
 
-      {/* Lista de Etapas */}
-      <div className="relative border-l-4 border-gray-200 dark:border-slate-700 ml-4 md:ml-8 space-y-12">
+      {/* Título da Seção */}
+      <div className="mb-4">
+          <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-1">Acompanhamento da Safra</h2>
+          <p className="text-gray-500 text-sm">Toque nas etapas abaixo para ver detalhes.</p>
+      </div>
+
+      {/* Lista de Cards de Etapas */}
+      <div className="space-y-6">
         {crop.timeline?.map((stage, idx) => {
           const isExpanded = expandedStageId === stage.id;
           const stageCost = stage.resources?.reduce((a,b) => a + b.totalCost, 0) || 0;
           
           return (
-            <div key={stage.id} className="relative pl-8 md:pl-12">
-              {/* Círculo da Linha do Tempo */}
-              <div className={`
-                absolute -left-[18px] md:-left-[22px] top-0 w-9 h-9 md:w-11 md:h-11 rounded-full flex items-center justify-center border-4 border-gray-50 dark:border-slate-900 z-10 shadow-md transition-colors cursor-pointer
-                ${stage.status === 'concluido' ? 'bg-agro-green text-white' : 'bg-white dark:bg-slate-800 text-gray-400'}
-              `} onClick={() => setExpandedStageId(isExpanded ? null : stage.id)}>
-                 {stage.status === 'concluido' ? <Check size={20}/> : <span className="font-bold text-sm">{idx + 1}</span>}
-              </div>
-
-              {/* Cartão da Etapa */}
-              <div className={`
-                bg-white dark:bg-slate-800 rounded-3xl border transition-all duration-300 overflow-hidden
-                ${isExpanded ? 'border-agro-green ring-1 ring-green-500/30 shadow-xl' : 'border-gray-200 dark:border-slate-700 shadow-sm'}
-              `}>
-                 {/* Cabeçalho do Cartão */}
+            <div 
+                key={stage.id} 
+                className={`
+                    relative bg-white dark:bg-slate-800 rounded-3xl transition-all duration-300 overflow-hidden
+                    ${isExpanded ? 'shadow-2xl ring-2 ring-agro-green scale-[1.01]' : 'shadow-md border border-gray-200 dark:border-slate-700'}
+                `}
+            >
+                 {/* Cabeçalho do Card (Sempre Visível) */}
                  <div 
                    onClick={() => setExpandedStageId(isExpanded ? null : stage.id)}
                    className="p-6 cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors"
                  >
-                    <div className="flex justify-between items-start mb-2">
-                        <span className="text-xs font-black uppercase tracking-widest text-gray-400">Fase {idx + 1}</span>
+                    <div className="flex justify-between items-start mb-3">
+                        {/* Badges de Status e Número */}
                         <div className="flex items-center gap-2">
-                            {stageCost > 0 && (
-                                <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
-                                    <DollarSign size={12}/> {stageCost.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}
-                                </span>
+                            <span className={`
+                                w-8 h-8 rounded-full flex items-center justify-center font-black text-sm
+                                ${stage.status === 'concluido' ? 'bg-agro-green text-white' : 'bg-gray-200 dark:bg-slate-700 text-gray-500'}
+                            `}>
+                                {stage.status === 'concluido' ? <Check size={16}/> : idx + 1}
+                            </span>
+                            {stage.status === 'concluido' && (
+                                <span className="bg-green-100 text-green-700 px-2 py-1 rounded-lg text-xs font-bold uppercase">Concluída</span>
                             )}
-                            <ChevronDown size={20} className={`text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}/>
+                        </div>
+
+                        {/* Valor da Etapa (Destaque) */}
+                        <div className="flex flex-col items-end">
+                            <span className="text-[10px] uppercase font-bold text-gray-400">Custo Previsto</span>
+                            <span className="text-lg font-black text-agro-green">
+                                {stageCost.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}
+                            </span>
                         </div>
                     </div>
-                    <h3 className="text-xl md:text-2xl font-extrabold text-gray-900 dark:text-white leading-tight">{stage.title}</h3>
-                    <div className="flex items-center gap-2 mt-2 text-gray-500 text-sm font-medium">
-                        <Calendar size={16} />
-                        <span>Previsão: {stage.dateEstimate}</span>
+
+                    <div className="flex justify-between items-end">
+                        <div className="flex-1 pr-4">
+                            <h3 className="text-xl font-extrabold text-gray-900 dark:text-white leading-tight mb-1">{stage.title}</h3>
+                            <div className="flex items-center gap-2 text-gray-500 text-sm font-medium">
+                                <Calendar size={14} />
+                                <span>Previsão: {stage.dateEstimate}</span>
+                            </div>
+                        </div>
+                        <div className={`p-2 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
+                            <ChevronDown size={20} />
+                        </div>
                     </div>
                  </div>
 
-                 {/* Conteúdo Expandido */}
+                 {/* Conteúdo Expandido (Abas) */}
                  {isExpanded && (
-                   <div className="border-t border-gray-100 dark:border-slate-700 animate-fade-in">
+                   <div className="border-t border-gray-100 dark:border-slate-700 animate-fade-in bg-gray-50 dark:bg-slate-900/50">
                       
-                      {/* Seção 1: O que fazer? (Tarefas) */}
-                      <div className="p-6 bg-blue-50/50 dark:bg-slate-900/30">
-                          <h4 className="text-sm font-bold text-blue-900 dark:text-blue-300 uppercase tracking-wide mb-4 flex items-center gap-2">
-                              <ListTodo size={18}/> Lista de Tarefas
-                          </h4>
-                          <div className="space-y-3">
-                             {stage.tasks?.map(task => (
-                               <div 
-                                 key={task.id} 
-                                 onClick={() => toggleTask(stage.id, task.id)} 
-                                 className={`
-                                    flex items-center gap-4 p-4 rounded-2xl cursor-pointer border-2 transition-all
-                                    ${task.done 
-                                        ? 'bg-blue-100 border-blue-200' 
-                                        : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 hover:border-blue-300'}
-                                 `}
-                               >
-                                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${task.done ? 'bg-blue-500 border-blue-500 text-white' : 'border-gray-300'}`}>
-                                     {task.done && <Check size={14}/>}
-                                  </div>
-                                  <span className={`font-medium ${task.done ? 'text-blue-800 line-through' : 'text-gray-700 dark:text-gray-200'}`}>{task.text}</span>
-                               </div>
-                             ))}
+                      {/* Navegação Interna do Card (Abas Grandes) */}
+                      <div className="flex p-2 gap-2 bg-white dark:bg-slate-800 mx-4 mt-4 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700">
+                          <button 
+                            onClick={() => setStageTab('tasks')}
+                            className={`flex-1 py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-colors ${stageTab === 'tasks' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' : 'text-gray-500 hover:bg-gray-50'}`}
+                          >
+                              <ListTodo size={18} /> O QUE FAZER
+                          </button>
+                          <button 
+                            onClick={() => setStageTab('resources')}
+                            className={`flex-1 py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-colors ${stageTab === 'resources' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' : 'text-gray-500 hover:bg-gray-50'}`}
+                          >
+                              <Wallet size={18} /> O QUE GASTAR
+                          </button>
+                      </div>
+
+                      {/* Conteúdo da Aba: TAREFAS */}
+                      {stageTab === 'tasks' && (
+                          <div className="p-6">
+                              <p className="text-gray-500 text-sm mb-4 italic">"{stage.description}"</p>
+                              <div className="space-y-3">
+                                  {stage.tasks?.map(task => (
+                                      <div 
+                                          key={task.id} 
+                                          onClick={() => toggleTask(stage.id, task.id)} 
+                                          className={`
+                                              flex items-center gap-4 p-4 rounded-2xl cursor-pointer border-2 transition-all
+                                              ${task.done 
+                                                  ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/10 dark:border-blue-900/30' 
+                                                  : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 hover:border-blue-300'}
+                                          `}
+                                      >
+                                          <div className={`
+                                              shrink-0 w-8 h-8 rounded-full border-2 flex items-center justify-center transition-colors
+                                              ${task.done ? 'bg-blue-500 border-blue-500 text-white' : 'border-gray-300 bg-white dark:bg-slate-700 dark:border-slate-600'}
+                                          `}>
+                                              {task.done && <Check size={16}/>}
+                                          </div>
+                                          <span className={`font-medium text-lg leading-snug ${task.done ? 'text-blue-800 dark:text-blue-300 line-through opacity-70' : 'text-gray-800 dark:text-gray-200'}`}>
+                                              {task.text}
+                                          </span>
+                                      </div>
+                                  ))}
+                              </div>
+                              
+                              {/* Botão Concluir Etapa (Fica em Tarefas pois é uma ação de fluxo) */}
+                              {stage.status !== 'concluido' && (
+                                <div className="mt-8 pt-4 border-t border-gray-200 dark:border-slate-700">
+                                    <button 
+                                        onClick={() => handleCompleteStage(stage)}
+                                        className="w-full flex flex-col items-center justify-center bg-gray-900 dark:bg-white text-white dark:text-gray-900 py-4 rounded-2xl font-bold shadow-lg active:scale-95 transition-transform"
+                                    >
+                                        <div className="flex items-center gap-2 text-lg">
+                                            <CheckCircle2 size={24} className="text-green-400 dark:text-green-600" />
+                                            Finalizar Esta Etapa
+                                        </div>
+                                        <span className="text-xs opacity-60 font-normal mt-1">Lança os custos no financeiro automaticamente</span>
+                                    </button>
+                                </div>
+                              )}
                           </div>
-                      </div>
+                      )}
 
-                      {/* Seção 2: O que vou gastar? (Recursos) */}
-                      <div className="p-6">
-                        <h4 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wide mb-6 flex items-center gap-2">
-                              <Wallet size={18}/> Planejamento de Recursos
-                        </h4>
+                      {/* Conteúdo da Aba: CUSTOS (RECURSOS) */}
+                      {stageTab === 'resources' && (
+                          <div className="p-6">
+                              {/* Grid de Botões de Adição */}
+                              <div className="grid grid-cols-3 gap-3 mb-8">
+                                  <button 
+                                      onClick={() => openResourceModal(stage.id, 'insumo')}
+                                      className="flex flex-col items-center justify-center p-4 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border-b-4 border-green-500 active:border-b-0 active:translate-y-1 transition-all"
+                                  >
+                                      <div className="bg-green-100 p-2 rounded-full mb-2"><Beaker size={24} className="text-green-600"/></div>
+                                      <span className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase">Produto</span>
+                                  </button>
+                                  <button 
+                                      onClick={() => openResourceModal(stage.id, 'maquinario')}
+                                      className="flex flex-col items-center justify-center p-4 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border-b-4 border-orange-500 active:border-b-0 active:translate-y-1 transition-all"
+                                  >
+                                      <div className="bg-orange-100 p-2 rounded-full mb-2"><Tractor size={24} className="text-orange-600"/></div>
+                                      <span className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase">Máquina</span>
+                                  </button>
+                                  <button 
+                                      onClick={() => openResourceModal(stage.id, 'mao_de_obra')}
+                                      className="flex flex-col items-center justify-center p-4 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border-b-4 border-blue-500 active:border-b-0 active:translate-y-1 transition-all"
+                                  >
+                                      <div className="bg-blue-100 p-2 rounded-full mb-2"><User size={24} className="text-blue-600"/></div>
+                                      <span className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase">Pessoa</span>
+                                  </button>
+                              </div>
 
-                        {/* Botões Grandes de Adição */}
-                        <div className="grid grid-cols-3 gap-3 mb-8">
-                            <button 
-                                onClick={() => openResourceModal(stage.id, 'insumo')}
-                                className="flex flex-col items-center justify-center p-4 bg-green-50 dark:bg-green-900/20 rounded-2xl border-2 border-transparent hover:border-green-500 transition-all active:scale-95 group"
-                            >
-                                <div className="bg-white dark:bg-slate-800 p-2 rounded-full mb-2 shadow-sm group-hover:scale-110 transition-transform">
-                                    <Beaker size={20} className="text-green-600"/>
-                                </div>
-                                <span className="text-xs font-bold text-green-700 dark:text-green-300 text-center leading-tight">Adicionar<br/>Produto</span>
-                            </button>
+                              {/* Lista de Itens Adicionados */}
+                              <div className="space-y-4">
+                                  {stage.resources?.length === 0 && (
+                                      <div className="text-center py-10 bg-white dark:bg-slate-800 rounded-2xl border-2 border-dashed border-gray-200 dark:border-slate-700">
+                                          <p className="text-gray-400 font-medium">Nenhum custo lançado.</p>
+                                          <p className="text-xs text-gray-400 mt-1">Toque nos botões acima para adicionar.</p>
+                                      </div>
+                                  )}
 
-                            <button 
-                                onClick={() => openResourceModal(stage.id, 'maquinario')}
-                                className="flex flex-col items-center justify-center p-4 bg-orange-50 dark:bg-orange-900/20 rounded-2xl border-2 border-transparent hover:border-orange-500 transition-all active:scale-95 group"
-                            >
-                                <div className="bg-white dark:bg-slate-800 p-2 rounded-full mb-2 shadow-sm group-hover:scale-110 transition-transform">
-                                    <Tractor size={20} className="text-orange-600"/>
-                                </div>
-                                <span className="text-xs font-bold text-orange-700 dark:text-orange-300 text-center leading-tight">Adicionar<br/>Máquina</span>
-                            </button>
+                                  {/* Renderização em Lista Estilizada */}
+                                  {stage.resources?.map(res => {
+                                      let iconColor = "text-gray-500";
+                                      let bgColor = "bg-gray-50";
+                                      let Icon = Package;
+                                      
+                                      if(res.type === 'insumo') { iconColor = "text-green-600"; bgColor = "bg-green-50 dark:bg-green-900/10"; Icon = Beaker; }
+                                      if(res.type === 'maquinario') { iconColor = "text-orange-600"; bgColor = "bg-orange-50 dark:bg-orange-900/10"; Icon = Tractor; }
+                                      if(res.type === 'mao_de_obra') { iconColor = "text-blue-600"; bgColor = "bg-blue-50 dark:bg-blue-900/10"; Icon = User; }
 
-                            <button 
-                                onClick={() => openResourceModal(stage.id, 'mao_de_obra')}
-                                className="flex flex-col items-center justify-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-2xl border-2 border-transparent hover:border-blue-500 transition-all active:scale-95 group"
-                            >
-                                <div className="bg-white dark:bg-slate-800 p-2 rounded-full mb-2 shadow-sm group-hover:scale-110 transition-transform">
-                                    <User size={20} className="text-blue-600"/>
-                                </div>
-                                <span className="text-xs font-bold text-blue-700 dark:text-blue-300 text-center leading-tight">Adicionar<br/>Pessoa</span>
-                            </button>
-                        </div>
+                                      return (
+                                          <div key={res.id} className="flex flex-col md:flex-row md:items-center bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700">
+                                              {/* Ícone e Nome */}
+                                              <div className="flex items-center gap-4 flex-1 mb-3 md:mb-0">
+                                                  <div className={`w-12 h-12 rounded-xl ${bgColor} flex items-center justify-center shrink-0`}>
+                                                      <Icon size={24} className={iconColor} />
+                                                  </div>
+                                                  <div>
+                                                      <h4 className="font-bold text-gray-900 dark:text-white text-base">{res.name}</h4>
+                                                      <p className="text-xs text-gray-500 font-medium flex items-center gap-1">
+                                                          <span className="bg-gray-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">{res.quantity} {res.unit}</span>
+                                                          <span>x</span>
+                                                          <span>{res.unitCost.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</span>
+                                                      </p>
+                                                  </div>
+                                              </div>
 
-                        {/* Listagem de Itens (Cards Grandes) */}
-                        <div>
-                            {stage.resources?.length === 0 && (
-                                <div className="text-center py-8 text-gray-400 bg-gray-50 dark:bg-slate-900 rounded-2xl border-2 border-dashed border-gray-200 dark:border-slate-700">
-                                    <p>Nenhum item adicionado nesta etapa ainda.</p>
-                                </div>
-                            )}
-                            
-                            {/* Filtra e agrupa visualmente */}
-                            {stage.resources?.filter(r => r.type === 'insumo').length > 0 && (
-                                <div className="mb-6">
-                                    <h5 className="text-xs font-bold text-green-600 mb-2 pl-1">PRODUTOS & INSUMOS</h5>
-                                    {stage.resources.filter(r => r.type === 'insumo').map(res => (
-                                        <ResourceCard key={res.id} resource={res} onDelete={() => handleDeleteResource(stage.id, res.id)} onEdit={() => openResourceModal(stage.id, res.type, res)} />
-                                    ))}
-                                </div>
-                            )}
-
-                            {stage.resources?.filter(r => r.type === 'maquinario').length > 0 && (
-                                <div className="mb-6">
-                                    <h5 className="text-xs font-bold text-orange-600 mb-2 pl-1">MAQUINÁRIO</h5>
-                                    {stage.resources.filter(r => r.type === 'maquinario').map(res => (
-                                        <ResourceCard key={res.id} resource={res} onDelete={() => handleDeleteResource(stage.id, res.id)} onEdit={() => openResourceModal(stage.id, res.type, res)} />
-                                    ))}
-                                </div>
-                            )}
-
-                            {stage.resources?.filter(r => r.type === 'mao_de_obra').length > 0 && (
-                                <div className="mb-6">
-                                    <h5 className="text-xs font-bold text-blue-600 mb-2 pl-1">MÃO DE OBRA</h5>
-                                    {stage.resources.filter(r => r.type === 'mao_de_obra').map(res => (
-                                        <ResourceCard key={res.id} resource={res} onDelete={() => handleDeleteResource(stage.id, res.id)} onEdit={() => openResourceModal(stage.id, res.type, res)} />
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                      </div>
-
-                      {/* Botão de Conclusão */}
-                      {stage.status !== 'concluido' && (
-                          <div className="p-6 bg-gray-50 dark:bg-slate-900/50 border-t border-gray-100 dark:border-slate-700 flex justify-end">
-                              <button 
-                                onClick={() => handleCompleteStage(stage)}
-                                className="flex items-center gap-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-6 py-4 rounded-2xl font-bold shadow-xl active:scale-95 transition-transform"
-                              >
-                                  <CheckCircle2 size={24} className="text-green-400 dark:text-green-600" />
-                                  <div className="text-left leading-tight">
-                                      <span className="block text-sm opacity-80 font-normal">Tudo pronto?</span>
-                                      <span>Concluir Etapa</span>
-                                  </div>
-                              </button>
+                                              {/* Total e Ações */}
+                                              <div className="flex items-center justify-between md:justify-end gap-4 border-t md:border-t-0 border-gray-100 dark:border-slate-700 pt-3 md:pt-0">
+                                                  <span className="text-lg font-black text-gray-800 dark:text-white">
+                                                      {res.totalCost.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}
+                                                  </span>
+                                                  
+                                                  <div className="flex gap-2">
+                                                      <button 
+                                                          onClick={() => openResourceModal(stage.id, res.type, res)}
+                                                          className="p-2.5 bg-gray-100 dark:bg-slate-700 text-blue-600 rounded-xl hover:bg-blue-50 transition-colors"
+                                                      >
+                                                          <Edit2 size={18} />
+                                                      </button>
+                                                      <button 
+                                                          onClick={() => handleDeleteResource(stage.id, res.id)}
+                                                          className="p-2.5 bg-gray-100 dark:bg-slate-700 text-red-500 rounded-xl hover:bg-red-50 transition-colors"
+                                                      >
+                                                          <Trash2 size={18} />
+                                                      </button>
+                                                  </div>
+                                              </div>
+                                          </div>
+                                      );
+                                  })}
+                              </div>
                           </div>
                       )}
                    </div>
                  )}
-              </div>
             </div>
           );
         })}
