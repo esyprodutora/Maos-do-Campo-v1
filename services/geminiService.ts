@@ -22,46 +22,56 @@ export const generateCropPlan = async (
   spacing: string
 ): Promise<Partial<CropData>> => {
   
+  // Prompt de Engenharia Agronômica Avançada
   const prompt = `
-    Atue como um Engenheiro Agrônomo Sênior e Gerente de Fazenda especialista em ${type}.
+    Atue como um Engenheiro Agrônomo Sênior especializado em ${type} no Brasil.
     
-    OBJETIVO:
-    Criar a "ESPINHA DORSAL" operacional de uma lavoura de ${areaHa} ha de ${type}.
-    A sequência deve ser cronológica e lógica, cobrindo do ZERO até o ARMAZENAMENTO.
+    TAREFA CRÍTICA:
+    Gerar um CRONOGRAMA OPERACIONAL COMPLETO E DETALHADO (Passo a Passo) para ${areaHa} hectares.
+    Não resuma. Eu preciso de GRANULARIDADE.
+    
+    O cronograma DEVE conter entre 12 a 20 etapas distintas, cobrindo explicitamente:
+    1. PREPARO: Análise de solo, Calagem, Gessagem, Subsolagem/Gradagem.
+    2. PRÉ-PLANTIO: Dessecação, Tratamento de sementes.
+    3. PLANTIO: A operação de semeadura/plantio em si.
+    4. VEGETATIVO: Adubação de Cobertura 1, Controle de Ervas Daninhas.
+    5. REPRODUTIVO: Fungicida 1, Inseticida 1, Adubação Foliar.
+    6. MATURAÇÃO: Aplicação final ou Dessecação pré-colheita (se aplicável).
+    7. COLHEITA: Operação mecanizada ou manual.
+    8. PÓS-COLHEITA: Transporte interno, Secagem/Beneficiamento, Armazenamento.
 
-    ESTRUTURA DE ETAPAS (Timeline):
-    Gere entre 5 a 8 etapas macro, obrigatoriamente seguindo este fluxo lógico:
-    1. Preparo do Solo (Análise, correção, aragem).
-    2. Plantio/Semeadura (Momento crítico).
-    3. Manejo Vegetativo (Desenvolvimento).
-    4. Manejo Reprodutivo/Sanitário (Florada, enchimento, pragas).
-    5. Colheita (A operação de retirada).
-    6. Pós-Colheita/Beneficiamento (Secagem, limpeza, transporte interno).
-    7. Estoque/Armazenamento (Finalização).
-
-    PARA CADA ETAPA, GERE RECURSOS DETALHADOS (Estimativa em BRL R$):
-    - 'insumo': Sementes, Adubos, Defensivos.
-    - 'maquinario': Tratores, Colheitadeiras, Secadores. (Indique se é 'alugado' ou 'proprio' no nome se relevante).
-    - 'mao_de_obra': Operadores, diaristas.
+    PARA CADA ETAPA, GERE A LISTA DE CUSTOS (RECURSOS) NECESSÁRIOS:
+    Você deve estimar quantidades realistas para ${areaHa} hectares e custos médios em Reais (BRL).
+    Classifique ESTRITAMENTE em:
+    - 'insumo': Sementes, Calcário, Gesso, NPK, Ureia, Herbicidas, Fungicidas.
+    - 'maquinario': Trator (horas), Pulverizador (horas), Colheitadeira (horas), Caminhão (diárias).
+    - 'mao_de_obra': Operador de máquinas (dias), Trabalhador rural (dias), Agrônomo (visitas).
 
     Input:
+    - Cultura: ${type}
     - Área: ${areaHa} ha
     - Solo: ${soilType}
     - Meta: ${productivityGoal}
 
-    SAÍDA JSON:
+    FORMATO JSON OBRIGATÓRIO:
     {
       "estimatedHarvestDate": "YYYY-MM-DD",
-      "aiAdvice": "Conselho gerencial curto.",
+      "aiAdvice": "Dica técnica curta e direta.",
       "timeline": [
         {
-          "title": "Nome da Etapa",
+          "title": "Nome da Etapa (Ex: 1. Calagem)",
           "type": "preparo" | "plantio" | "manejo" | "colheita" | "pos_colheita",
-          "description": "O que fazer.",
+          "description": "Descrição técnica breve.",
           "dateEstimate": "Mês/Ano",
-          "tasks": [{ "text": "Tarefa" }],
+          "tasks": [{ "text": "Ação operacional 1" }],
           "resources": [
-             { "name": "Recurso", "type": "insumo" | "maquinario" | "mao_de_obra", "quantity": number, "unit": "un", "unitCost": number }
+             { 
+               "name": "Nome do Item (Ex: Calcário Dolomítico)", 
+               "type": "insumo" | "maquinario" | "mao_de_obra", 
+               "quantity": number, 
+               "unit": "ton" | "kg" | "lt" | "h" | "dia", 
+               "unitCost": number 
+             }
           ]
         }
       ]
@@ -75,6 +85,8 @@ export const generateCropPlan = async (
       contents: prompt,
       config: {
         responseMimeType: "application/json",
+        // Aumentando tokens para garantir resposta longa e detalhada
+        maxOutputTokens: 8192, 
         responseSchema: {
           type: Type.OBJECT,
           properties: {
@@ -131,7 +143,7 @@ export const generateCropPlan = async (
                  ...res,
                  id: Math.random().toString(36).substr(2, 9),
                  totalCost: cost,
-                 ownership: res.type === 'maquinario' ? 'alugado' : undefined // Default assumption for AI, user can change
+                 ownership: res.type === 'maquinario' ? 'alugado' : undefined // Default para IA, editável na UI
              };
           });
 
@@ -168,7 +180,7 @@ export const generateCropPlan = async (
     return {
       estimatedCost: 0,
       estimatedHarvestDate: new Date().toISOString().split('T')[0],
-      aiAdvice: "Erro na geração do plano.",
+      aiAdvice: "Erro na geração. Verifique a chave API ou tente novamente.",
       timeline: [],
       inventory: [],
       transactions: []

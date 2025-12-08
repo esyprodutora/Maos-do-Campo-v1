@@ -28,19 +28,17 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
   // Assistant State
   const [chatInput, setChatInput] = useState('');
   const [chatHistory, setChatHistory] = useState<{role: 'user' | 'ai', text: string}[]>([
-    { role: 'ai', text: `Olá. Sou o Tonico. Acompanho a espinha dorsal da sua lavoura de ${crop.name}. O que precisa?` }
+    { role: 'ai', text: `Olá. Sou o Tonico. Acompanho o cronograma da sua lavoura de ${crop.name}. O que precisa?` }
   ]);
   const [isChatLoading, setIsChatLoading] = useState(false);
 
-  // Market Data State (For Inventory Simulation)
+  // Market Data State
   const [marketPrice, setMarketPrice] = useState<number>(0);
   const [marketUnit, setMarketUnit] = useState<string>('sc 60kg');
 
-  // Load Market Data on Mount to simulate stock values
   useEffect(() => {
     const loadMarket = async () => {
       const quotes = await getMarketQuotes();
-      // Simple matching logic
       const quote = quotes.find(q => 
         (crop.type === 'cafe' && q.id === 'cafe') ||
         (crop.type === 'soja' && q.id === 'soja') ||
@@ -51,7 +49,6 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
         setMarketPrice(quote.price);
         setMarketUnit(quote.unit);
       } else {
-        // Fallback defaults
         setMarketPrice(100); 
       }
     };
@@ -66,7 +63,6 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
       name: '', type: 'insumo', quantity: 0, unit: 'un', unitCost: 0, ownership: 'alugado'
   });
 
-  // Resource CRUD
   const handleAddResource = (stageId: string) => {
       if (!newResource.name || !newResource.quantity || !newResource.unitCost) return alert("Preencha todos os campos");
       
@@ -122,7 +118,6 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
 
   const handleAddStock = () => {
     if(newStock.quantity <= 0) return;
-    
     const item: InventoryItem = {
       id: Math.random().toString(36).substr(2, 9),
       cropType: crop.type,
@@ -132,7 +127,6 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
       location: newStock.location,
       estimatedUnitValue: marketPrice
     };
-
     const updatedInventory = [...(crop.inventory || []), item];
     onUpdateCrop({ ...crop, inventory: updatedInventory });
     setIsAddingStock(false);
@@ -140,7 +134,6 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
   };
 
   const handleHarvestAction = (stageId: string) => {
-    // Shortcut to add stock directly from Timeline
     setExpandedStageId(null);
     setActiveTab('inventory');
     setIsAddingStock(true);
@@ -168,15 +161,12 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
     setNewTx({ description: '', amount: 0, type: 'despesa', category: 'insumo', status: 'pago' });
   };
 
-  // --- CALCULATIONS ---
   const totalOperationalCost = crop.timeline?.reduce((acc, stage) => 
     acc + (stage.resources?.reduce((sAcc, r) => sAcc + r.totalCost, 0) || 0), 0
   ) || 0;
-
   const totalPaid = crop.transactions?.filter(t => t.type === 'despesa' && t.status === 'pago').reduce((acc, t) => acc + t.amount, 0) || 0;
   const totalInventoryValue = (crop.inventory || []).reduce((acc, item) => acc + (item.quantity * marketPrice), 0);
 
-  // --- ASSISTANT ---
   const handleChatSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!chatInput.trim()) return;
@@ -195,13 +185,6 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
       case 'cafe': return 'from-[#A67C52] to-[#8B6540]';
       case 'milho': return 'from-orange-500 to-red-500';
       case 'soja': return 'from-yellow-500 to-orange-500';
-      case 'cana': return 'from-green-600 to-emerald-700';
-      case 'algodao': return 'from-slate-400 to-slate-600';
-      case 'arroz': return 'from-yellow-400 to-yellow-600';
-      case 'feijao': return 'from-red-800 to-red-950';
-      case 'trigo': return 'from-amber-300 to-amber-500';
-      case 'laranja': return 'from-orange-600 to-orange-800';
-      case 'mandioca': return 'from-amber-800 to-amber-950';
       default: return 'from-agro-green to-emerald-600';
     }
   };
@@ -212,8 +195,8 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
     <div className="space-y-6 animate-slide-up">
       <div className="flex justify-between items-center">
         <div>
-           <h3 className="text-xl font-bold text-gray-900 dark:text-white">Espinha Dorsal</h3>
-           <p className="text-sm text-gray-500">Cronograma operacional do solo ao estoque.</p>
+           <h3 className="text-xl font-bold text-gray-900 dark:text-white">Cronograma & Custos</h3>
+           <p className="text-sm text-gray-500">Gestão detalhada: Insumos, Máquinas e Mão de Obra.</p>
         </div>
         <button 
           onClick={() => setIsEditingTimeline(!isEditingTimeline)}
@@ -229,7 +212,6 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
           const isExpanded = expandedStageId === stage.id;
           const stageCost = stage.resources?.reduce((a,b) => a + b.totalCost, 0) || 0;
           
-          // Semantic Icon
           let StageIcon = Leaf;
           if(stage.type === 'preparo') StageIcon = Tractor;
           if(stage.type === 'plantio') StageIcon = Sprout;
@@ -238,7 +220,6 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
 
           return (
             <div key={stage.id} className="relative pl-8">
-              {/* Dot Icon */}
               <div className={`
                 absolute -left-[19px] top-0 w-10 h-10 rounded-full flex items-center justify-center border-4 border-gray-50 dark:border-slate-900 z-10
                 ${stage.status === 'concluido' ? 'bg-agro-green text-white' : 'bg-white dark:bg-slate-800 text-gray-400 dark:text-gray-500 shadow-sm'}
@@ -257,7 +238,6 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                     <div>
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Etapa {idx + 1}</span>
-                        {stage.status === 'concluido' && <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">Concluído</span>}
                       </div>
                       <h4 className="font-bold text-gray-900 dark:text-white text-lg">{stage.title}</h4>
                       <div className="flex items-center gap-4 text-xs text-gray-500 mt-1">
@@ -274,7 +254,7 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                       
                       {/* Operational Checklist */}
                       <div className="mb-6">
-                        <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Checklist Operacional</h5>
+                        <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Checklist de Atividades</h5>
                         <div className="space-y-2">
                            {stage.tasks?.map(task => (
                              <div key={task.id} onClick={() => !isEditingTimeline && toggleTask(stage.id, task.id)} className="flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-slate-700/50 rounded-lg cursor-pointer transition-colors">
@@ -287,18 +267,17 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                         </div>
                       </div>
 
-                      {/* Resources Management */}
+                      {/* RESOURCES SECTION - THE CORE */}
                       <div>
                         <div className="flex justify-between items-center mb-3">
-                           <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Recursos & Custos</h5>
+                           <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Custos & Recursos</h5>
                            {isEditingTimeline && (
                              <button onClick={() => setNewResourceStageId(stage.id)} className="text-xs flex items-center gap-1 text-agro-green font-bold bg-green-50 px-2 py-1 rounded-lg">
-                               <Plus size={14}/> Add Recurso
+                               <Plus size={14}/> Add Item
                              </button>
                            )}
                         </div>
 
-                        {/* Add Resource Form */}
                         {newResourceStageId === stage.id && (
                            <div className="bg-gray-50 dark:bg-slate-900 p-4 rounded-xl mb-4 border border-agro-green/30 animate-fade-in">
                               <div className="grid grid-cols-2 gap-2 mb-2">
@@ -312,16 +291,6 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                                     <option value="mao_de_obra">Mão de Obra</option>
                                 </select>
                                 <input placeholder="Nome" className="p-2 rounded-lg border text-sm" value={newResource.name} onChange={e=>setNewResource({...newResource, name: e.target.value})}/>
-                                {newResource.type === 'maquinario' && (
-                                   <select 
-                                      className="p-2 rounded-lg border text-sm col-span-2"
-                                      value={newResource.ownership}
-                                      onChange={e=>setNewResource({...newResource, ownership: e.target.value as any})}
-                                   >
-                                      <option value="alugado">Alugado (R$/h)</option>
-                                      <option value="proprio">Próprio (Manutenção/Combustível)</option>
-                                   </select>
-                                )}
                                 <input type="number" placeholder="Qtd" className="p-2 rounded-lg border text-sm" value={newResource.quantity || ''} onChange={e=>setNewResource({...newResource, quantity: Number(e.target.value)})}/>
                                 <input type="number" placeholder="R$ Unit" className="p-2 rounded-lg border text-sm" value={newResource.unitCost || ''} onChange={e=>setNewResource({...newResource, unitCost: Number(e.target.value)})}/>
                               </div>
@@ -329,39 +298,70 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                            </div>
                         )}
 
-                        {/* Resources List */}
-                        <div className="space-y-2">
-                           {stage.resources?.map(res => (
-                             <div key={res.id} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-slate-900/50 rounded-xl border border-gray-100 dark:border-slate-700/50">
-                                <div className="flex items-center gap-3">
-                                   <div className={`p-2 rounded-lg ${res.type === 'maquinario' ? 'bg-orange-100 text-orange-600' : res.type === 'mao_de_obra' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600'}`}>
-                                      {res.type === 'maquinario' ? <Tractor size={16}/> : res.type === 'mao_de_obra' ? <User size={16}/> : <Beaker size={16}/>}
-                                   </div>
-                                   <div>
-                                      <p className="text-sm font-bold text-gray-800 dark:text-gray-200">
-                                        {res.name}
-                                        {res.ownership && <span className="ml-2 text-[10px] uppercase bg-gray-200 dark:bg-slate-700 px-1.5 py-0.5 rounded text-gray-600">{res.ownership}</span>}
-                                      </p>
-                                      <p className="text-xs text-gray-500">{res.quantity} {res.unit} x R$ {res.unitCost}</p>
-                                   </div>
+                        {/* Resources Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            {/* INSUMOS */}
+                            <div className="bg-green-50/50 dark:bg-green-900/10 p-3 rounded-xl border border-green-100 dark:border-green-900/20">
+                                <h6 className="text-[10px] font-bold text-green-700 dark:text-green-400 uppercase tracking-widest mb-2 flex items-center gap-1"><Beaker size={12}/> Insumos</h6>
+                                <div className="space-y-2">
+                                    {stage.resources?.filter(r => r.type === 'insumo').map(res => (
+                                        <div key={res.id} className="flex justify-between items-start text-xs">
+                                            <div>
+                                                <span className="font-semibold text-gray-700 dark:text-gray-200 block">{res.name}</span>
+                                                <span className="text-gray-400">{res.quantity}{res.unit} x {res.unitCost}</span>
+                                            </div>
+                                            <div className="text-right">
+                                                <span className="font-bold text-gray-800 dark:text-gray-100">{res.totalCost.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</span>
+                                                {isEditingTimeline && <button onClick={() => handleDeleteResource(stage.id, res.id)} className="text-red-400 ml-1"><Trash2 size={10}/></button>}
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {!stage.resources?.some(r => r.type === 'insumo') && <p className="text-[10px] text-gray-400 italic">-</p>}
                                 </div>
-                                <div className="flex items-center gap-3">
-                                   <span className="font-bold text-sm text-gray-900 dark:text-white">
-                                     {res.totalCost.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}
-                                   </span>
-                                   {isEditingTimeline && (
-                                     <button onClick={() => handleDeleteResource(stage.id, res.id)} className="text-red-400 hover:text-red-600"><Trash2 size={14}/></button>
-                                   )}
+                            </div>
+
+                            {/* MAQUINÁRIO */}
+                            <div className="bg-orange-50/50 dark:bg-orange-900/10 p-3 rounded-xl border border-orange-100 dark:border-orange-900/20">
+                                <h6 className="text-[10px] font-bold text-orange-700 dark:text-orange-400 uppercase tracking-widest mb-2 flex items-center gap-1"><Tractor size={12}/> Maquinário</h6>
+                                <div className="space-y-2">
+                                    {stage.resources?.filter(r => r.type === 'maquinario').map(res => (
+                                        <div key={res.id} className="flex justify-between items-start text-xs">
+                                            <div>
+                                                <span className="font-semibold text-gray-700 dark:text-gray-200 block">{res.name}</span>
+                                                <span className="text-gray-400">{res.quantity}{res.unit} x {res.unitCost}</span>
+                                            </div>
+                                            <div className="text-right">
+                                                <span className="font-bold text-gray-800 dark:text-gray-100">{res.totalCost.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</span>
+                                                {isEditingTimeline && <button onClick={() => handleDeleteResource(stage.id, res.id)} className="text-red-400 ml-1"><Trash2 size={10}/></button>}
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {!stage.resources?.some(r => r.type === 'maquinario') && <p className="text-[10px] text-gray-400 italic">-</p>}
                                 </div>
-                             </div>
-                           ))}
-                           {(!stage.resources || stage.resources.length === 0) && (
-                             <p className="text-xs text-gray-400 italic text-center py-2">Nenhum recurso registrado nesta etapa.</p>
-                           )}
+                            </div>
+
+                            {/* MÃO DE OBRA */}
+                            <div className="bg-blue-50/50 dark:bg-blue-900/10 p-3 rounded-xl border border-blue-100 dark:border-blue-900/20">
+                                <h6 className="text-[10px] font-bold text-blue-700 dark:text-blue-400 uppercase tracking-widest mb-2 flex items-center gap-1"><User size={12}/> Mão de Obra</h6>
+                                <div className="space-y-2">
+                                    {stage.resources?.filter(r => r.type === 'mao_de_obra').map(res => (
+                                        <div key={res.id} className="flex justify-between items-start text-xs">
+                                            <div>
+                                                <span className="font-semibold text-gray-700 dark:text-gray-200 block">{res.name}</span>
+                                                <span className="text-gray-400">{res.quantity}{res.unit} x {res.unitCost}</span>
+                                            </div>
+                                            <div className="text-right">
+                                                <span className="font-bold text-gray-800 dark:text-gray-100">{res.totalCost.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</span>
+                                                {isEditingTimeline && <button onClick={() => handleDeleteResource(stage.id, res.id)} className="text-red-400 ml-1"><Trash2 size={10}/></button>}
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {!stage.resources?.some(r => r.type === 'mao_de_obra') && <p className="text-[10px] text-gray-400 italic">-</p>}
+                                </div>
+                            </div>
                         </div>
                       </div>
                       
-                      {/* Harvest Button Action (Only for harvest stages) */}
                       {(stage.type === 'colheita' || stage.type === 'pos_colheita') && (
                         <div className="mt-6 pt-4 border-t border-gray-100 dark:border-slate-700 flex justify-end">
                            <button 
@@ -604,7 +604,7 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
 
             <div className="flex gap-2 mt-8 overflow-x-auto pb-2 no-scrollbar">
                 {[
-                    {id: 'timeline', label: 'Espinha Dorsal', icon: ListTodo},
+                    {id: 'timeline', label: 'Cronograma', icon: ListTodo},
                     {id: 'inventory', label: 'Estoque', icon: Warehouse},
                     {id: 'finance', label: 'Financeiro', icon: DollarSign},
                     {id: 'reports', label: 'Relatórios', icon: FileText}
