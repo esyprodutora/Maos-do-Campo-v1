@@ -66,8 +66,10 @@ export const NewCropForm: React.FC<NewCropFormProps> = ({ onSave, onCancel }) =>
         datePlanted: new Date().toISOString(),
         estimatedCost: plan.estimatedCost || 0,
         estimatedHarvestDate: plan.estimatedHarvestDate || new Date().toISOString(),
-        timeline: plan.timeline || [], // New detailed structure source
-        aiAdvice: plan.aiAdvice || "Sucesso na safra!"
+        timeline: plan.timeline || [], 
+        aiAdvice: plan.aiAdvice || "Sucesso na safra!",
+        materials: [], // Legacy empty, using timeline for data
+        harvestLogs: []
       };
 
       onSave(newCrop);

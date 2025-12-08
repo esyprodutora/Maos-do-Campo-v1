@@ -38,8 +38,8 @@ export const generateCropPlan = async (
     
     ESTRUTURA OBRIGATÓRIA PARA CADA ETAPA:
     Para CADA etapa do ciclo, você DEVE listar os recursos necessários divididos em 3 categorias:
-    1. 'insumo': Fertilizantes, sementes, defensivos, corretivos.
-    2. 'maquinario': Horas-máquina de Tratores, Colheitadeiras, Pulverizadores, Implementos, Combustível.
+    1. 'insumo': Fertilizantes (NPK, Ureia), sementes, defensivos (Herbicidas, Fungicidas).
+    2. 'maquinario': Horas-máquina de Tratores, Colheitadeiras, Pulverizadores, Implementos, Combustível (Diesel).
     3. 'mao_de_obra': Diárias de trabalhadores, operadores, técnicos.
 
     Preço Unitário: Estime preços reais de mercado brasileiro (BRL) atualizados.
@@ -48,11 +48,13 @@ export const generateCropPlan = async (
     SAÍDA ESPERADA (JSON):
     Um objeto contendo:
     - estimatedHarvestDate (YYYY-MM-DD)
-    - aiAdvice (Conselho técnico curto)
+    - aiAdvice (Conselho técnico curto sobre o manejo)
     - timeline: Array de etapas. Cada etapa tem:
-        - title, description, dateEstimate
-        - tasks: Lista de tarefas (checklist simples)
-        - resources: Array de recursos { name, type, quantity, unit, unitCost, totalCost }
+        - title (Nome da etapa)
+        - description (Descrição técnica breve)
+        - dateEstimate (Mês/Ano estimado)
+        - tasks: Lista de tarefas operacionais (checklist simples)
+        - resources: Array de recursos { name, type, quantity, unit, unitCost }
   `;
 
   try {
@@ -72,19 +74,15 @@ export const generateCropPlan = async (
               items: {
                 type: Type.OBJECT,
                 properties: {
-                  id: { type: Type.STRING }, // AI can generate or we fill
                   title: { type: Type.STRING },
                   description: { type: Type.STRING },
-                  status: { type: Type.STRING, enum: ['pendente'] },
                   dateEstimate: { type: Type.STRING },
                   tasks: {
                     type: Type.ARRAY,
                     items: {
                       type: Type.OBJECT,
                       properties: {
-                        id: { type: Type.STRING },
                         text: { type: Type.STRING },
-                        done: { type: Type.BOOLEAN }
                       }
                     }
                   },
@@ -93,13 +91,11 @@ export const generateCropPlan = async (
                     items: {
                       type: Type.OBJECT,
                       properties: {
-                        id: { type: Type.STRING },
                         name: { type: Type.STRING },
                         type: { type: Type.STRING, enum: ['insumo', 'maquinario', 'mao_de_obra', 'outros'] },
                         quantity: { type: Type.NUMBER },
                         unit: { type: Type.STRING },
-                        unitCost: { type: Type.NUMBER },
-                        totalCost: { type: Type.NUMBER }
+                        unitCost: { type: Type.NUMBER }
                       }
                     }
                   }
@@ -114,37 +110,51 @@ export const generateCropPlan = async (
     if (response.text) {
       const data = JSON.parse(response.text);
       
-      // Calculate total estimated cost based on all resources in timeline
+      // Post-processing to add IDs and Defaults
       let totalCost = 0;
-      data.timeline.forEach((stage: any) => {
-          stage.id = Math.random().toString(36).substr(2, 9);
-          if (stage.resources) {
-              stage.resources.forEach((res: any) => {
-                  res.id = Math.random().toString(36).substr(2, 9);
-                  // Ensure total cost is accurate
-                  res.totalCost = res.quantity * res.unitCost;
-                  totalCost += res.totalCost;
-              });
-          } else {
-              stage.resources = [];
-          }
-          if (stage.tasks) {
-              stage.tasks.forEach((t: any) => t.id = Math.random().toString(36).substr(2, 9));
-          }
+      const processedTimeline = data.timeline.map((stage: any) => {
+          const stageResources = (stage.resources || []).map((res: any) => {
+             const cost = res.quantity * res.unitCost;
+             totalCost += cost;
+             return {
+                 ...res,
+                 id: Math.random().toString(36).substr(2, 9),
+                 totalCost: cost
+             };
+          });
+
+          const stageTasks = (stage.tasks || []).map((t: any) => ({
+              id: Math.random().toString(36).substr(2, 9),
+              text: t.text,
+              done: false
+          }));
+
+          return {
+              id: Math.random().toString(36).substr(2, 9),
+              title: stage.title,
+              description: stage.description,
+              status: 'pendente',
+              dateEstimate: stage.dateEstimate,
+              tasks: stageTasks,
+              resources: stageResources
+          };
       });
 
       return {
-        ...data,
+        estimatedHarvestDate: data.estimatedHarvestDate,
+        aiAdvice: data.aiAdvice,
+        timeline: processedTimeline,
         estimatedCost: totalCost
       };
     }
     throw new Error("Falha ao gerar dados");
   } catch (error) {
     console.error("Erro na IA:", error);
+    // Return empty safe object to avoid crash
     return {
       estimatedCost: 0,
       estimatedHarvestDate: new Date().toISOString().split('T')[0],
-      aiAdvice: "Erro ao gerar plano. Tente novamente.",
+      aiAdvice: "Não foi possível gerar o plano. Verifique sua chave de API.",
       timeline: []
     };
   }
@@ -159,6 +169,6 @@ export const getAssistantResponse = async (question: string, context: string): P
         });
         return response.text || "Desculpe, não entendi.";
     } catch (e) {
-        return "Erro de conexão.";
+        return "Erro de conexão com o assistente.";
     }
 }

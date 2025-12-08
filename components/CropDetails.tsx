@@ -24,14 +24,13 @@ interface CropDetailsProps {
 }
 
 export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdateCrop, onDeleteCrop }) => {
-  // Changed default tab to 'timeline' to prioritize stages
+  // Default to 'timeline' as requested
   const [activeTab, setActiveTab] = useState<'overview' | 'timeline' | 'finance' | 'storage' | 'assistant' | 'reports'>('timeline');
   const [chatInput, setChatInput] = useState('');
   const [chatHistory, setChatHistory] = useState<{role: 'user' | 'ai', text: string}[]>([
     { role: 'ai', text: `Olá. Sou o Tonico. Estou analisando o ciclo da sua lavoura de ${crop.name}. Como posso ajudar?` }
   ]);
   const [isChatLoading, setIsChatLoading] = useState(false);
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   
   const mapsApiKey = GOOGLE_MAPS_API_KEY;
 
@@ -66,14 +65,28 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
   };
 
   const toggleTask = (stageId: string, taskId: string) => {
-    const updatedTimeline = crop.timeline.map(stage => {
+    const updatedTimeline = (crop.timeline || []).map(stage => {
         if (stage.id === stageId) {
             const updatedTasks = stage.tasks.map(t => t.id === taskId ? { ...t, done: !t.done } : t);
-            return { ...stage, tasks: updatedTasks };
+            // Auto-update status if all tasks done
+            const allDone = updatedTasks.every(t => t.done);
+            const status = allDone ? 'concluido' : stage.status === 'concluido' ? 'em_andamento' : stage.status;
+            return { ...stage, tasks: updatedTasks, status: status as any };
         }
         return stage;
     });
     onUpdateCrop({ ...crop, timeline: updatedTimeline });
+  };
+
+  const handleStageStatusChange = (stageId: string) => {
+      const updatedTimeline = (crop.timeline || []).map(stage => {
+          if (stage.id === stageId) {
+              const nextStatus = stage.status === 'pendente' ? 'em_andamento' : stage.status === 'em_andamento' ? 'concluido' : 'pendente';
+              return { ...stage, status: nextStatus as any };
+          }
+          return stage;
+      });
+      onUpdateCrop({ ...crop, timeline: updatedTimeline });
   };
 
   // --- Calculation Helpers ---
@@ -89,8 +102,8 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
       const breakdown = { insumo: 0, maquinario: 0, mao_de_obra: 0, outros: 0 };
       crop.timeline?.forEach(stage => {
           stage.resources?.forEach(res => {
-              if (breakdown[res.type] !== undefined) {
-                  breakdown[res.type] += res.totalCost;
+              if (breakdown[res.type as keyof typeof breakdown] !== undefined) {
+                  breakdown[res.type as keyof typeof breakdown] += res.totalCost;
               } else {
                   breakdown['outros'] += res.totalCost;
               }
@@ -155,7 +168,10 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                 return (
                     <div key={stage.id} className="relative">
                         {/* Dot */}
-                        <div className={`absolute -left-[27px] top-6 w-5 h-5 rounded-full border-4 border-white dark:border-slate-900 ${statusColor} shadow-sm z-10`}></div>
+                        <div 
+                           onClick={() => handleStageStatusChange(stage.id)}
+                           className={`absolute -left-[27px] top-6 w-5 h-5 rounded-full border-4 border-white dark:border-slate-900 ${statusColor} shadow-sm z-10 cursor-pointer hover:scale-110 transition-transform`}
+                        ></div>
                         
                         {/* Card */}
                         <div className={`bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden transition-all duration-300 ${isExpanded ? 'ring-2 ring-agro-green/20' : ''}`}>
@@ -166,7 +182,7 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                                 className="p-5 cursor-pointer flex items-center justify-between hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors"
                             >
                                 <div className="flex items-center gap-4">
-                                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg ${stage.status === 'concluido' ? 'bg-green-100 text-green-700' : 'bg-blue-50 text-blue-700 dark:bg-slate-700 dark:text-blue-400'}`}>
+                                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg ${stage.status === 'concluido' ? 'bg-green-100 text-green-700' : stage.status === 'em_andamento' ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-500 dark:bg-slate-700 dark:text-gray-400'}`}>
                                         {index + 1}
                                     </div>
                                     <div>
@@ -188,19 +204,21 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                                     <p className="text-gray-600 dark:text-gray-300 my-4 text-sm leading-relaxed">{stage.description}</p>
                                     
                                     {/* Checklist */}
-                                    <div className="mb-6">
-                                        <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Tarefas</h5>
-                                        <div className="space-y-2">
-                                            {stage.tasks?.map((task) => (
-                                                <div key={task.id} onClick={() => !isEditingTimeline && toggleTask(stage.id, task.id)} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-slate-700/50 rounded-xl cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">
-                                                    <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center ${task.done ? 'bg-agro-green border-agro-green' : 'border-gray-300'}`}>
-                                                        {task.done && <Check size={12} className="text-white"/>}
+                                    {stage.tasks && stage.tasks.length > 0 && (
+                                        <div className="mb-6">
+                                            <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Tarefas</h5>
+                                            <div className="space-y-2">
+                                                {stage.tasks.map((task) => (
+                                                    <div key={task.id} onClick={() => !isEditingTimeline && toggleTask(stage.id, task.id)} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-slate-700/50 rounded-xl cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">
+                                                        <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center ${task.done ? 'bg-agro-green border-agro-green' : 'border-gray-300'}`}>
+                                                            {task.done && <Check size={12} className="text-white"/>}
+                                                        </div>
+                                                        <span className={`text-sm ${task.done ? 'text-gray-400 line-through' : 'text-gray-700 dark:text-gray-200'}`}>{task.text}</span>
                                                     </div>
-                                                    <span className={`text-sm ${task.done ? 'text-gray-400 line-through' : 'text-gray-700 dark:text-gray-200'}`}>{task.text}</span>
-                                                </div>
-                                            ))}
+                                                ))}
+                                            </div>
                                         </div>
-                                    </div>
+                                    )}
 
                                     {/* Resources Grid */}
                                     <div>
@@ -218,7 +236,7 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                                                             <span className="font-bold">{r.totalCost.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</span>
                                                         </li>
                                                     ))}
-                                                    {stage.resources?.filter(r => r.type === 'insumo').length === 0 && <span className="text-xs text-gray-400 italic">Nenhum insumo</span>}
+                                                    {(!stage.resources || stage.resources.filter(r => r.type === 'insumo').length === 0) && <span className="text-xs text-gray-400 italic">Nenhum insumo</span>}
                                                 </ul>
                                             </div>
 
@@ -234,7 +252,7 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                                                             <span className="font-bold">{r.totalCost.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</span>
                                                         </li>
                                                     ))}
-                                                     {stage.resources?.filter(r => r.type === 'maquinario').length === 0 && <span className="text-xs text-gray-400 italic">Nenhum maquinário</span>}
+                                                     {(!stage.resources || stage.resources.filter(r => r.type === 'maquinario').length === 0) && <span className="text-xs text-gray-400 italic">Nenhum maquinário</span>}
                                                 </ul>
                                             </div>
 
@@ -250,7 +268,7 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                                                             <span className="font-bold">{r.totalCost.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</span>
                                                         </li>
                                                     ))}
-                                                     {stage.resources?.filter(r => r.type === 'mao_de_obra').length === 0 && <span className="text-xs text-gray-400 italic">Nenhuma MO</span>}
+                                                     {(!stage.resources || stage.resources.filter(r => r.type === 'mao_de_obra').length === 0) && <span className="text-xs text-gray-400 italic">Nenhuma MO</span>}
                                                 </ul>
                                             </div>
                                         </div>
@@ -291,25 +309,29 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
             
             <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700">
                 <h3 className="font-bold text-gray-800 dark:text-white mb-2">Distribuição por Categoria</h3>
-                <div className="h-48 w-full">
-                   <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                          <Pie
-                             data={categories}
-                             innerRadius={50}
-                             outerRadius={70}
-                             paddingAngle={5}
-                             dataKey="value"
-                          >
-                             {categories.map((entry: any, index) => (
-                                 <Cell key={`cell-${index}`} fill={COLORS[entry.name as keyof typeof COLORS] || '#888'} />
-                             ))}
-                          </Pie>
-                          <Tooltip formatter={(value:number) => value.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})} />
-                          <Legend formatter={(value) => LABELS[value as keyof typeof LABELS] || value}/>
-                      </PieChart>
-                   </ResponsiveContainer>
-                </div>
+                {categories.length > 0 ? (
+                    <div className="h-48 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                            <Pie
+                                data={categories}
+                                innerRadius={50}
+                                outerRadius={70}
+                                paddingAngle={5}
+                                dataKey="value"
+                            >
+                                {categories.map((entry: any, index) => (
+                                    <Cell key={`cell-${index}`} fill={COLORS[entry.name as keyof typeof COLORS] || '#888'} />
+                                ))}
+                            </Pie>
+                            <Tooltip formatter={(value:number) => value.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})} />
+                            <Legend formatter={(value) => LABELS[value as keyof typeof LABELS] || value}/>
+                        </PieChart>
+                    </ResponsiveContainer>
+                    </div>
+                ) : (
+                    <div className="h-48 flex items-center justify-center text-gray-400">Sem custos registrados ainda.</div>
+                )}
             </div>
          </div>
 

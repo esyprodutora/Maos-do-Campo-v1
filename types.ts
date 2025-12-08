@@ -23,11 +23,11 @@ export type ResourceType = 'insumo' | 'maquinario' | 'mao_de_obra' | 'outros';
 export interface StageResource {
   id: string;
   name: string;
-  type: ResourceType; // Categorization
+  type: ResourceType;
   quantity: number;
   unit: string;
-  unitCost: number; // Estimate per unit
-  totalCost: number; // calculated
+  unitCost: number;
+  totalCost: number;
 }
 
 export interface TimelineStage {
@@ -50,13 +50,13 @@ export interface HarvestLog {
 }
 
 export interface Material {
-  // Legacy support for top-level, but mainly calculated from stages now
+  // Legacy/Derived interface for backward compatibility
   name: string;
   quantity: number;
   unit: string;
   unitPriceEstimate: number;
   realCost?: number;
-  category: 'fertilizante' | 'semente' | 'defensivo' | 'corretivo' | 'outros';
+  category: string;
 }
 
 export interface CropData {
@@ -70,12 +70,12 @@ export interface CropData {
   spacing: string;
   datePlanted: string;
   
-  // Calculated/Generated Data
+  // Core Data
   estimatedCost: number;
   estimatedHarvestDate: string;
-  timeline: TimelineStage[]; // This is now the source of truth for costs
+  timeline: TimelineStage[]; // Source of truth for all operations and costs
   
-  // Legacy/Aggregated fields (optional to keep for backward compatibility or caching)
+  // Legacy/Aggregated fields
   materials?: Material[]; 
   harvestLogs?: HarvestLog[];
   
