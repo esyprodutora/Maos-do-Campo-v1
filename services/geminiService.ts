@@ -23,45 +23,45 @@ export const generateCropPlan = async (
 ): Promise<Partial<CropData>> => {
   
   const prompt = `
-    Atue como um Engenheiro Agrônomo Sênior e Gerente de Fazenda com 30 anos de experiência em ${type}.
+    Atue como um Engenheiro Agrônomo Sênior e Gerente de Fazenda especialista em ${type}.
     
     OBJETIVO:
-    Criar um PLANO OPERACIONAL E ORÇAMENTÁRIO DETALHADO (PONTA A PONTA) para uma lavoura de ${areaHa} hectares de ${type}.
-    
-    CRITÉRIO CRÍTICO:
-    Você NÃO PODE parar na adubação. Você DEVE cobrir o ciclo inteiro até o produto estar ensacado/armazenado.
-    
-    ESTRUTURA DE ETAPAS OBRIGATÓRIA (Adaptar para a cultura, mas manter a profundidade):
-    1. Preparo & Correção (Análise, Calagem, Gessagem, Aragem).
-    2. Plantio/Instalação (Mudas, Sulcos, Adubação de base).
-    3. Tratos Culturais - Vegetativo (Controle de mato, Adubações de cobertura).
-    4. Tratos Culturais - Reprodutivo/Fitossanitário (Preventivos, Foliar, Enchimento de grão).
-    5. COLHEITA (Detalhamento máx: Maquinário, Combustível, Mão de obra temporária, Varrição).
-    6. PÓS-COLHEITA (CRUCIAL PARA CAFÉ/GRÃOS): Transporte interno, Lavador, Terreiro/Secador (Lenha/Gás), Beneficiamento, Ensacamento.
-    
-    PARA CADA ETAPA, GERE UMA LISTA DE RECURSOS (BRL R$):
-    - 'insumo': Ex: NPK 20-00-20, Herbicida Glifosato, Calcário, Mudas.
-    - 'maquinario': Ex: Trator 75cv (horas), Colheitadeira (horas), Secador Rotativo (horas), Caminhão.
-    - 'mao_de_obra': Ex: Tratorista (dias), Apanhador de café (dias), Operador de secador (dias).
+    Criar a "ESPINHA DORSAL" operacional de uma lavoura de ${areaHa} ha de ${type}.
+    A sequência deve ser cronológica e lógica, cobrindo do ZERO até o ARMAZENAMENTO.
+
+    ESTRUTURA DE ETAPAS (Timeline):
+    Gere entre 5 a 8 etapas macro, obrigatoriamente seguindo este fluxo lógico:
+    1. Preparo do Solo (Análise, correção, aragem).
+    2. Plantio/Semeadura (Momento crítico).
+    3. Manejo Vegetativo (Desenvolvimento).
+    4. Manejo Reprodutivo/Sanitário (Florada, enchimento, pragas).
+    5. Colheita (A operação de retirada).
+    6. Pós-Colheita/Beneficiamento (Secagem, limpeza, transporte interno).
+    7. Estoque/Armazenamento (Finalização).
+
+    PARA CADA ETAPA, GERE RECURSOS DETALHADOS (Estimativa em BRL R$):
+    - 'insumo': Sementes, Adubos, Defensivos.
+    - 'maquinario': Tratores, Colheitadeiras, Secadores. (Indique se é 'alugado' ou 'proprio' no nome se relevante).
+    - 'mao_de_obra': Operadores, diaristas.
 
     Input:
     - Área: ${areaHa} ha
     - Solo: ${soilType}
     - Meta: ${productivityGoal}
-    - Espaçamento: ${spacing}
 
     SAÍDA JSON:
     {
       "estimatedHarvestDate": "YYYY-MM-DD",
-      "aiAdvice": "Dica estratégica focada em lucro e eficiência.",
+      "aiAdvice": "Conselho gerencial curto.",
       "timeline": [
         {
-          "title": "Nome Técnico da Etapa",
-          "description": "Explicação agronômica do que fazer.",
+          "title": "Nome da Etapa",
+          "type": "preparo" | "plantio" | "manejo" | "colheita" | "pos_colheita",
+          "description": "O que fazer.",
           "dateEstimate": "Mês/Ano",
-          "tasks": [{ "text": "Ação prática 1" }, { "text": "Ação prática 2" }],
+          "tasks": [{ "text": "Tarefa" }],
           "resources": [
-             { "name": "Nome do Recurso", "type": "insumo" | "maquinario" | "mao_de_obra", "quantity": number, "unit": "kg/l/h/dia", "unitCost": number (BRL) }
+             { "name": "Recurso", "type": "insumo" | "maquinario" | "mao_de_obra", "quantity": number, "unit": "un", "unitCost": number }
           ]
         }
       ]
@@ -86,6 +86,7 @@ export const generateCropPlan = async (
                 type: Type.OBJECT,
                 properties: {
                   title: { type: Type.STRING },
+                  type: { type: Type.STRING, enum: ['preparo', 'plantio', 'manejo', 'colheita', 'pos_colheita'] },
                   description: { type: Type.STRING },
                   dateEstimate: { type: Type.STRING },
                   tasks: {
@@ -129,7 +130,8 @@ export const generateCropPlan = async (
              return {
                  ...res,
                  id: Math.random().toString(36).substr(2, 9),
-                 totalCost: cost
+                 totalCost: cost,
+                 ownership: res.type === 'maquinario' ? 'alugado' : undefined // Default assumption for AI, user can change
              };
           });
 
@@ -142,6 +144,7 @@ export const generateCropPlan = async (
           return {
               id: Math.random().toString(36).substr(2, 9),
               title: stage.title,
+              type: stage.type || 'manejo',
               description: stage.description,
               status: 'pendente',
               dateEstimate: stage.dateEstimate,
@@ -154,7 +157,9 @@ export const generateCropPlan = async (
         estimatedHarvestDate: data.estimatedHarvestDate,
         aiAdvice: data.aiAdvice,
         timeline: processedTimeline,
-        estimatedCost: totalCost
+        estimatedCost: totalCost,
+        inventory: [],
+        transactions: []
       };
     }
     throw new Error("Falha ao gerar dados");
@@ -163,8 +168,10 @@ export const generateCropPlan = async (
     return {
       estimatedCost: 0,
       estimatedHarvestDate: new Date().toISOString().split('T')[0],
-      aiAdvice: "Erro na geração do plano. Verifique a API Key.",
-      timeline: []
+      aiAdvice: "Erro na geração do plano.",
+      timeline: [],
+      inventory: [],
+      transactions: []
     };
   }
 };

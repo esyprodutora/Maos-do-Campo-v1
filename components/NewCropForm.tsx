@@ -69,7 +69,9 @@ export const NewCropForm: React.FC<NewCropFormProps> = ({ onSave, onCancel }) =>
         timeline: plan.timeline || [], 
         aiAdvice: plan.aiAdvice || "Sucesso na safra!",
         materials: [], // Legacy empty, using timeline for data
-        harvestLogs: []
+        harvestLogs: [],
+        inventory: [],
+        transactions: []
       };
 
       onSave(newCrop);

@@ -1,19 +1,18 @@
 
 import React, { useState, useEffect } from 'react';
-import { CropData, TimelineStage, StageResource, ResourceType } from '../types';
+import { CropData, StageResource, ResourceType, InventoryItem, FinancialTransaction } from '../types';
 import { getAssistantResponse } from '../services/geminiService';
+import { getMarketQuotes } from '../services/marketService';
 import { Reports } from './Reports';
 import { 
-  ArrowLeft, Calendar, DollarSign, ListTodo, MessageSquare, Send, 
-  CheckCircle, Circle, AlertCircle, Droplets, Ruler, ShoppingBag, 
-  Download, Loader2, Edit2, Check, MapPin, Navigation, Trash2, 
-  Plus, X, Clock, Sprout, FileText, Home, Sparkles, Bot, 
-  MessageCircle, Warehouse, Package, Truck, TrendingUp, Wallet, 
-  User, Tractor, Hammer, ChevronDown, ChevronUp, Beaker, Save
+  ArrowLeft, Calendar, DollarSign, ListTodo, Send, 
+  Check, MapPin, Trash2, Plus, Edit2, 
+  User, Tractor, Beaker, Package, 
+  TrendingUp, Warehouse, AlertCircle, 
+  ChevronDown, ChevronUp, Leaf, Truck, CheckCircle2,
+  Sprout, Wallet, MessageCircle, FileText
 } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from 'recharts';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { GOOGLE_MAPS_API_KEY } from '../config/env';
 
 interface CropDetailsProps {
@@ -24,77 +23,50 @@ interface CropDetailsProps {
 }
 
 export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdateCrop, onDeleteCrop }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'timeline' | 'finance' | 'storage' | 'assistant' | 'reports'>('timeline');
+  const [activeTab, setActiveTab] = useState<'timeline' | 'finance' | 'inventory' | 'assistant' | 'reports'>('timeline');
+  
+  // Assistant State
   const [chatInput, setChatInput] = useState('');
   const [chatHistory, setChatHistory] = useState<{role: 'user' | 'ai', text: string}[]>([
-    { role: 'ai', text: `Olá. Sou o Tonico. Estou analisando o ciclo da sua lavoura de ${crop.name}. Como posso ajudar?` }
+    { role: 'ai', text: `Olá. Sou o Tonico. Acompanho a espinha dorsal da sua lavoura de ${crop.name}. O que precisa?` }
   ]);
   const [isChatLoading, setIsChatLoading] = useState(false);
-  
-  const mapsApiKey = GOOGLE_MAPS_API_KEY;
 
-  // --- States for Timeline Editing ---
+  // Market Data State (For Inventory Simulation)
+  const [marketPrice, setMarketPrice] = useState<number>(0);
+  const [marketUnit, setMarketUnit] = useState<string>('sc 60kg');
+
+  // Load Market Data on Mount to simulate stock values
+  useEffect(() => {
+    const loadMarket = async () => {
+      const quotes = await getMarketQuotes();
+      // Simple matching logic
+      const quote = quotes.find(q => 
+        (crop.type === 'cafe' && q.id === 'cafe') ||
+        (crop.type === 'soja' && q.id === 'soja') ||
+        (crop.type === 'milho' && q.id === 'milho')
+      );
+      
+      if (quote) {
+        setMarketPrice(quote.price);
+        setMarketUnit(quote.unit);
+      } else {
+        // Fallback defaults
+        setMarketPrice(100); 
+      }
+    };
+    loadMarket();
+  }, [crop.type]);
+
+  // --- TIMELINE LOGIC ---
   const [expandedStageId, setExpandedStageId] = useState<string | null>(crop.timeline?.[0]?.id || null);
   const [isEditingTimeline, setIsEditingTimeline] = useState(false);
-  
-  // State for adding a new resource
   const [newResourceStageId, setNewResourceStageId] = useState<string | null>(null);
   const [newResource, setNewResource] = useState<Partial<StageResource>>({
-      name: '', type: 'insumo', quantity: 0, unit: 'un', unitCost: 0
+      name: '', type: 'insumo', quantity: 0, unit: 'un', unitCost: 0, ownership: 'alugado'
   });
 
-  // --- Theme Helper ---
-  const getTheme = (type: string) => {
-    switch(type) {
-      case 'cafe': return { main: 'text-[#A67C52]', bg: 'bg-[#A67C52]', bgGlass: 'bg-[#A67C52]/90', border: 'border-[#A67C52]/30', light: 'bg-[#FAF3E0] dark:bg-[#A67C52]/20', gradient: 'from-[#A67C52] to-[#8B6642]' };
-      case 'milho': return { main: 'text-orange-500', bg: 'bg-orange-500', bgGlass: 'bg-orange-500/90', border: 'border-orange-500/30', light: 'bg-orange-50 dark:bg-orange-500/20', gradient: 'from-orange-500 to-orange-600' };
-      case 'soja': return { main: 'text-yellow-500', bg: 'bg-yellow-500', bgGlass: 'bg-yellow-500/90', border: 'border-yellow-500/30', light: 'bg-yellow-50 dark:bg-yellow-500/20', gradient: 'from-yellow-500 to-yellow-600' };
-      default: return { main: 'text-agro-green', bg: 'bg-agro-green', bgGlass: 'bg-agro-green/90', border: 'border-agro-green/30', light: 'bg-green-50 dark:bg-green-900/20', gradient: 'from-agro-green to-green-700' };
-    }
-  };
-  const theme = getTheme(crop.type);
-
-  // --- Logic & Handlers ---
-
-  const handleChatSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!chatInput.trim()) return;
-    const userMsg = chatInput;
-    setChatInput('');
-    setChatHistory(prev => [...prev, { role: 'user', text: userMsg }]);
-    setIsChatLoading(true);
-    const context = `Lavoura: ${crop.name}, ${crop.areaHa}ha de ${crop.type}.`;
-    const response = await getAssistantResponse(userMsg, context);
-    setChatHistory(prev => [...prev, { role: 'ai', text: response }]);
-    setIsChatLoading(false);
-  };
-
-  const toggleTask = (stageId: string, taskId: string) => {
-    const updatedTimeline = (crop.timeline || []).map(stage => {
-        if (stage.id === stageId) {
-            const updatedTasks = stage.tasks.map(t => t.id === taskId ? { ...t, done: !t.done } : t);
-            const allDone = updatedTasks.every(t => t.done);
-            const status = allDone ? 'concluido' : stage.status === 'concluido' ? 'em_andamento' : stage.status;
-            return { ...stage, tasks: updatedTasks, status: status as any };
-        }
-        return stage;
-    });
-    onUpdateCrop({ ...crop, timeline: updatedTimeline });
-  };
-
-  const handleStageStatusChange = (stageId: string) => {
-      const updatedTimeline = (crop.timeline || []).map(stage => {
-          if (stage.id === stageId) {
-              const nextStatus = stage.status === 'pendente' ? 'em_andamento' : stage.status === 'em_andamento' ? 'concluido' : 'pendente';
-              return { ...stage, status: nextStatus as any };
-          }
-          return stage;
-      });
-      onUpdateCrop({ ...crop, timeline: updatedTimeline });
-  };
-
-  // --- Resource Management Logic ---
-
+  // Resource CRUD
   const handleAddResource = (stageId: string) => {
       if (!newResource.name || !newResource.quantity || !newResource.unitCost) return alert("Preencha todos os campos");
       
@@ -107,7 +79,8 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                   quantity: Number(newResource.quantity),
                   unit: newResource.unit!,
                   unitCost: Number(newResource.unitCost),
-                  totalCost: Number(newResource.quantity) * Number(newResource.unitCost)
+                  totalCost: Number(newResource.quantity) * Number(newResource.unitCost),
+                  ownership: newResource.type === 'maquinario' ? newResource.ownership : undefined
               };
               return { ...stage, resources: [...(stage.resources || []), res] };
           }
@@ -116,7 +89,7 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
 
       onUpdateCrop({ ...crop, timeline: updatedTimeline });
       setNewResourceStageId(null);
-      setNewResource({ name: '', type: 'insumo', quantity: 0, unit: 'un', unitCost: 0 });
+      setNewResource({ name: '', type: 'insumo', quantity: 0, unit: 'un', unitCost: 0, ownership: 'alugado' });
   };
 
   const handleDeleteResource = (stageId: string, resourceId: string) => {
@@ -130,416 +103,459 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
       onUpdateCrop({ ...crop, timeline: updatedTimeline });
   };
 
-  const handleUpdateResource = (stageId: string, resourceId: string, field: keyof StageResource, value: any) => {
-      const updatedTimeline = crop.timeline.map(stage => {
-          if (stage.id === stageId) {
-              const updatedResources = stage.resources.map(res => {
-                  if (res.id === resourceId) {
-                      const updatedRes = { ...res, [field]: value };
-                      // Recalculate total if qty or cost changes
-                      if (field === 'quantity' || field === 'unitCost') {
-                          updatedRes.quantity = Number(updatedRes.quantity);
-                          updatedRes.unitCost = Number(updatedRes.unitCost);
-                          updatedRes.totalCost = updatedRes.quantity * updatedRes.unitCost;
-                      }
-                      return updatedRes;
-                  }
-                  return res;
-              });
-              return { ...stage, resources: updatedResources };
-          }
-          return stage;
-      });
-      onUpdateCrop({ ...crop, timeline: updatedTimeline });
+  const toggleTask = (stageId: string, taskId: string) => {
+    const updatedTimeline = (crop.timeline || []).map(stage => {
+        if (stage.id === stageId) {
+            const updatedTasks = stage.tasks.map(t => t.id === taskId ? { ...t, done: !t.done } : t);
+            const allDone = updatedTasks.every(t => t.done);
+            const status = allDone ? 'concluido' : stage.status;
+            return { ...stage, tasks: updatedTasks, status: status as any };
+        }
+        return stage;
+    });
+    onUpdateCrop({ ...crop, timeline: updatedTimeline });
   };
 
-  // --- Calculation Helpers ---
-  const getTotalCost = () => {
-      if (!crop.timeline) return 0;
-      return crop.timeline.reduce((acc, stage) => {
-          const stageCost = stage.resources ? stage.resources.reduce((sAcc, res) => sAcc + (res.totalCost || 0), 0) : 0;
-          return acc + stageCost;
-      }, 0);
+  // --- INVENTORY LOGIC ---
+  const [isAddingStock, setIsAddingStock] = useState(false);
+  const [newStock, setNewStock] = useState({ quantity: 0, location: 'Silo' });
+
+  const handleAddStock = () => {
+    if(newStock.quantity <= 0) return;
+    
+    const item: InventoryItem = {
+      id: Math.random().toString(36).substr(2, 9),
+      cropType: crop.type,
+      quantity: Number(newStock.quantity),
+      unit: marketUnit,
+      dateStored: new Date().toISOString(),
+      location: newStock.location,
+      estimatedUnitValue: marketPrice
+    };
+
+    const updatedInventory = [...(crop.inventory || []), item];
+    onUpdateCrop({ ...crop, inventory: updatedInventory });
+    setIsAddingStock(false);
+    setNewStock({ quantity: 0, location: 'Silo' });
   };
 
-  const getResourcesByCategory = () => {
-      const breakdown = { insumo: 0, maquinario: 0, mao_de_obra: 0, outros: 0 };
-      crop.timeline?.forEach(stage => {
-          stage.resources?.forEach(res => {
-              if (breakdown[res.type as keyof typeof breakdown] !== undefined) {
-                  breakdown[res.type as keyof typeof breakdown] += res.totalCost;
-              } else {
-                  breakdown['outros'] += res.totalCost;
-              }
-          });
-      });
-      return Object.entries(breakdown).map(([name, value]) => ({ name, value })).filter(x => x.value > 0);
+  const handleHarvestAction = (stageId: string) => {
+    // Shortcut to add stock directly from Timeline
+    setExpandedStageId(null);
+    setActiveTab('inventory');
+    setIsAddingStock(true);
   };
 
-  // --- Renderers ---
+  // --- FINANCE LOGIC ---
+  const [isAddingTransaction, setIsAddingTransaction] = useState(false);
+  const [newTx, setNewTx] = useState<Partial<FinancialTransaction>>({
+    description: '', amount: 0, type: 'despesa', category: 'insumo', status: 'pago'
+  });
 
-  const renderOverview = () => (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-slide-up">
-         <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 relative overflow-hidden group">
-            <div className={`absolute top-0 right-0 p-10 opacity-5 ${theme.main}`}><Ruler size={100} /></div>
-            <h3 className="font-bold text-xl text-gray-800 dark:text-white mb-6 flex items-center gap-2">
-              <span className={`p-2 rounded-lg ${theme.light} ${theme.main}`}><Ruler size={20}/></span> Dados da Área
-            </h3>
-            <div className="space-y-5 relative z-10">
-               <div className="flex justify-between p-3 bg-gray-50 dark:bg-slate-700 rounded-xl"><span className="text-gray-500 dark:text-gray-300 font-medium">Área Total</span><span className="font-bold text-gray-800 dark:text-white text-lg">{crop.areaHa} ha</span></div>
-               <div className="flex justify-between p-3 bg-gray-50 dark:bg-slate-700 rounded-xl"><span className="text-gray-500 dark:text-gray-300 font-medium">Solo</span><span className="font-bold capitalize text-gray-800 dark:text-white">{crop.soilType}</span></div>
-               <div className="flex justify-between p-3 bg-gray-50 dark:bg-slate-700 rounded-xl"><span className="text-gray-500 dark:text-gray-300 font-medium">Espaçamento</span><span className="font-bold text-gray-800 dark:text-white">{crop.spacing}</span></div>
-            </div>
-         </div>
-         <div className="flex flex-col gap-6">
-             <div className={`p-8 rounded-3xl border relative overflow-hidden flex flex-col justify-between ${theme.light} ${theme.border} flex-1`}>
-                <div className="relative z-10"><h3 className={`font-bold text-xl mb-4 flex items-center gap-3 ${theme.main}`}><img src="/tonyk.png" className="w-10 h-10 rounded-full border-2 border-white/30 object-cover" alt="Tonico" onError={(e) => (e.currentTarget.src = 'https://cdn-icons-png.flaticon.com/512/4712/4712035.png')} /><span>Dica Técnica</span></h3><p className="text-gray-700 dark:text-gray-200 italic leading-relaxed text-lg font-medium">"{crop.aiAdvice}"</p></div>
-                <div className="mt-8 relative z-10"><p className={`text-xs font-bold uppercase tracking-wider mb-1 ${theme.main}`}>Colheita Estimada</p><p className="text-3xl font-extrabold text-gray-800 dark:text-white">{new Date(crop.estimatedHarvestDate).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</p></div>
-             </div>
-             {crop.coordinates && (
-               <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700">
-                  <h3 className="font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2"><MapPin className="text-agro-green" size={20}/> Localização</h3>
-                  {mapsApiKey ? (
-                      <div className="relative w-full h-40 bg-gray-200 dark:bg-slate-700 rounded-xl overflow-hidden mb-4"><iframe width="100%" height="100%" frameBorder="0" style={{ border: 0 }} src={`https://www.google.com/maps/embed/v1/place?key=${mapsApiKey}&q=${crop.coordinates.lat},${crop.coordinates.lng}&maptype=satellite&zoom=15`} allowFullScreen></iframe></div>
-                  ) : <div className="w-full h-40 bg-gray-100 rounded-xl flex items-center justify-center text-gray-400 text-xs">Mapa Indisponível</div>}
-               </div>
-             )}
-         </div>
-      </div>
-  );
+  const handleAddTransaction = () => {
+    if(!newTx.description || !newTx.amount) return;
+    const tx: FinancialTransaction = {
+      id: Math.random().toString(36).substr(2, 9),
+      description: newTx.description!,
+      amount: Number(newTx.amount),
+      type: newTx.type as any,
+      category: newTx.category as any,
+      status: newTx.status as any,
+      date: new Date().toISOString()
+    };
+    onUpdateCrop({ ...crop, transactions: [...(crop.transactions || []), tx] });
+    setIsAddingTransaction(false);
+    setNewTx({ description: '', amount: 0, type: 'despesa', category: 'insumo', status: 'pago' });
+  };
+
+  // --- CALCULATIONS ---
+  const totalOperationalCost = crop.timeline?.reduce((acc, stage) => 
+    acc + (stage.resources?.reduce((sAcc, r) => sAcc + r.totalCost, 0) || 0), 0
+  ) || 0;
+
+  const totalPaid = crop.transactions?.filter(t => t.type === 'despesa' && t.status === 'pago').reduce((acc, t) => acc + t.amount, 0) || 0;
+  const totalInventoryValue = (crop.inventory || []).reduce((acc, item) => acc + (item.quantity * marketPrice), 0);
+
+  // --- ASSISTANT ---
+  const handleChatSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chatInput.trim()) return;
+    const userMsg = chatInput;
+    setChatInput('');
+    setChatHistory(prev => [...prev, { role: 'user', text: userMsg }]);
+    setIsChatLoading(true);
+    const context = `Lavoura: ${crop.name} (${crop.type}). Etapa atual: ${crop.timeline?.find(s=>s.status === 'em_andamento')?.title || 'Início'}. Estoque: ${totalInventoryValue} BRL.`;
+    const response = await getAssistantResponse(userMsg, context);
+    setChatHistory(prev => [...prev, { role: 'ai', text: response }]);
+    setIsChatLoading(false);
+  };
+
+  const getCropGradient = (type: string) => {
+    switch(type) {
+      case 'cafe': return 'from-[#A67C52] to-[#8B6540]';
+      case 'milho': return 'from-orange-500 to-red-500';
+      case 'soja': return 'from-yellow-500 to-orange-500';
+      case 'cana': return 'from-green-600 to-emerald-700';
+      case 'algodao': return 'from-slate-400 to-slate-600';
+      case 'arroz': return 'from-yellow-400 to-yellow-600';
+      case 'feijao': return 'from-red-800 to-red-950';
+      case 'trigo': return 'from-amber-300 to-amber-500';
+      case 'laranja': return 'from-orange-600 to-orange-800';
+      case 'mandioca': return 'from-amber-800 to-amber-950';
+      default: return 'from-agro-green to-emerald-600';
+    }
+  };
+
+  // --- RENDERERS ---
 
   const renderTimeline = () => (
     <div className="space-y-6 animate-slide-up">
-        <div className="flex items-center justify-between mb-2">
-            <div>
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Ciclo Operacional</h3>
-                <p className="text-sm text-gray-500">Gestão detalhada de etapas, maquinário e mão de obra.</p>
-            </div>
-            <button 
-                onClick={() => setIsEditingTimeline(!isEditingTimeline)}
-                className={`p-2.5 rounded-xl transition-colors flex items-center gap-2 font-bold ${isEditingTimeline ? 'bg-agro-green text-white shadow-lg shadow-green-600/20' : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200'}`}
-            >
-                {isEditingTimeline ? <><Check size={20} /> Concluir Edição</> : <><Edit2 size={20} /> Editar Etapas</>}
-            </button>
+      <div className="flex justify-between items-center">
+        <div>
+           <h3 className="text-xl font-bold text-gray-900 dark:text-white">Espinha Dorsal</h3>
+           <p className="text-sm text-gray-500">Cronograma operacional do solo ao estoque.</p>
         </div>
+        <button 
+          onClick={() => setIsEditingTimeline(!isEditingTimeline)}
+          className={`px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors ${isEditingTimeline ? 'bg-agro-green text-white' : 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300'}`}
+        >
+          {isEditingTimeline ? <Check size={16} /> : <Edit2 size={16} />} 
+          {isEditingTimeline ? 'Concluir' : 'Editar'}
+        </button>
+      </div>
 
-        <div className="relative pl-4 ml-2 border-l-2 border-dashed border-gray-200 dark:border-slate-700 space-y-8">
-            {crop.timeline?.map((stage, index) => {
-                const stageCost = stage.resources?.reduce((acc, r) => acc + r.totalCost, 0) || 0;
-                const isExpanded = expandedStageId === stage.id;
-                const statusColor = stage.status === 'concluido' ? 'bg-agro-green' : stage.status === 'em_andamento' ? 'bg-blue-500' : 'bg-gray-300 dark:bg-slate-600';
+      <div className="relative border-l-2 border-dashed border-gray-200 dark:border-slate-700 ml-4 space-y-8 pb-12">
+        {crop.timeline?.map((stage, idx) => {
+          const isExpanded = expandedStageId === stage.id;
+          const stageCost = stage.resources?.reduce((a,b) => a + b.totalCost, 0) || 0;
+          
+          // Semantic Icon
+          let StageIcon = Leaf;
+          if(stage.type === 'preparo') StageIcon = Tractor;
+          if(stage.type === 'plantio') StageIcon = Sprout;
+          if(stage.type === 'colheita') StageIcon = Package;
+          if(stage.type === 'pos_colheita') StageIcon = Truck;
 
-                return (
-                    <div key={stage.id} className="relative">
-                        {/* Dot */}
-                        <div 
-                           onClick={() => handleStageStatusChange(stage.id)}
-                           className={`absolute -left-[27px] top-6 w-5 h-5 rounded-full border-4 border-white dark:border-slate-900 ${statusColor} shadow-sm z-10 cursor-pointer hover:scale-110 transition-transform`}
-                           title="Alterar Status"
-                        ></div>
-                        
-                        {/* Card */}
-                        <div className={`bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden transition-all duration-300 ${isExpanded ? 'ring-2 ring-agro-green/20' : ''}`}>
-                            
-                            {/* Header */}
-                            <div 
-                                onClick={() => setExpandedStageId(isExpanded ? null : stage.id)}
-                                className="p-5 cursor-pointer flex items-center justify-between hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors"
-                            >
-                                <div className="flex items-center gap-4">
-                                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg ${stage.status === 'concluido' ? 'bg-green-100 text-green-700' : stage.status === 'em_andamento' ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-500 dark:bg-slate-700 dark:text-gray-400'}`}>
-                                        {index + 1}
-                                    </div>
-                                    <div>
-                                        <h4 className="text-lg font-bold text-gray-900 dark:text-white">{stage.title}</h4>
-                                        <div className="flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                                            <span className="flex items-center gap-1"><Calendar size={14}/> {stage.dateEstimate}</span>
-                                            {stageCost > 0 && <span className="flex items-center gap-1 font-medium text-gray-700 dark:text-gray-300"><DollarSign size={14}/> {stageCost.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}</span>}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="text-gray-400">
-                                    {isExpanded ? <ChevronUp size={20}/> : <ChevronDown size={20}/>}
-                                </div>
-                            </div>
+          return (
+            <div key={stage.id} className="relative pl-8">
+              {/* Dot Icon */}
+              <div className={`
+                absolute -left-[19px] top-0 w-10 h-10 rounded-full flex items-center justify-center border-4 border-gray-50 dark:border-slate-900 z-10
+                ${stage.status === 'concluido' ? 'bg-agro-green text-white' : 'bg-white dark:bg-slate-800 text-gray-400 dark:text-gray-500 shadow-sm'}
+              `}>
+                 <StageIcon size={18} />
+              </div>
 
-                            {/* Expanded Content */}
-                            {isExpanded && (
-                                <div className="px-5 pb-5 pt-0 border-t border-gray-100 dark:border-slate-700 animate-fade-in">
-                                    <p className="text-gray-600 dark:text-gray-300 my-4 text-sm leading-relaxed">{stage.description}</p>
-                                    
-                                    {/* Checklist */}
-                                    {stage.tasks && stage.tasks.length > 0 && (
-                                        <div className="mb-6">
-                                            <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Checklist Operacional</h5>
-                                            <div className="space-y-2">
-                                                {stage.tasks.map((task) => (
-                                                    <div key={task.id} onClick={() => !isEditingTimeline && toggleTask(stage.id, task.id)} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-slate-700/50 rounded-xl cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">
-                                                        <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center ${task.done ? 'bg-agro-green border-agro-green' : 'border-gray-300'}`}>
-                                                            {task.done && <Check size={12} className="text-white"/>}
-                                                        </div>
-                                                        <span className={`text-sm ${task.done ? 'text-gray-400 line-through' : 'text-gray-700 dark:text-gray-200'}`}>{task.text}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Resources Grid */}
-                                    <div>
-                                        <div className="flex justify-between items-center mb-3">
-                                            <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Recursos Alocados</h5>
-                                            {isEditingTimeline && (
-                                                <button 
-                                                    onClick={() => setNewResourceStageId(stage.id)}
-                                                    className="text-xs font-bold text-agro-green flex items-center gap-1 bg-green-50 px-2 py-1 rounded-lg hover:bg-green-100"
-                                                >
-                                                    <Plus size={14}/> Adicionar Recurso
-                                                </button>
-                                            )}
-                                        </div>
-
-                                        {/* New Resource Form */}
-                                        {newResourceStageId === stage.id && (
-                                            <div className="bg-gray-50 dark:bg-slate-900 p-4 rounded-xl mb-4 border border-agro-green/30 animate-fade-in">
-                                                <p className="text-xs font-bold text-gray-500 mb-2">Novo Item</p>
-                                                <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-2">
-                                                    <select 
-                                                        value={newResource.type}
-                                                        onChange={e => setNewResource({...newResource, type: e.target.value as ResourceType})}
-                                                        className="p-2 rounded-lg border text-sm"
-                                                    >
-                                                        <option value="insumo">Insumo</option>
-                                                        <option value="maquinario">Maquinário</option>
-                                                        <option value="mao_de_obra">Mão de Obra</option>
-                                                    </select>
-                                                    <input 
-                                                        placeholder="Nome (Ex: Adubo NPK)" 
-                                                        value={newResource.name}
-                                                        onChange={e => setNewResource({...newResource, name: e.target.value})}
-                                                        className="p-2 rounded-lg border text-sm md:col-span-2"
-                                                    />
-                                                    <input 
-                                                        type="number" 
-                                                        placeholder="Qtd" 
-                                                        value={newResource.quantity || ''}
-                                                        onChange={e => setNewResource({...newResource, quantity: parseFloat(e.target.value)})}
-                                                        className="p-2 rounded-lg border text-sm"
-                                                    />
-                                                    <div className="flex gap-1">
-                                                        <input 
-                                                            type="number" 
-                                                            placeholder="R$ Unit." 
-                                                            value={newResource.unitCost || ''}
-                                                            onChange={e => setNewResource({...newResource, unitCost: parseFloat(e.target.value)})}
-                                                            className="p-2 rounded-lg border text-sm w-full"
-                                                        />
-                                                    </div>
-                                                </div>
-                                                <div className="flex gap-2">
-                                                    <button onClick={() => handleAddResource(stage.id)} className="flex-1 bg-agro-green text-white py-2 rounded-lg text-sm font-bold hover:bg-green-700">Salvar</button>
-                                                    <button onClick={() => setNewResourceStageId(null)} className="flex-1 bg-gray-200 text-gray-600 py-2 rounded-lg text-sm font-bold">Cancelar</button>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                            {/* Insumos */}
-                                            <div className="bg-green-50 dark:bg-green-900/10 p-4 rounded-xl border border-green-100 dark:border-green-900/20">
-                                                <div className="flex items-center gap-2 mb-3 text-green-700 dark:text-green-400 font-bold text-sm">
-                                                    <Beaker size={16} /> Insumos
-                                                </div>
-                                                <ul className="space-y-2">
-                                                    {stage.resources?.filter(r => r.type === 'insumo').map(r => (
-                                                        <li key={r.id} className="flex justify-between items-center text-xs text-gray-600 dark:text-gray-300 border-b border-green-200/30 pb-1 last:border-0 group">
-                                                            <div>
-                                                                <span className="font-semibold block">{r.name}</span>
-                                                                <div className="flex gap-1 text-[10px] opacity-70">
-                                                                    {isEditingTimeline ? (
-                                                                       <>
-                                                                         <input type="number" className="w-10 bg-white border rounded px-1" value={r.quantity} onChange={(e) => handleUpdateResource(stage.id, r.id, 'quantity', e.target.value)} /> {r.unit} x 
-                                                                         R$ <input type="number" className="w-12 bg-white border rounded px-1" value={r.unitCost} onChange={(e) => handleUpdateResource(stage.id, r.id, 'unitCost', e.target.value)} />
-                                                                       </>
-                                                                    ) : (
-                                                                       <span>{r.quantity} {r.unit} x R$ {r.unitCost}</span>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="font-bold">{r.totalCost.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</span>
-                                                                {isEditingTimeline && <button onClick={() => handleDeleteResource(stage.id, r.id)} className="text-red-400 hover:text-red-600"><Trash2 size={12}/></button>}
-                                                            </div>
-                                                        </li>
-                                                    ))}
-                                                    {(!stage.resources || stage.resources.filter(r => r.type === 'insumo').length === 0) && <span className="text-xs text-gray-400 italic">Nenhum insumo</span>}
-                                                </ul>
-                                            </div>
-
-                                            {/* Maquinario */}
-                                            <div className="bg-orange-50 dark:bg-orange-900/10 p-4 rounded-xl border border-orange-100 dark:border-orange-900/20">
-                                                <div className="flex items-center gap-2 mb-3 text-orange-700 dark:text-orange-400 font-bold text-sm">
-                                                    <Tractor size={16} /> Maquinário
-                                                </div>
-                                                <ul className="space-y-2">
-                                                    {stage.resources?.filter(r => r.type === 'maquinario').map(r => (
-                                                        <li key={r.id} className="flex justify-between items-center text-xs text-gray-600 dark:text-gray-300 border-b border-orange-200/30 pb-1 last:border-0 group">
-                                                            <div>
-                                                                <span className="font-semibold block">{r.name}</span>
-                                                                <div className="flex gap-1 text-[10px] opacity-70">
-                                                                    {isEditingTimeline ? (
-                                                                       <>
-                                                                         <input type="number" className="w-10 bg-white border rounded px-1" value={r.quantity} onChange={(e) => handleUpdateResource(stage.id, r.id, 'quantity', e.target.value)} /> {r.unit} x 
-                                                                         R$ <input type="number" className="w-12 bg-white border rounded px-1" value={r.unitCost} onChange={(e) => handleUpdateResource(stage.id, r.id, 'unitCost', e.target.value)} />
-                                                                       </>
-                                                                    ) : (
-                                                                       <span>{r.quantity} {r.unit} x R$ {r.unitCost}</span>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="font-bold">{r.totalCost.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</span>
-                                                                {isEditingTimeline && <button onClick={() => handleDeleteResource(stage.id, r.id)} className="text-red-400 hover:text-red-600"><Trash2 size={12}/></button>}
-                                                            </div>
-                                                        </li>
-                                                    ))}
-                                                     {(!stage.resources || stage.resources.filter(r => r.type === 'maquinario').length === 0) && <span className="text-xs text-gray-400 italic">Nenhum maquinário</span>}
-                                                </ul>
-                                            </div>
-
-                                            {/* Mão de Obra */}
-                                            <div className="bg-blue-50 dark:bg-blue-900/10 p-4 rounded-xl border border-blue-100 dark:border-blue-900/20">
-                                                <div className="flex items-center gap-2 mb-3 text-blue-700 dark:text-blue-400 font-bold text-sm">
-                                                    <User size={16} /> Mão de Obra
-                                                </div>
-                                                <ul className="space-y-2">
-                                                    {stage.resources?.filter(r => r.type === 'mao_de_obra').map(r => (
-                                                        <li key={r.id} className="flex justify-between items-center text-xs text-gray-600 dark:text-gray-300 border-b border-blue-200/30 pb-1 last:border-0 group">
-                                                            <div>
-                                                                <span className="font-semibold block">{r.name}</span>
-                                                                <div className="flex gap-1 text-[10px] opacity-70">
-                                                                    {isEditingTimeline ? (
-                                                                       <>
-                                                                         <input type="number" className="w-10 bg-white border rounded px-1" value={r.quantity} onChange={(e) => handleUpdateResource(stage.id, r.id, 'quantity', e.target.value)} /> {r.unit} x 
-                                                                         R$ <input type="number" className="w-12 bg-white border rounded px-1" value={r.unitCost} onChange={(e) => handleUpdateResource(stage.id, r.id, 'unitCost', e.target.value)} />
-                                                                       </>
-                                                                    ) : (
-                                                                       <span>{r.quantity} {r.unit} x R$ {r.unitCost}</span>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="font-bold">{r.totalCost.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</span>
-                                                                {isEditingTimeline && <button onClick={() => handleDeleteResource(stage.id, r.id)} className="text-red-400 hover:text-red-600"><Trash2 size={12}/></button>}
-                                                            </div>
-                                                        </li>
-                                                    ))}
-                                                     {(!stage.resources || stage.resources.filter(r => r.type === 'mao_de_obra').length === 0) && <span className="text-xs text-gray-400 italic">Nenhuma MO</span>}
-                                                </ul>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
+              <div className={`
+                bg-white dark:bg-slate-800 rounded-2xl shadow-sm border transition-all overflow-hidden
+                ${isExpanded ? 'border-agro-green ring-1 ring-agro-green/20' : 'border-gray-100 dark:border-slate-700'}
+              `}>
+                 <div 
+                   onClick={() => setExpandedStageId(isExpanded ? null : stage.id)}
+                   className="p-5 cursor-pointer flex justify-between items-center hover:bg-gray-50 dark:hover:bg-slate-700/50"
+                 >
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Etapa {idx + 1}</span>
+                        {stage.status === 'concluido' && <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">Concluído</span>}
+                      </div>
+                      <h4 className="font-bold text-gray-900 dark:text-white text-lg">{stage.title}</h4>
+                      <div className="flex items-center gap-4 text-xs text-gray-500 mt-1">
+                         <span className="flex items-center gap-1"><Calendar size={12}/> {stage.dateEstimate}</span>
+                         <span className="flex items-center gap-1 font-medium text-gray-700 dark:text-gray-300"><DollarSign size={12}/> {stageCost.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})} (Est.)</span>
+                      </div>
                     </div>
-                );
-            })}
-        </div>
+                    {isExpanded ? <ChevronUp className="text-gray-400"/> : <ChevronDown className="text-gray-400"/>}
+                 </div>
+
+                 {isExpanded && (
+                   <div className="px-5 pb-5 border-t border-gray-100 dark:border-slate-700 animate-fade-in">
+                      <p className="text-sm text-gray-600 dark:text-gray-300 py-4 leading-relaxed">{stage.description}</p>
+                      
+                      {/* Operational Checklist */}
+                      <div className="mb-6">
+                        <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Checklist Operacional</h5>
+                        <div className="space-y-2">
+                           {stage.tasks?.map(task => (
+                             <div key={task.id} onClick={() => !isEditingTimeline && toggleTask(stage.id, task.id)} className="flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-slate-700/50 rounded-lg cursor-pointer transition-colors">
+                                <div className={`w-5 h-5 rounded border flex items-center justify-center ${task.done ? 'bg-agro-green border-agro-green' : 'border-gray-300'}`}>
+                                   {task.done && <Check size={14} className="text-white"/>}
+                                </div>
+                                <span className={`text-sm ${task.done ? 'text-gray-400 line-through' : 'text-gray-700 dark:text-gray-200'}`}>{task.text}</span>
+                             </div>
+                           ))}
+                        </div>
+                      </div>
+
+                      {/* Resources Management */}
+                      <div>
+                        <div className="flex justify-between items-center mb-3">
+                           <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Recursos & Custos</h5>
+                           {isEditingTimeline && (
+                             <button onClick={() => setNewResourceStageId(stage.id)} className="text-xs flex items-center gap-1 text-agro-green font-bold bg-green-50 px-2 py-1 rounded-lg">
+                               <Plus size={14}/> Add Recurso
+                             </button>
+                           )}
+                        </div>
+
+                        {/* Add Resource Form */}
+                        {newResourceStageId === stage.id && (
+                           <div className="bg-gray-50 dark:bg-slate-900 p-4 rounded-xl mb-4 border border-agro-green/30 animate-fade-in">
+                              <div className="grid grid-cols-2 gap-2 mb-2">
+                                <select 
+                                    className="p-2 rounded-lg border text-sm"
+                                    value={newResource.type}
+                                    onChange={e => setNewResource({...newResource, type: e.target.value as any})}
+                                >
+                                    <option value="insumo">Insumo</option>
+                                    <option value="maquinario">Maquinário</option>
+                                    <option value="mao_de_obra">Mão de Obra</option>
+                                </select>
+                                <input placeholder="Nome" className="p-2 rounded-lg border text-sm" value={newResource.name} onChange={e=>setNewResource({...newResource, name: e.target.value})}/>
+                                {newResource.type === 'maquinario' && (
+                                   <select 
+                                      className="p-2 rounded-lg border text-sm col-span-2"
+                                      value={newResource.ownership}
+                                      onChange={e=>setNewResource({...newResource, ownership: e.target.value as any})}
+                                   >
+                                      <option value="alugado">Alugado (R$/h)</option>
+                                      <option value="proprio">Próprio (Manutenção/Combustível)</option>
+                                   </select>
+                                )}
+                                <input type="number" placeholder="Qtd" className="p-2 rounded-lg border text-sm" value={newResource.quantity || ''} onChange={e=>setNewResource({...newResource, quantity: Number(e.target.value)})}/>
+                                <input type="number" placeholder="R$ Unit" className="p-2 rounded-lg border text-sm" value={newResource.unitCost || ''} onChange={e=>setNewResource({...newResource, unitCost: Number(e.target.value)})}/>
+                              </div>
+                              <button onClick={() => handleAddResource(stage.id)} className="w-full bg-agro-green text-white py-2 rounded-lg text-sm font-bold">Salvar</button>
+                           </div>
+                        )}
+
+                        {/* Resources List */}
+                        <div className="space-y-2">
+                           {stage.resources?.map(res => (
+                             <div key={res.id} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-slate-900/50 rounded-xl border border-gray-100 dark:border-slate-700/50">
+                                <div className="flex items-center gap-3">
+                                   <div className={`p-2 rounded-lg ${res.type === 'maquinario' ? 'bg-orange-100 text-orange-600' : res.type === 'mao_de_obra' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600'}`}>
+                                      {res.type === 'maquinario' ? <Tractor size={16}/> : res.type === 'mao_de_obra' ? <User size={16}/> : <Beaker size={16}/>}
+                                   </div>
+                                   <div>
+                                      <p className="text-sm font-bold text-gray-800 dark:text-gray-200">
+                                        {res.name}
+                                        {res.ownership && <span className="ml-2 text-[10px] uppercase bg-gray-200 dark:bg-slate-700 px-1.5 py-0.5 rounded text-gray-600">{res.ownership}</span>}
+                                      </p>
+                                      <p className="text-xs text-gray-500">{res.quantity} {res.unit} x R$ {res.unitCost}</p>
+                                   </div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                   <span className="font-bold text-sm text-gray-900 dark:text-white">
+                                     {res.totalCost.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}
+                                   </span>
+                                   {isEditingTimeline && (
+                                     <button onClick={() => handleDeleteResource(stage.id, res.id)} className="text-red-400 hover:text-red-600"><Trash2 size={14}/></button>
+                                   )}
+                                </div>
+                             </div>
+                           ))}
+                           {(!stage.resources || stage.resources.length === 0) && (
+                             <p className="text-xs text-gray-400 italic text-center py-2">Nenhum recurso registrado nesta etapa.</p>
+                           )}
+                        </div>
+                      </div>
+                      
+                      {/* Harvest Button Action (Only for harvest stages) */}
+                      {(stage.type === 'colheita' || stage.type === 'pos_colheita') && (
+                        <div className="mt-6 pt-4 border-t border-gray-100 dark:border-slate-700 flex justify-end">
+                           <button 
+                             onClick={() => handleHarvestAction(stage.id)}
+                             className="flex items-center gap-2 px-4 py-2 bg-yellow-500 text-white rounded-xl font-bold hover:bg-yellow-600 shadow-lg shadow-yellow-500/20 transition-all active:scale-95"
+                           >
+                             <Warehouse size={18} /> Registrar no Estoque
+                           </button>
+                        </div>
+                      )}
+                   </div>
+                 )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 
-  const renderFinance = () => {
-    const totalCost = getTotalCost();
-    const categories = getResourcesByCategory();
-    const COLORS = {'insumo': '#27AE60', 'maquinario': '#E67E22', 'mao_de_obra': '#2980B9', 'outros': '#95A5A6'};
-    const LABELS = {'insumo': 'Insumos', 'maquinario': 'Maquinário', 'mao_de_obra': 'Mão de Obra', 'outros': 'Outros'};
+  const renderInventory = () => (
+    <div className="space-y-6 animate-slide-up">
+       <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col md:flex-row justify-between items-center gap-4">
+          <div>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+               <Warehouse className="text-yellow-500"/> Estoque Físico
+            </h3>
+            <p className="text-sm text-gray-500">Valorização em tempo real baseada na cotação: <strong>R$ {marketPrice.toFixed(2)} / {marketUnit}</strong></p>
+          </div>
+          <div className="text-right">
+             <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Valor Estimado</p>
+             <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white">
+               {totalInventoryValue.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}
+             </h2>
+          </div>
+       </div>
 
-    // Flatten all resources for the table
-    const allResources = crop.timeline?.flatMap(stage => 
-        stage.resources?.map(r => ({...r, stageName: stage.title})) || []
-    ) || [];
+       {isAddingStock ? (
+         <div className="bg-yellow-50 dark:bg-yellow-900/10 p-6 rounded-3xl border border-yellow-200 dark:border-yellow-700/30 animate-fade-in">
+            <h4 className="font-bold text-yellow-800 dark:text-yellow-200 mb-4">Nova Entrada de Colheita</h4>
+            <div className="flex gap-4 mb-4">
+               <div className="flex-1">
+                 <label className="text-xs font-bold text-yellow-700 dark:text-yellow-300 ml-1">Quantidade ({marketUnit})</label>
+                 <input 
+                   type="number" 
+                   autoFocus
+                   className="w-full p-3 rounded-xl border border-yellow-300 focus:ring-2 focus:ring-yellow-500 outline-none" 
+                   value={newStock.quantity || ''}
+                   onChange={e => setNewStock({...newStock, quantity: Number(e.target.value)})}
+                 />
+               </div>
+               <div className="flex-1">
+                 <label className="text-xs font-bold text-yellow-700 dark:text-yellow-300 ml-1">Local de Armazenamento</label>
+                 <select 
+                    className="w-full p-3 rounded-xl border border-yellow-300 focus:ring-2 focus:ring-yellow-500 outline-none bg-white"
+                    value={newStock.location}
+                    onChange={e => setNewStock({...newStock, location: e.target.value})}
+                 >
+                    <option>Silo 1</option>
+                    <option>Tulha</option>
+                    <option>Cooperativa</option>
+                    <option>Armazém Geral</option>
+                 </select>
+               </div>
+            </div>
+            <div className="flex justify-end gap-2">
+               <button onClick={() => setIsAddingStock(false)} className="px-4 py-2 text-yellow-700 font-bold hover:bg-yellow-100 rounded-lg">Cancelar</button>
+               <button onClick={handleAddStock} className="px-6 py-2 bg-yellow-500 text-white font-bold rounded-lg hover:bg-yellow-600 shadow-md">Confirmar Entrada</button>
+            </div>
+         </div>
+       ) : (
+         <button onClick={() => setIsAddingStock(true)} className="w-full py-3 border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-2xl text-gray-500 font-bold hover:border-yellow-500 hover:text-yellow-500 transition-colors flex items-center justify-center gap-2">
+            <Plus size={20}/> Registrar Entrada Manual
+         </button>
+       )}
 
-    return (
-      <div className="space-y-6 animate-slide-up">
-         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700">
-                <h3 className="font-bold text-gray-800 dark:text-white mb-6">Custo Total da Lavoura</h3>
-                <div className="flex flex-col items-center justify-center h-48">
-                    <span className="text-4xl font-extrabold text-gray-900 dark:text-white">
-                        {totalCost.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}
-                    </span>
-                    <span className="text-gray-500 text-sm mt-2">Custo estimado por hectare: {(totalCost / crop.areaHa).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}/ha</span>
+       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {crop.inventory?.map((item, i) => (
+             <div key={i} className="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 relative overflow-hidden group hover:shadow-md transition-all">
+                <div className="absolute top-0 right-0 p-4 opacity-5 text-yellow-500 transform group-hover:scale-110 transition-transform">
+                   <Package size={80} />
                 </div>
-            </div>
-            
-            <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700">
-                <h3 className="font-bold text-gray-800 dark:text-white mb-2">Distribuição por Categoria</h3>
-                {categories.length > 0 ? (
-                    <div className="h-48 w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                            <Pie
-                                data={categories}
-                                innerRadius={50}
-                                outerRadius={70}
-                                paddingAngle={5}
-                                dataKey="value"
-                            >
-                                {categories.map((entry: any, index) => (
-                                    <Cell key={`cell-${index}`} fill={COLORS[entry.name as keyof typeof COLORS] || '#888'} />
-                                ))}
-                            </Pie>
-                            <Tooltip formatter={(value:number) => value.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})} />
-                            <Legend formatter={(value) => LABELS[value as keyof typeof LABELS] || value}/>
-                        </PieChart>
-                    </ResponsiveContainer>
+                <div className="relative z-10">
+                   <div className="flex justify-between items-start mb-2">
+                      <span className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 text-xs font-bold px-2 py-1 rounded-lg">
+                        {item.location}
+                      </span>
+                      <span className="text-xs text-gray-400">{new Date(item.dateStored).toLocaleDateString()}</span>
+                   </div>
+                   <h3 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-1">
+                      {item.quantity} <span className="text-base font-medium text-gray-500">{item.unit}</span>
+                   </h3>
+                   <div className="mt-4 pt-4 border-t border-gray-50 dark:border-slate-700 flex items-center gap-2 text-sm">
+                      <TrendingUp size={16} className="text-green-500"/>
+                      <span className="text-gray-600 dark:text-gray-300">
+                        Valendo: <strong>{(item.quantity * marketPrice).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</strong>
+                      </span>
+                   </div>
+                </div>
+             </div>
+          ))}
+       </div>
+    </div>
+  );
+
+  const renderFinance = () => (
+    <div className="space-y-6 animate-slide-up">
+       
+       {/* Comparison Cards */}
+       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700">
+             <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><ListTodo size={20}/></div>
+                <h4 className="font-bold text-gray-700 dark:text-gray-200">Custo Operacional (Consumo)</h4>
+             </div>
+             <p className="text-3xl font-extrabold text-gray-900 dark:text-white">
+                {totalOperationalCost.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}
+             </p>
+             <p className="text-xs text-gray-400 mt-2">Calculado com base nos recursos inseridos nas etapas.</p>
+          </div>
+
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700">
+             <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-green-50 text-green-600 rounded-lg"><Wallet size={20}/></div>
+                <h4 className="font-bold text-gray-700 dark:text-gray-200">Fluxo de Caixa (Realizado)</h4>
+             </div>
+             <p className="text-3xl font-extrabold text-gray-900 dark:text-white">
+                {totalPaid.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}
+             </p>
+             <p className="text-xs text-gray-400 mt-2">Soma dos pagamentos efetivados e lançados.</p>
+          </div>
+       </div>
+
+       {/* Transaction List */}
+       <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden">
+          <div className="p-6 border-b border-gray-100 dark:border-slate-700 flex justify-between items-center">
+             <h3 className="font-bold text-lg text-gray-800 dark:text-white">Lançamentos Financeiros</h3>
+             <button 
+               onClick={() => setIsAddingTransaction(!isAddingTransaction)}
+               className="text-sm font-bold text-agro-green flex items-center gap-1 bg-green-50 px-3 py-1.5 rounded-xl hover:bg-green-100"
+             >
+               <Plus size={16}/> Novo Lançamento
+             </button>
+          </div>
+          
+          {isAddingTransaction && (
+             <div className="p-6 bg-gray-50 dark:bg-slate-900 border-b border-gray-100 dark:border-slate-700 animate-fade-in">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-3">
+                   <select className="p-3 rounded-xl border text-sm" value={newTx.type} onChange={e => setNewTx({...newTx, type: e.target.value as any})}>
+                      <option value="despesa">Despesa</option>
+                      <option value="receita">Receita</option>
+                   </select>
+                   <input className="p-3 rounded-xl border text-sm md:col-span-2" placeholder="Descrição (Ex: Pagto Tratorista)" value={newTx.description} onChange={e => setNewTx({...newTx, description: e.target.value})} />
+                   <input className="p-3 rounded-xl border text-sm" type="number" placeholder="Valor R$" value={newTx.amount || ''} onChange={e => setNewTx({...newTx, amount: Number(e.target.value)})} />
+                   <select className="p-3 rounded-xl border text-sm" value={newTx.status} onChange={e => setNewTx({...newTx, status: e.target.value as any})}>
+                      <option value="pago">Pago</option>
+                      <option value="pendente">Pendente</option>
+                   </select>
+                </div>
+                <button onClick={handleAddTransaction} className="w-full py-3 bg-agro-green text-white font-bold rounded-xl shadow-md">Salvar Lançamento</button>
+             </div>
+          )}
+
+          <div className="divide-y divide-gray-100 dark:divide-slate-700">
+             {crop.transactions?.length === 0 ? (
+               <div className="p-10 text-center text-gray-400">Nenhum lançamento registrado.</div>
+             ) : (
+               crop.transactions?.map((tx, i) => (
+                 <div key={i} className="p-4 flex justify-between items-center hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
+                    <div className="flex items-center gap-4">
+                       <div className={`p-2 rounded-full ${tx.type === 'receita' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                          {tx.type === 'receita' ? <TrendingUp size={18}/> : <DollarSign size={18}/>}
+                       </div>
+                       <div>
+                          <p className="font-bold text-gray-800 dark:text-gray-200">{tx.description}</p>
+                          <p className="text-xs text-gray-500">{new Date(tx.date).toLocaleDateString()} • <span className="capitalize">{tx.category}</span></p>
+                       </div>
                     </div>
-                ) : (
-                    <div className="h-48 flex items-center justify-center text-gray-400">Sem custos registrados ainda.</div>
-                )}
-            </div>
-         </div>
-
-         <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700">
-            <h3 className="font-bold text-gray-800 dark:text-white mb-6 flex items-center gap-2"><ShoppingBag size={20}/> Detalhamento de Recursos</h3>
-            <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left">
-                    <thead className="bg-gray-50 dark:bg-slate-700 text-gray-500 dark:text-gray-300 font-bold uppercase text-xs">
-                        <tr>
-                            <th className="p-3 rounded-l-xl">Item</th>
-                            <th className="p-3">Categoria</th>
-                            <th className="p-3">Etapa</th>
-                            <th className="p-3 text-right">Qtd</th>
-                            <th className="p-3 text-right rounded-r-xl">Total</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
-                        {allResources.map((res, idx) => (
-                            <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
-                                <td className="p-3 font-medium text-gray-900 dark:text-white">{res.name}</td>
-                                <td className="p-3">
-                                    <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase
-                                        ${res.type === 'insumo' ? 'bg-green-100 text-green-700' :
-                                          res.type === 'maquinario' ? 'bg-orange-100 text-orange-700' : 
-                                          'bg-blue-100 text-blue-700'}
-                                    `}>
-                                        {res.type}
-                                    </span>
-                                </td>
-                                <td className="p-3 text-gray-500">{res.stageName}</td>
-                                <td className="p-3 text-right text-gray-600 dark:text-gray-300">{res.quantity} {res.unit}</td>
-                                <td className="p-3 text-right font-bold text-gray-900 dark:text-white">{res.totalCost.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-         </div>
-      </div>
-    );
-  };
-
-  const renderStorage = () => <div className="p-10 text-center text-gray-500">Módulo de Estoque em Desenvolvimento</div>;
+                    <div className="text-right">
+                       <p className={`font-bold ${tx.type === 'receita' ? 'text-green-600' : 'text-gray-900 dark:text-white'}`}>
+                          {tx.type === 'despesa' ? '- ' : '+ '}
+                          {tx.amount.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}
+                       </p>
+                       <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${tx.status === 'pago' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                          {tx.status}
+                       </span>
+                    </div>
+                 </div>
+               ))
+             )}
+          </div>
+       </div>
+    </div>
+  );
 
   const renderAssistant = () => (
     <div className="flex flex-col h-[500px] bg-white dark:bg-slate-800 rounded-3xl p-4 border border-gray-100 dark:border-slate-700 shadow-sm">
@@ -567,7 +583,7 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
   return (
     <div className="space-y-6 pb-24 md:pb-8">
       {/* Header */}
-      <div className={`rounded-b-3xl md:rounded-3xl shadow-xl p-6 text-white bg-gradient-to-br ${theme.gradient} relative overflow-hidden`}>
+      <div className={`rounded-b-3xl md:rounded-3xl shadow-xl p-6 text-white bg-gradient-to-br ${getCropGradient(crop.type)} relative overflow-hidden`}>
          <div className="relative z-10">
             <div className="flex justify-between items-start mb-6">
                 <button onClick={onBack} className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors backdrop-blur-sm"><ArrowLeft/></button>
@@ -588,10 +604,9 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
 
             <div className="flex gap-2 mt-8 overflow-x-auto pb-2 no-scrollbar">
                 {[
-                    {id: 'overview', label: 'Resumo', icon: Home},
-                    {id: 'timeline', label: 'Etapas', icon: ListTodo},
-                    {id: 'finance', label: 'Custos', icon: DollarSign},
-                    {id: 'storage', label: 'Estoque', icon: Warehouse},
+                    {id: 'timeline', label: 'Espinha Dorsal', icon: ListTodo},
+                    {id: 'inventory', label: 'Estoque', icon: Warehouse},
+                    {id: 'finance', label: 'Financeiro', icon: DollarSign},
                     {id: 'reports', label: 'Relatórios', icon: FileText}
                 ].map(tab => (
                     <button 
@@ -612,10 +627,9 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
       </div>
 
       <div className="min-h-[500px] px-1 pb-24">
-        {activeTab === 'overview' && renderOverview()}
         {activeTab === 'timeline' && renderTimeline()}
+        {activeTab === 'inventory' && renderInventory()}
         {activeTab === 'finance' && renderFinance()}
-        {activeTab === 'storage' && renderStorage()}
         {activeTab === 'assistant' && renderAssistant()}
         {activeTab === 'reports' && <Reports crop={crop} />}
       </div>

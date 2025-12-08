@@ -28,6 +28,9 @@ export interface StageResource {
   unit: string;
   unitCost: number;
   totalCost: number;
+  // New specific fields
+  ownership?: 'proprio' | 'alugado'; // For machinery
+  details?: string; // e.g., "Diesel" or "Manutenção" for owned machines
 }
 
 export interface TimelineStage {
@@ -36,27 +39,31 @@ export interface TimelineStage {
   description: string;
   status: 'pendente' | 'em_andamento' | 'concluido';
   dateEstimate: string;
-  resources: StageResource[]; // Detailed resources for this stage
-  tasks: { id: string; text: string; done: boolean }[]; // Checklist items
+  resources: StageResource[]; 
+  tasks: { id: string; text: string; done: boolean }[];
+  type?: 'preparo' | 'plantio' | 'manejo' | 'colheita' | 'pos_colheita'; // Semantic type
 }
 
-export interface HarvestLog {
+export interface InventoryItem {
   id: string;
-  date: string;
+  cropType: CropType;
   quantity: number;
-  unit: string;
-  location: string;
-  qualityNote?: string;
+  unit: string; // 'sc', 'ton', 'kg'
+  dateStored: string;
+  location: string; // 'Silo 1', 'Tulha', 'Cooperativa'
+  quality?: string; // 'Tipo 6', 'Padrão Exportação'
+  estimatedUnitValue?: number; // Snapshot of value at storage time or current
 }
 
-export interface Material {
-  // Legacy/Derived interface for backward compatibility
-  name: string;
-  quantity: number;
-  unit: string;
-  unitPriceEstimate: number;
-  realCost?: number;
-  category: string;
+export interface FinancialTransaction {
+  id: string;
+  description: string;
+  amount: number;
+  type: 'despesa' | 'receita';
+  category: 'insumo' | 'maquinario' | 'mao_de_obra' | 'venda' | 'outros';
+  date: string;
+  status: 'pago' | 'pendente';
+  relatedStageId?: string; // Link to a stage
 }
 
 export interface CropData {
@@ -73,13 +80,17 @@ export interface CropData {
   // Core Data
   estimatedCost: number;
   estimatedHarvestDate: string;
-  timeline: TimelineStage[]; // Source of truth for all operations and costs
+  timeline: TimelineStage[]; // The Backbone
   
-  // Legacy/Aggregated fields
-  materials?: Material[]; 
-  harvestLogs?: HarvestLog[];
+  // New Modules
+  inventory: InventoryItem[];
+  transactions: FinancialTransaction[];
   
   aiAdvice: string;
+  
+  // Legacy
+  materials?: any[]; 
+  harvestLogs?: any[];
 }
 
 export interface WeatherData {
