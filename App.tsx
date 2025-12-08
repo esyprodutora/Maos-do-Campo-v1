@@ -180,6 +180,32 @@ const App: React.FC = () => {
     }
   };
 
+  const handleDeleteCrop = async (cropId: string) => {
+    if(!confirm("Tem certeza que deseja excluir esta lavoura? Essa ação não pode ser desfeita e todos os dados serão perdidos.")) return;
+
+    // Optimistic Update
+    const updatedList = crops.filter(c => c.id !== cropId);
+    setCrops(updatedList);
+    setSelectedCrop(null); // Return to dashboard
+
+    // Update LocalStorage
+    localStorage.setItem('maos-do-campo-crops', JSON.stringify(updatedList));
+
+    // Update Supabase
+    if (supabase && session) {
+        try {
+            const { error } = await supabase
+                .from('crops')
+                .delete()
+                .eq('id', cropId);
+            
+            if (error) throw error;
+        } catch (e) {
+            console.error("Erro ao excluir do Supabase:", e);
+        }
+    }
+  };
+
   const renderContent = () => {
     // Show loading only if we have NO data and are fetching
     if (isLoading && crops.length === 0 && !error) {
@@ -212,6 +238,7 @@ const App: React.FC = () => {
           crop={selectedCrop} 
           onBack={() => setSelectedCrop(null)}
           onUpdateCrop={handleUpdateCrop}
+          onDeleteCrop={() => handleDeleteCrop(selectedCrop.id)}
         />
       );
     }
