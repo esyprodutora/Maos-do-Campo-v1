@@ -23,38 +23,49 @@ export const generateCropPlan = async (
 ): Promise<Partial<CropData>> => {
   
   const prompt = `
-    Atue como um Engenheiro Agrônomo Sênior especialista em gestão de fazendas no Brasil.
-    Preciso de um PLANO OPERACIONAL COMPLETO para uma lavoura de ${type}.
+    Atue como um Engenheiro Agrônomo Sênior e Gerente de Fazenda com 30 anos de experiência em ${type}.
     
-    DADOS DA LAVOURA:
-    - Área: ${areaHa} hectares
+    OBJETIVO:
+    Criar um PLANO OPERACIONAL E ORÇAMENTÁRIO DETALHADO (PONTA A PONTA) para uma lavoura de ${areaHa} hectares de ${type}.
+    
+    CRITÉRIO CRÍTICO:
+    Você NÃO PODE parar na adubação. Você DEVE cobrir o ciclo inteiro até o produto estar ensacado/armazenado.
+    
+    ESTRUTURA DE ETAPAS OBRIGATÓRIA (Adaptar para a cultura, mas manter a profundidade):
+    1. Preparo & Correção (Análise, Calagem, Gessagem, Aragem).
+    2. Plantio/Instalação (Mudas, Sulcos, Adubação de base).
+    3. Tratos Culturais - Vegetativo (Controle de mato, Adubações de cobertura).
+    4. Tratos Culturais - Reprodutivo/Fitossanitário (Preventivos, Foliar, Enchimento de grão).
+    5. COLHEITA (Detalhamento máx: Maquinário, Combustível, Mão de obra temporária, Varrição).
+    6. PÓS-COLHEITA (CRUCIAL PARA CAFÉ/GRÃOS): Transporte interno, Lavador, Terreiro/Secador (Lenha/Gás), Beneficiamento, Ensacamento.
+    
+    PARA CADA ETAPA, GERE UMA LISTA DE RECURSOS (BRL R$):
+    - 'insumo': Ex: NPK 20-00-20, Herbicida Glifosato, Calcário, Mudas.
+    - 'maquinario': Ex: Trator 75cv (horas), Colheitadeira (horas), Secador Rotativo (horas), Caminhão.
+    - 'mao_de_obra': Ex: Tratorista (dias), Apanhador de café (dias), Operador de secador (dias).
+
+    Input:
+    - Área: ${areaHa} ha
     - Solo: ${soilType}
     - Meta: ${productivityGoal}
     - Espaçamento: ${spacing}
 
-    OBJETIVO:
-    Gere um cronograma detalhado de ponta a ponta. 
-    Exemplo de profundidade para Café: Análise de Solo -> Preparo (Calagem/Gessagem) -> Plantio -> Tratos Culturais (Adubação/Fitossanitário) -> Colheita (Mecanizada/Manual) -> Pós-Colheita (Secagem/Terreiro/Secador) -> Beneficiamento -> Transporte/Silo.
-    
-    ESTRUTURA OBRIGATÓRIA PARA CADA ETAPA:
-    Para CADA etapa do ciclo, você DEVE listar os recursos necessários divididos em 3 categorias:
-    1. 'insumo': Fertilizantes (NPK, Ureia), sementes, defensivos (Herbicidas, Fungicidas).
-    2. 'maquinario': Horas-máquina de Tratores, Colheitadeiras, Pulverizadores, Implementos, Combustível (Diesel).
-    3. 'mao_de_obra': Diárias de trabalhadores, operadores, técnicos.
-
-    Preço Unitário: Estime preços reais de mercado brasileiro (BRL) atualizados.
-    Quantidade: Calcule a quantidade necessária para ${areaHa} hectares.
-
-    SAÍDA ESPERADA (JSON):
-    Um objeto contendo:
-    - estimatedHarvestDate (YYYY-MM-DD)
-    - aiAdvice (Conselho técnico curto sobre o manejo)
-    - timeline: Array de etapas. Cada etapa tem:
-        - title (Nome da etapa)
-        - description (Descrição técnica breve)
-        - dateEstimate (Mês/Ano estimado)
-        - tasks: Lista de tarefas operacionais (checklist simples)
-        - resources: Array de recursos { name, type, quantity, unit, unitCost }
+    SAÍDA JSON:
+    {
+      "estimatedHarvestDate": "YYYY-MM-DD",
+      "aiAdvice": "Dica estratégica focada em lucro e eficiência.",
+      "timeline": [
+        {
+          "title": "Nome Técnico da Etapa",
+          "description": "Explicação agronômica do que fazer.",
+          "dateEstimate": "Mês/Ano",
+          "tasks": [{ "text": "Ação prática 1" }, { "text": "Ação prática 2" }],
+          "resources": [
+             { "name": "Nome do Recurso", "type": "insumo" | "maquinario" | "mao_de_obra", "quantity": number, "unit": "kg/l/h/dia", "unitCost": number (BRL) }
+          ]
+        }
+      ]
+    }
   `;
 
   try {
@@ -110,7 +121,6 @@ export const generateCropPlan = async (
     if (response.text) {
       const data = JSON.parse(response.text);
       
-      // Post-processing to add IDs and Defaults
       let totalCost = 0;
       const processedTimeline = data.timeline.map((stage: any) => {
           const stageResources = (stage.resources || []).map((res: any) => {
@@ -150,11 +160,10 @@ export const generateCropPlan = async (
     throw new Error("Falha ao gerar dados");
   } catch (error) {
     console.error("Erro na IA:", error);
-    // Return empty safe object to avoid crash
     return {
       estimatedCost: 0,
       estimatedHarvestDate: new Date().toISOString().split('T')[0],
-      aiAdvice: "Não foi possível gerar o plano. Verifique sua chave de API.",
+      aiAdvice: "Erro na geração do plano. Verifique a API Key.",
       timeline: []
     };
   }

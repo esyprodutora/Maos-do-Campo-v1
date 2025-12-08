@@ -9,7 +9,7 @@ import {
   Download, Loader2, Edit2, Check, MapPin, Navigation, Trash2, 
   Plus, X, Clock, Sprout, FileText, Home, Sparkles, Bot, 
   MessageCircle, Warehouse, Package, Truck, TrendingUp, Wallet, 
-  User, Tractor, Hammer, ChevronDown, ChevronUp, Beaker
+  User, Tractor, Hammer, ChevronDown, ChevronUp, Beaker, Save
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from 'recharts';
 import jsPDF from 'jspdf';
@@ -24,7 +24,6 @@ interface CropDetailsProps {
 }
 
 export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdateCrop, onDeleteCrop }) => {
-  // Default to 'timeline' as requested
   const [activeTab, setActiveTab] = useState<'overview' | 'timeline' | 'finance' | 'storage' | 'assistant' | 'reports'>('timeline');
   const [chatInput, setChatInput] = useState('');
   const [chatHistory, setChatHistory] = useState<{role: 'user' | 'ai', text: string}[]>([
@@ -34,9 +33,15 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
   
   const mapsApiKey = GOOGLE_MAPS_API_KEY;
 
-  // --- States for Timeline ---
+  // --- States for Timeline Editing ---
   const [expandedStageId, setExpandedStageId] = useState<string | null>(crop.timeline?.[0]?.id || null);
   const [isEditingTimeline, setIsEditingTimeline] = useState(false);
+  
+  // State for adding a new resource
+  const [newResourceStageId, setNewResourceStageId] = useState<string | null>(null);
+  const [newResource, setNewResource] = useState<Partial<StageResource>>({
+      name: '', type: 'insumo', quantity: 0, unit: 'un', unitCost: 0
+  });
 
   // --- Theme Helper ---
   const getTheme = (type: string) => {
@@ -49,7 +54,7 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
   };
   const theme = getTheme(crop.type);
 
-  // --- Handlers ---
+  // --- Logic & Handlers ---
 
   const handleChatSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,7 +73,6 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
     const updatedTimeline = (crop.timeline || []).map(stage => {
         if (stage.id === stageId) {
             const updatedTasks = stage.tasks.map(t => t.id === taskId ? { ...t, done: !t.done } : t);
-            // Auto-update status if all tasks done
             const allDone = updatedTasks.every(t => t.done);
             const status = allDone ? 'concluido' : stage.status === 'concluido' ? 'em_andamento' : stage.status;
             return { ...stage, tasks: updatedTasks, status: status as any };
@@ -83,6 +87,66 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
           if (stage.id === stageId) {
               const nextStatus = stage.status === 'pendente' ? 'em_andamento' : stage.status === 'em_andamento' ? 'concluido' : 'pendente';
               return { ...stage, status: nextStatus as any };
+          }
+          return stage;
+      });
+      onUpdateCrop({ ...crop, timeline: updatedTimeline });
+  };
+
+  // --- Resource Management Logic ---
+
+  const handleAddResource = (stageId: string) => {
+      if (!newResource.name || !newResource.quantity || !newResource.unitCost) return alert("Preencha todos os campos");
+      
+      const updatedTimeline = crop.timeline.map(stage => {
+          if (stage.id === stageId) {
+              const res: StageResource = {
+                  id: Math.random().toString(36).substr(2, 9),
+                  name: newResource.name!,
+                  type: newResource.type as ResourceType,
+                  quantity: Number(newResource.quantity),
+                  unit: newResource.unit!,
+                  unitCost: Number(newResource.unitCost),
+                  totalCost: Number(newResource.quantity) * Number(newResource.unitCost)
+              };
+              return { ...stage, resources: [...(stage.resources || []), res] };
+          }
+          return stage;
+      });
+
+      onUpdateCrop({ ...crop, timeline: updatedTimeline });
+      setNewResourceStageId(null);
+      setNewResource({ name: '', type: 'insumo', quantity: 0, unit: 'un', unitCost: 0 });
+  };
+
+  const handleDeleteResource = (stageId: string, resourceId: string) => {
+      if(!confirm("Remover este recurso?")) return;
+      const updatedTimeline = crop.timeline.map(stage => {
+          if(stage.id === stageId) {
+              return { ...stage, resources: stage.resources.filter(r => r.id !== resourceId) };
+          }
+          return stage;
+      });
+      onUpdateCrop({ ...crop, timeline: updatedTimeline });
+  };
+
+  const handleUpdateResource = (stageId: string, resourceId: string, field: keyof StageResource, value: any) => {
+      const updatedTimeline = crop.timeline.map(stage => {
+          if (stage.id === stageId) {
+              const updatedResources = stage.resources.map(res => {
+                  if (res.id === resourceId) {
+                      const updatedRes = { ...res, [field]: value };
+                      // Recalculate total if qty or cost changes
+                      if (field === 'quantity' || field === 'unitCost') {
+                          updatedRes.quantity = Number(updatedRes.quantity);
+                          updatedRes.unitCost = Number(updatedRes.unitCost);
+                          updatedRes.totalCost = updatedRes.quantity * updatedRes.unitCost;
+                      }
+                      return updatedRes;
+                  }
+                  return res;
+              });
+              return { ...stage, resources: updatedResources };
           }
           return stage;
       });
@@ -148,14 +212,14 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
     <div className="space-y-6 animate-slide-up">
         <div className="flex items-center justify-between mb-2">
             <div>
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Etapas da Lavoura</h3>
-                <p className="text-sm text-gray-500">Ciclo completo, do preparo à entrega.</p>
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Ciclo Operacional</h3>
+                <p className="text-sm text-gray-500">Gestão detalhada de etapas, maquinário e mão de obra.</p>
             </div>
             <button 
                 onClick={() => setIsEditingTimeline(!isEditingTimeline)}
-                className="p-2.5 rounded-xl bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 text-gray-700 dark:text-gray-200 transition-colors"
+                className={`p-2.5 rounded-xl transition-colors flex items-center gap-2 font-bold ${isEditingTimeline ? 'bg-agro-green text-white shadow-lg shadow-green-600/20' : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200'}`}
             >
-                {isEditingTimeline ? <Check size={20} /> : <Edit2 size={20} />}
+                {isEditingTimeline ? <><Check size={20} /> Concluir Edição</> : <><Edit2 size={20} /> Editar Etapas</>}
             </button>
         </div>
 
@@ -171,6 +235,7 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                         <div 
                            onClick={() => handleStageStatusChange(stage.id)}
                            className={`absolute -left-[27px] top-6 w-5 h-5 rounded-full border-4 border-white dark:border-slate-900 ${statusColor} shadow-sm z-10 cursor-pointer hover:scale-110 transition-transform`}
+                           title="Alterar Status"
                         ></div>
                         
                         {/* Card */}
@@ -206,7 +271,7 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                                     {/* Checklist */}
                                     {stage.tasks && stage.tasks.length > 0 && (
                                         <div className="mb-6">
-                                            <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Tarefas</h5>
+                                            <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Checklist Operacional</h5>
                                             <div className="space-y-2">
                                                 {stage.tasks.map((task) => (
                                                     <div key={task.id} onClick={() => !isEditingTimeline && toggleTask(stage.id, task.id)} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-slate-700/50 rounded-xl cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">
@@ -222,7 +287,62 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
 
                                     {/* Resources Grid */}
                                     <div>
-                                        <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Recursos & Custos</h5>
+                                        <div className="flex justify-between items-center mb-3">
+                                            <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Recursos Alocados</h5>
+                                            {isEditingTimeline && (
+                                                <button 
+                                                    onClick={() => setNewResourceStageId(stage.id)}
+                                                    className="text-xs font-bold text-agro-green flex items-center gap-1 bg-green-50 px-2 py-1 rounded-lg hover:bg-green-100"
+                                                >
+                                                    <Plus size={14}/> Adicionar Recurso
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        {/* New Resource Form */}
+                                        {newResourceStageId === stage.id && (
+                                            <div className="bg-gray-50 dark:bg-slate-900 p-4 rounded-xl mb-4 border border-agro-green/30 animate-fade-in">
+                                                <p className="text-xs font-bold text-gray-500 mb-2">Novo Item</p>
+                                                <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-2">
+                                                    <select 
+                                                        value={newResource.type}
+                                                        onChange={e => setNewResource({...newResource, type: e.target.value as ResourceType})}
+                                                        className="p-2 rounded-lg border text-sm"
+                                                    >
+                                                        <option value="insumo">Insumo</option>
+                                                        <option value="maquinario">Maquinário</option>
+                                                        <option value="mao_de_obra">Mão de Obra</option>
+                                                    </select>
+                                                    <input 
+                                                        placeholder="Nome (Ex: Adubo NPK)" 
+                                                        value={newResource.name}
+                                                        onChange={e => setNewResource({...newResource, name: e.target.value})}
+                                                        className="p-2 rounded-lg border text-sm md:col-span-2"
+                                                    />
+                                                    <input 
+                                                        type="number" 
+                                                        placeholder="Qtd" 
+                                                        value={newResource.quantity || ''}
+                                                        onChange={e => setNewResource({...newResource, quantity: parseFloat(e.target.value)})}
+                                                        className="p-2 rounded-lg border text-sm"
+                                                    />
+                                                    <div className="flex gap-1">
+                                                        <input 
+                                                            type="number" 
+                                                            placeholder="R$ Unit." 
+                                                            value={newResource.unitCost || ''}
+                                                            onChange={e => setNewResource({...newResource, unitCost: parseFloat(e.target.value)})}
+                                                            className="p-2 rounded-lg border text-sm w-full"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    <button onClick={() => handleAddResource(stage.id)} className="flex-1 bg-agro-green text-white py-2 rounded-lg text-sm font-bold hover:bg-green-700">Salvar</button>
+                                                    <button onClick={() => setNewResourceStageId(null)} className="flex-1 bg-gray-200 text-gray-600 py-2 rounded-lg text-sm font-bold">Cancelar</button>
+                                                </div>
+                                            </div>
+                                        )}
+
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                             {/* Insumos */}
                                             <div className="bg-green-50 dark:bg-green-900/10 p-4 rounded-xl border border-green-100 dark:border-green-900/20">
@@ -231,9 +351,24 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                                                 </div>
                                                 <ul className="space-y-2">
                                                     {stage.resources?.filter(r => r.type === 'insumo').map(r => (
-                                                        <li key={r.id} className="flex justify-between text-xs text-gray-600 dark:text-gray-300 border-b border-green-200/30 pb-1 last:border-0">
-                                                            <span>{r.name} <span className="opacity-50">({r.quantity} {r.unit})</span></span>
-                                                            <span className="font-bold">{r.totalCost.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</span>
+                                                        <li key={r.id} className="flex justify-between items-center text-xs text-gray-600 dark:text-gray-300 border-b border-green-200/30 pb-1 last:border-0 group">
+                                                            <div>
+                                                                <span className="font-semibold block">{r.name}</span>
+                                                                <div className="flex gap-1 text-[10px] opacity-70">
+                                                                    {isEditingTimeline ? (
+                                                                       <>
+                                                                         <input type="number" className="w-10 bg-white border rounded px-1" value={r.quantity} onChange={(e) => handleUpdateResource(stage.id, r.id, 'quantity', e.target.value)} /> {r.unit} x 
+                                                                         R$ <input type="number" className="w-12 bg-white border rounded px-1" value={r.unitCost} onChange={(e) => handleUpdateResource(stage.id, r.id, 'unitCost', e.target.value)} />
+                                                                       </>
+                                                                    ) : (
+                                                                       <span>{r.quantity} {r.unit} x R$ {r.unitCost}</span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="font-bold">{r.totalCost.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</span>
+                                                                {isEditingTimeline && <button onClick={() => handleDeleteResource(stage.id, r.id)} className="text-red-400 hover:text-red-600"><Trash2 size={12}/></button>}
+                                                            </div>
                                                         </li>
                                                     ))}
                                                     {(!stage.resources || stage.resources.filter(r => r.type === 'insumo').length === 0) && <span className="text-xs text-gray-400 italic">Nenhum insumo</span>}
@@ -247,9 +382,24 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                                                 </div>
                                                 <ul className="space-y-2">
                                                     {stage.resources?.filter(r => r.type === 'maquinario').map(r => (
-                                                        <li key={r.id} className="flex justify-between text-xs text-gray-600 dark:text-gray-300 border-b border-orange-200/30 pb-1 last:border-0">
-                                                            <span>{r.name} <span className="opacity-50">({r.quantity} {r.unit})</span></span>
-                                                            <span className="font-bold">{r.totalCost.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</span>
+                                                        <li key={r.id} className="flex justify-between items-center text-xs text-gray-600 dark:text-gray-300 border-b border-orange-200/30 pb-1 last:border-0 group">
+                                                            <div>
+                                                                <span className="font-semibold block">{r.name}</span>
+                                                                <div className="flex gap-1 text-[10px] opacity-70">
+                                                                    {isEditingTimeline ? (
+                                                                       <>
+                                                                         <input type="number" className="w-10 bg-white border rounded px-1" value={r.quantity} onChange={(e) => handleUpdateResource(stage.id, r.id, 'quantity', e.target.value)} /> {r.unit} x 
+                                                                         R$ <input type="number" className="w-12 bg-white border rounded px-1" value={r.unitCost} onChange={(e) => handleUpdateResource(stage.id, r.id, 'unitCost', e.target.value)} />
+                                                                       </>
+                                                                    ) : (
+                                                                       <span>{r.quantity} {r.unit} x R$ {r.unitCost}</span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="font-bold">{r.totalCost.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</span>
+                                                                {isEditingTimeline && <button onClick={() => handleDeleteResource(stage.id, r.id)} className="text-red-400 hover:text-red-600"><Trash2 size={12}/></button>}
+                                                            </div>
                                                         </li>
                                                     ))}
                                                      {(!stage.resources || stage.resources.filter(r => r.type === 'maquinario').length === 0) && <span className="text-xs text-gray-400 italic">Nenhum maquinário</span>}
@@ -263,9 +413,24 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                                                 </div>
                                                 <ul className="space-y-2">
                                                     {stage.resources?.filter(r => r.type === 'mao_de_obra').map(r => (
-                                                        <li key={r.id} className="flex justify-between text-xs text-gray-600 dark:text-gray-300 border-b border-blue-200/30 pb-1 last:border-0">
-                                                            <span>{r.name} <span className="opacity-50">({r.quantity} {r.unit})</span></span>
-                                                            <span className="font-bold">{r.totalCost.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</span>
+                                                        <li key={r.id} className="flex justify-between items-center text-xs text-gray-600 dark:text-gray-300 border-b border-blue-200/30 pb-1 last:border-0 group">
+                                                            <div>
+                                                                <span className="font-semibold block">{r.name}</span>
+                                                                <div className="flex gap-1 text-[10px] opacity-70">
+                                                                    {isEditingTimeline ? (
+                                                                       <>
+                                                                         <input type="number" className="w-10 bg-white border rounded px-1" value={r.quantity} onChange={(e) => handleUpdateResource(stage.id, r.id, 'quantity', e.target.value)} /> {r.unit} x 
+                                                                         R$ <input type="number" className="w-12 bg-white border rounded px-1" value={r.unitCost} onChange={(e) => handleUpdateResource(stage.id, r.id, 'unitCost', e.target.value)} />
+                                                                       </>
+                                                                    ) : (
+                                                                       <span>{r.quantity} {r.unit} x R$ {r.unitCost}</span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="font-bold">{r.totalCost.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</span>
+                                                                {isEditingTimeline && <button onClick={() => handleDeleteResource(stage.id, r.id)} className="text-red-400 hover:text-red-600"><Trash2 size={12}/></button>}
+                                                            </div>
                                                         </li>
                                                     ))}
                                                      {(!stage.resources || stage.resources.filter(r => r.type === 'mao_de_obra').length === 0) && <span className="text-xs text-gray-400 italic">Nenhuma MO</span>}
