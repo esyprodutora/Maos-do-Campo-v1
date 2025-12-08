@@ -1,3 +1,4 @@
+
 export type CropType = 
   | 'soja' 
   | 'milho' 
@@ -17,12 +18,16 @@ export interface Coordinates {
   lng: number;
 }
 
-export interface Material {
+export type ResourceType = 'insumo' | 'maquinario' | 'mao_de_obra' | 'outros';
+
+export interface StageResource {
+  id: string;
   name: string;
+  type: ResourceType; // Categorization
   quantity: number;
   unit: string;
-  unitPriceEstimate: number;
-  category: 'fertilizante' | 'semente' | 'defensivo' | 'corretivo' | 'outros';
+  unitCost: number; // Estimate per unit
+  totalCost: number; // calculated
 }
 
 export interface TimelineStage {
@@ -31,7 +36,27 @@ export interface TimelineStage {
   description: string;
   status: 'pendente' | 'em_andamento' | 'concluido';
   dateEstimate: string;
-  tasks: { id: string; text: string; done: boolean }[];
+  resources: StageResource[]; // Detailed resources for this stage
+  tasks: { id: string; text: string; done: boolean }[]; // Checklist items
+}
+
+export interface HarvestLog {
+  id: string;
+  date: string;
+  quantity: number;
+  unit: string;
+  location: string;
+  qualityNote?: string;
+}
+
+export interface Material {
+  // Legacy support for top-level, but mainly calculated from stages now
+  name: string;
+  quantity: number;
+  unit: string;
+  unitPriceEstimate: number;
+  realCost?: number;
+  category: 'fertilizante' | 'semente' | 'defensivo' | 'corretivo' | 'outros';
 }
 
 export interface CropData {
@@ -41,16 +66,20 @@ export interface CropData {
   areaHa: number;
   soilType: SoilType;
   coordinates?: Coordinates;
-  productivityGoal: string; // e.g. "60 sc/ha"
+  productivityGoal: string; 
   spacing: string;
   datePlanted: string;
   
   // Calculated/Generated Data
   estimatedCost: number;
   estimatedHarvestDate: string;
-  materials: Material[];
-  timeline: TimelineStage[];
-  aiAdvice: string; // General advice
+  timeline: TimelineStage[]; // This is now the source of truth for costs
+  
+  // Legacy/Aggregated fields (optional to keep for backward compatibility or caching)
+  materials?: Material[]; 
+  harvestLogs?: HarvestLog[];
+  
+  aiAdvice: string;
 }
 
 export interface WeatherData {
@@ -58,4 +87,6 @@ export interface WeatherData {
   condition: string;
   humidity: number;
   wind: number;
+  location: string;
+  isDay: boolean;
 }

@@ -1,12 +1,13 @@
+
 // @ts-ignore
 import { GoogleGenAI, Type } from "@google/genai";
 import { CropData, CropType, SoilType } from "../types";
 
-// Lazy initialization to prevent crashes on initial load if env is missing
+// Lazy initialization
 const getAiClient = () => {
   const apiKey = process.env.API_KEY;
   if (!apiKey) {
-    console.warn("API Key não encontrada. Verifique as variáveis de ambiente.");
+    console.warn("API Key não encontrada.");
     throw new Error("Chave de API não configurada");
   }
   return new GoogleGenAI({ apiKey });
@@ -22,21 +23,36 @@ export const generateCropPlan = async (
 ): Promise<Partial<CropData>> => {
   
   const prompt = `
-    Atue como um engenheiro agrônomo especialista. Vou fornecer dados de uma nova lavoura e preciso de um planejamento completo.
+    Atue como um Engenheiro Agrônomo Sênior especialista em gestão de fazendas no Brasil.
+    Preciso de um PLANO OPERACIONAL COMPLETO para uma lavoura de ${type}.
     
-    Dados:
-    - Cultura: ${type}
+    DADOS DA LAVOURA:
     - Área: ${areaHa} hectares
-    - Tipo de Solo: ${soilType}
-    - Meta de Produtividade: ${productivityGoal}
+    - Solo: ${soilType}
+    - Meta: ${productivityGoal}
     - Espaçamento: ${spacing}
 
-    Gere um plano técnico contendo:
-    1. Uma lista de materiais estimados (insumos) para o ciclo completo (NPK, Calcário, Sementes, Defensivos), com preços médios de mercado no Brasil (em R$).
-    2. Um custo total estimado da lavoura.
-    3. Uma data prevista de colheita (considerando plantio hoje).
-    4. Um cronograma (timeline) com 5 a 7 etapas principais do ciclo, com checklists de tarefas.
-    5. Um conselho técnico resumido (aiAdvice) sobre cuidados específicos para esse cenário.
+    OBJETIVO:
+    Gere um cronograma detalhado de ponta a ponta. 
+    Exemplo de profundidade para Café: Análise de Solo -> Preparo (Calagem/Gessagem) -> Plantio -> Tratos Culturais (Adubação/Fitossanitário) -> Colheita (Mecanizada/Manual) -> Pós-Colheita (Secagem/Terreiro/Secador) -> Beneficiamento -> Transporte/Silo.
+    
+    ESTRUTURA OBRIGATÓRIA PARA CADA ETAPA:
+    Para CADA etapa do ciclo, você DEVE listar os recursos necessários divididos em 3 categorias:
+    1. 'insumo': Fertilizantes, sementes, defensivos, corretivos.
+    2. 'maquinario': Horas-máquina de Tratores, Colheitadeiras, Pulverizadores, Implementos, Combustível.
+    3. 'mao_de_obra': Diárias de trabalhadores, operadores, técnicos.
+
+    Preço Unitário: Estime preços reais de mercado brasileiro (BRL) atualizados.
+    Quantidade: Calcule a quantidade necessária para ${areaHa} hectares.
+
+    SAÍDA ESPERADA (JSON):
+    Um objeto contendo:
+    - estimatedHarvestDate (YYYY-MM-DD)
+    - aiAdvice (Conselho técnico curto)
+    - timeline: Array de etapas. Cada etapa tem:
+        - title, description, dateEstimate
+        - tasks: Lista de tarefas (checklist simples)
+        - resources: Array de recursos { name, type, quantity, unit, unitCost, totalCost }
   `;
 
   try {
@@ -49,31 +65,17 @@ export const generateCropPlan = async (
         responseSchema: {
           type: Type.OBJECT,
           properties: {
-            estimatedCost: { type: Type.NUMBER, description: "Custo total estimado em Reais" },
-            estimatedHarvestDate: { type: Type.STRING, description: "Data formato YYYY-MM-DD" },
-            aiAdvice: { type: Type.STRING, description: "Conselho técnico curto e prático" },
-            materials: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  name: { type: Type.STRING },
-                  quantity: { type: Type.NUMBER },
-                  unit: { type: Type.STRING, description: "kg, sc, litros, ton" },
-                  unitPriceEstimate: { type: Type.NUMBER },
-                  category: { type: Type.STRING, enum: ['fertilizante', 'semente', 'defensivo', 'corretivo', 'outros'] }
-                }
-              }
-            },
+            estimatedHarvestDate: { type: Type.STRING },
+            aiAdvice: { type: Type.STRING },
             timeline: {
               type: Type.ARRAY,
               items: {
                 type: Type.OBJECT,
                 properties: {
-                  id: { type: Type.STRING },
+                  id: { type: Type.STRING }, // AI can generate or we fill
                   title: { type: Type.STRING },
                   description: { type: Type.STRING },
-                  status: { type: Type.STRING, enum: ['pendente'] }, // Start all as pending
+                  status: { type: Type.STRING, enum: ['pendente'] },
                   dateEstimate: { type: Type.STRING },
                   tasks: {
                     type: Type.ARRAY,
@@ -83,6 +85,21 @@ export const generateCropPlan = async (
                         id: { type: Type.STRING },
                         text: { type: Type.STRING },
                         done: { type: Type.BOOLEAN }
+                      }
+                    }
+                  },
+                  resources: {
+                    type: Type.ARRAY,
+                    items: {
+                      type: Type.OBJECT,
+                      properties: {
+                        id: { type: Type.STRING },
+                        name: { type: Type.STRING },
+                        type: { type: Type.STRING, enum: ['insumo', 'maquinario', 'mao_de_obra', 'outros'] },
+                        quantity: { type: Type.NUMBER },
+                        unit: { type: Type.STRING },
+                        unitCost: { type: Type.NUMBER },
+                        totalCost: { type: Type.NUMBER }
                       }
                     }
                   }
@@ -96,17 +113,38 @@ export const generateCropPlan = async (
 
     if (response.text) {
       const data = JSON.parse(response.text);
-      return data;
+      
+      // Calculate total estimated cost based on all resources in timeline
+      let totalCost = 0;
+      data.timeline.forEach((stage: any) => {
+          stage.id = Math.random().toString(36).substr(2, 9);
+          if (stage.resources) {
+              stage.resources.forEach((res: any) => {
+                  res.id = Math.random().toString(36).substr(2, 9);
+                  // Ensure total cost is accurate
+                  res.totalCost = res.quantity * res.unitCost;
+                  totalCost += res.totalCost;
+              });
+          } else {
+              stage.resources = [];
+          }
+          if (stage.tasks) {
+              stage.tasks.forEach((t: any) => t.id = Math.random().toString(36).substr(2, 9));
+          }
+      });
+
+      return {
+        ...data,
+        estimatedCost: totalCost
+      };
     }
     throw new Error("Falha ao gerar dados");
   } catch (error) {
     console.error("Erro na IA:", error);
-    // Fallback básico para não quebrar o app se a API falhar ou chave for inválida
     return {
-      estimatedCost: areaHa * 5000,
-      estimatedHarvestDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 120).toISOString().split('T')[0],
-      aiAdvice: "Verifique a análise de solo antes de iniciar.",
-      materials: [],
+      estimatedCost: 0,
+      estimatedHarvestDate: new Date().toISOString().split('T')[0],
+      aiAdvice: "Erro ao gerar plano. Tente novamente.",
       timeline: []
     };
   }
@@ -117,11 +155,10 @@ export const getAssistantResponse = async (question: string, context: string): P
         const ai = getAiClient();
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash",
-            contents: `Contexto da lavoura: ${context}. \nPergunta do produtor: ${question}. \nResponda de forma curta, prática e amigável, como um técnico agrícola.`,
+            contents: `Contexto da lavoura: ${context}. \nPergunta do produtor: ${question}. \nResponda de forma curta, prática e técnica.`,
         });
-        return response.text || "Desculpe, não consegui processar sua pergunta no momento.";
+        return response.text || "Desculpe, não entendi.";
     } catch (e) {
-        console.error(e);
-        return "Erro de conexão com o assistente ou chave de API inválida.";
+        return "Erro de conexão.";
     }
 }
