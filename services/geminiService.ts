@@ -12,19 +12,19 @@ const FALLBACK_PLANS: Record<string, any> = {
       {
         title: "1. Dessecação Pré-Plantio",
         type: "preparo",
-        description: "Eliminação da cobertura verde para garantir plantio no limpo.",
+        description: "Eliminação da cobertura verde para garantir plantio no limpo via pulverizador.",
         dateEstimate: "Dia -20",
         tasks: [{text: "Vistoria de plantas daninhas resistentes"}, {text: "Aplicação de herbicidas sistêmicos"}],
         resources: [
             {name: "Glifosato", type: "insumo", quantity: 3, unit: "lt/ha", unitCost: 45},
-            {name: "Pulverizador", type: "maquinario", quantity: 0.5, unit: "h/ha", unitCost: 150},
+            {name: "Pulverizador Costal ou Tratorizado", type: "maquinario", quantity: 0.5, unit: "h/ha", unitCost: 150},
             {name: "Operador", type: "mao_de_obra", quantity: 0.1, unit: "dia/ha", unitCost: 120}
         ]
       },
       {
         title: "2. Plantio e Adubação Base",
         type: "plantio",
-        description: "Semeadura com adubação no sulco.",
+        description: "Semeadura mecanizada com adubação no sulco.",
         dateEstimate: "Dia 0",
         tasks: [{text: "Regulagem da semeadora"}, {text: "Abastecimento de sementes e adubo"}, {text: "Plantio efetivo"}],
         resources: [
@@ -257,29 +257,20 @@ export const generateCropPlan = async (
     Atue como um Engenheiro Agrônomo Sênior especializado em ${type} no Brasil.
     
     TAREFA CRÍTICA:
-    Gerar um CRONOGRAMA OPERACIONAL COMPLETO para ${areaHa} hectares.
+    Gerar um CRONOGRAMA OPERACIONAL DETALHADO para ${areaHa} hectares. O produtor precisa saber exatamente O QUE aplicar e COMO aplicar.
     
-    REGRA DE OURO (IMPORTANTE):
-    Você NÃO PODE devolver a lista de recursos vazia. TODAS AS ETAPAS devem ter insumos, máquinas ou mão de obra associados.
-    Se a etapa é "Monitoramento", a mão de obra é o "Técnico". Se é "Plantio", precisa de Semente, Adubo, Trator, Operador.
-    PREENCHA OS CUSTOS. NÃO DEIXE NADA ZERADO.
-
+    DETALHAMENTO OBRIGATÓRIO:
+    1. Nas descrições das etapas, ESPECIFIQUE o método de aplicação (ex: "Aplicação via trator com bico cônico" ou "Aplicação manual na linha").
+    2. A lista de recursos NÃO PODE ESTAR VAZIA.
+    3. Se houver Insumo (Adubo/Veneno), TEM QUE HAVER Maquinário (Trator/Pulverizador) OU Mão de Obra (Aplicação Manual) correspondente na mesma etapa.
+    
     O cronograma DEVE cobrir explicitamente:
-    1. PREPARO: Análise de solo, Calagem, Gessagem, Subsolagem/Gradagem.
-    2. PRÉ-PLANTIO: Dessecação, Tratamento de sementes.
-    3. PLANTIO: A operação de semeadura/plantio em si.
-    4. VEGETATIVO: Adubação de Cobertura 1, Controle de Ervas Daninhas.
-    5. REPRODUTIVO: Fungicida 1, Inseticida 1, Adubação Foliar.
-    6. MATURAÇÃO: Aplicação final ou Dessecação pré-colheita (se aplicável).
-    7. COLHEITA: Operação mecanizada ou manual.
-    8. PÓS-COLHEITA: Transporte interno, Secagem/Beneficiamento, Armazenamento.
-
-    PARA CADA ETAPA, GERE A LISTA DE CUSTOS (RECURSOS) NECESSÁRIOS:
-    Estime quantidades realistas para ${areaHa} hectares e custos médios em Reais (BRL).
-    Classifique ESTRITAMENTE em:
-    - 'insumo': Sementes, Calcário, Gesso, NPK, Ureia, Herbicidas, Fungicidas.
-    - 'maquinario': Trator (horas), Pulverizador (horas), Colheitadeira (horas), Caminhão (diárias).
-    - 'mao_de_obra': Operador de máquinas (dias), Trabalhador rural (dias), Agrônomo (visitas).
+    1. PREPARO: Análise, Calagem, Gessagem (Detalhar maquinário).
+    2. PRÉ-PLANTIO: Dessecação (Insumo + Pulverizador).
+    3. PLANTIO: Sementes + Adubo Base + Trator + Plantadeira.
+    4. VEGETATIVO: Adubação de Cobertura (Detalhar se é a lanço ou incorporado).
+    5. REPRODUTIVO: Fungicida/Inseticida (Detalhar Pulverizador).
+    6. COLHEITA: Colheitadeira + Caminhão.
 
     Input:
     - Cultura: ${type}
@@ -290,17 +281,17 @@ export const generateCropPlan = async (
     FORMATO JSON OBRIGATÓRIO:
     {
       "estimatedHarvestDate": "YYYY-MM-DD",
-      "aiAdvice": "Dica técnica curta e direta.",
+      "aiAdvice": "Dica técnica sobre o método de aplicação sugerido.",
       "timeline": [
         {
-          "title": "Nome da Etapa",
+          "title": "Nome da Etapa (Ex: Adubação de Cobertura)",
           "type": "preparo" | "plantio" | "manejo" | "colheita" | "pos_colheita",
-          "description": "Descrição técnica breve.",
-          "dateEstimate": "Mês/Ano",
-          "tasks": [{ "text": "Ação operacional 1" }],
+          "description": "Descrição detalhada mencionando se é mecanizado ou manual.",
+          "dateEstimate": "Mês/Ano ou Dias após plantio",
+          "tasks": [{ "text": "Tarefa 1" }, { "text": "Tarefa 2" }],
           "resources": [
              { 
-               "name": "Nome do Item", 
+               "name": "Nome do Item (Ex: Ureia ou Trator 75cv)", 
                "type": "insumo" | "maquinario" | "mao_de_obra", 
                "quantity": number, 
                "unit": "ton" | "kg" | "lt" | "h" | "dia", 
