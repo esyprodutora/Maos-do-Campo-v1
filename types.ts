@@ -38,7 +38,9 @@ export interface TimelineStage {
   title: string;
   description: string;
   status: 'pendente' | 'em_andamento' | 'concluido';
-  dateEstimate: string;
+  dateEstimate: string; // Mantido para compatibilidade, mas a UI usará startDate/endDate
+  startDate?: string; // ISO Date YYYY-MM-DD
+  endDate?: string;   // ISO Date YYYY-MM-DD
   resources: StageResource[]; 
   tasks: { id: string; text: string; done: boolean }[];
   type?: 'preparo' | 'plantio' | 'manejo' | 'colheita' | 'pos_colheita'; // Semantic type
