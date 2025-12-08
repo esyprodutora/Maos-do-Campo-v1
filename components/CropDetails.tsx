@@ -8,7 +8,7 @@ import {
   ArrowLeft, Calendar, DollarSign, ListTodo, Send, 
   Check, MapPin, Trash2, Plus, Edit2, 
   User, Tractor, Beaker, Package, 
-  TrendingUp, Warehouse, AlertCircle, 
+  TrendingUp, TrendingDown, Warehouse, AlertCircle, 
   ChevronDown, ChevronUp, Leaf, Truck, CheckCircle2,
   Sprout, Wallet, MessageCircle, FileText, X, Save, Clock
 } from 'lucide-react';
@@ -452,6 +452,278 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                 <p className="text-xs text-gray-400 bg-gray-100 dark:bg-slate-700 p-2 rounded-lg inline-block">Dica: Tente excluir esta lavoura e criar novamente.</p>
             </div>
         )}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="animate-fade-in pb-20">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+         <div className="flex items-center gap-4">
+            <button onClick={onBack} className="p-2 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-500 dark:text-gray-400 transition-colors">
+              <ArrowLeft size={20} />
+            </button>
+            <div>
+               <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white flex items-center gap-3">
+                 {crop.name}
+                 <span className={`text-xs px-2 py-1 rounded-full font-bold uppercase tracking-wider text-white bg-gradient-to-r ${getCropGradient(crop.type)}`}>
+                   {crop.type}
+                 </span>
+               </h2>
+               <p className="text-gray-500 dark:text-gray-400 text-sm flex items-center gap-2 mt-1">
+                 <MapPin size={14}/> {crop.areaHa} hectares • Plantado em {new Date(crop.datePlanted).toLocaleDateString()}
+               </p>
+            </div>
+         </div>
+         
+         <div className="flex gap-2 w-full md:w-auto">
+             <button 
+               onClick={onDeleteCrop}
+               className="flex-1 md:flex-none p-3 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-bold text-sm hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors flex items-center justify-center gap-2"
+             >
+               <Trash2 size={18} /> <span className="md:hidden">Excluir</span>
+             </button>
+         </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex overflow-x-auto pb-4 mb-4 gap-2 no-scrollbar">
+        {[
+          { id: 'timeline', label: 'Cronograma', icon: ListTodo },
+          { id: 'finance', label: 'Financeiro', icon: DollarSign },
+          { id: 'inventory', label: 'Estoque', icon: Warehouse },
+          { id: 'reports', label: 'Relatórios', icon: FileText },
+          { id: 'assistant', label: 'IA Assistente', icon: MessageCircle },
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as any)}
+            className={`
+              flex items-center gap-2 px-5 py-3 rounded-xl font-bold whitespace-nowrap transition-all
+              ${activeTab === tab.id 
+                ? 'bg-agro-green text-white shadow-lg shadow-green-600/20' 
+                : 'bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-400 border border-gray-100 dark:border-slate-700 hover:bg-gray-50'}
+            `}
+          >
+            <tab.icon size={18} /> {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Content */}
+      <div className="min-h-[400px]">
+         {activeTab === 'timeline' && renderTimeline()}
+         
+         {activeTab === 'finance' && (
+           <div className="space-y-6 animate-slide-up">
+              {/* Finance Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                 <div className="p-5 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm">
+                    <p className="text-xs text-gray-500 uppercase font-bold">Custo Operacional (Previsto)</p>
+                    <h3 className="text-2xl font-bold text-gray-800 dark:text-white mt-1">
+                      {totalOperationalCost.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}
+                    </h3>
+                 </div>
+                 <div className="p-5 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm">
+                    <p className="text-xs text-gray-500 uppercase font-bold">Total Pago (Realizado)</p>
+                    <h3 className="text-2xl font-bold text-green-600 mt-1">
+                      {totalPaid.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}
+                    </h3>
+                 </div>
+                 <div className="p-5 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm">
+                    <p className="text-xs text-gray-500 uppercase font-bold">Estoque (Estimado)</p>
+                    <h3 className="text-2xl font-bold text-blue-600 mt-1">
+                      {totalInventoryValue.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}
+                    </h3>
+                 </div>
+              </div>
+
+              {/* Transactions List */}
+              <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 p-6">
+                 <div className="flex justify-between items-center mb-6">
+                    <h3 className="font-bold text-lg">Lançamentos</h3>
+                    <button 
+                      onClick={() => setIsAddingTransaction(true)}
+                      className="flex items-center gap-2 text-sm font-bold bg-agro-green text-white px-4 py-2 rounded-xl"
+                    >
+                      <Plus size={16}/> Novo Lançamento
+                    </button>
+                 </div>
+
+                 {isAddingTransaction && (
+                    <div className="bg-gray-50 dark:bg-slate-900 p-4 rounded-xl mb-6 animate-fade-in border border-gray-200 dark:border-slate-700">
+                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-3">
+                          <input 
+                             placeholder="Descrição (Ex: Compra Sementes)" 
+                             className="p-2 rounded-lg border dark:bg-slate-800 dark:border-slate-600"
+                             value={newTx.description} onChange={e => setNewTx({...newTx, description: e.target.value})}
+                          />
+                          <input 
+                             type="number" placeholder="Valor (R$)" 
+                             className="p-2 rounded-lg border dark:bg-slate-800 dark:border-slate-600"
+                             value={newTx.amount || ''} onChange={e => setNewTx({...newTx, amount: Number(e.target.value)})}
+                          />
+                          <select className="p-2 rounded-lg border dark:bg-slate-800 dark:border-slate-600" value={newTx.type} onChange={e => setNewTx({...newTx, type: e.target.value as any})}>
+                            <option value="despesa">Despesa</option>
+                            <option value="receita">Receita</option>
+                          </select>
+                          <select className="p-2 rounded-lg border dark:bg-slate-800 dark:border-slate-600" value={newTx.category} onChange={e => setNewTx({...newTx, category: e.target.value as any})}>
+                            <option value="insumo">Insumo</option>
+                            <option value="maquinario">Maquinário</option>
+                            <option value="mao_de_obra">Mão de Obra</option>
+                            <option value="venda">Venda</option>
+                            <option value="outros">Outros</option>
+                          </select>
+                          <select className="p-2 rounded-lg border dark:bg-slate-800 dark:border-slate-600" value={newTx.status} onChange={e => setNewTx({...newTx, status: e.target.value as any})}>
+                            <option value="pago">Pago</option>
+                            <option value="pendente">Pendente</option>
+                          </select>
+                       </div>
+                       <div className="flex justify-end gap-2">
+                          <button onClick={() => setIsAddingTransaction(false)} className="text-gray-500 text-sm font-bold px-4 py-2">Cancelar</button>
+                          <button onClick={handleAddTransaction} className="bg-agro-green text-white text-sm font-bold px-4 py-2 rounded-lg">Salvar</button>
+                       </div>
+                    </div>
+                 )}
+
+                 <div className="space-y-3">
+                    {crop.transactions?.length > 0 ? crop.transactions.map((tx) => (
+                      <div key={tx.id} className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-slate-700">
+                         <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-full ${tx.type === 'receita' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                               {tx.type === 'receita' ? <TrendingUp size={16}/> : <TrendingDown size={16}/>}
+                            </div>
+                            <div>
+                               <p className="font-bold text-gray-800 dark:text-gray-200">{tx.description}</p>
+                               <p className="text-xs text-gray-500 capitalize">{tx.category} • {new Date(tx.date).toLocaleDateString()}</p>
+                            </div>
+                         </div>
+                         <div className="text-right">
+                            <p className={`font-bold ${tx.type === 'receita' ? 'text-green-600' : 'text-gray-800 dark:text-white'}`}>
+                              {tx.type === 'despesa' ? '-' : '+'} {tx.amount.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}
+                            </p>
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${tx.status === 'pago' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                              {tx.status}
+                            </span>
+                         </div>
+                      </div>
+                    )) : (
+                      <div className="text-center py-8 text-gray-400">Nenhum lançamento registrado.</div>
+                    )}
+                 </div>
+              </div>
+           </div>
+         )}
+
+         {activeTab === 'inventory' && (
+           <div className="space-y-6 animate-slide-up">
+              <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 p-6">
+                 <div className="flex justify-between items-center mb-6">
+                    <h3 className="font-bold text-lg">Estoque Físico</h3>
+                    <button 
+                      onClick={() => setIsAddingStock(true)}
+                      className="flex items-center gap-2 text-sm font-bold bg-agro-green text-white px-4 py-2 rounded-xl"
+                    >
+                      <Plus size={16}/> Adicionar Item
+                    </button>
+                 </div>
+
+                 {isAddingStock && (
+                    <div className="bg-gray-50 dark:bg-slate-900 p-4 rounded-xl mb-6 animate-fade-in border border-gray-200 dark:border-slate-700">
+                       <h4 className="text-sm font-bold mb-3">{editingStockId ? 'Editar Item' : 'Novo Registro de Colheita'}</h4>
+                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                          <div>
+                            <label className="text-xs font-bold text-gray-500 mb-1 block">Quantidade ({marketUnit})</label>
+                            <input 
+                              type="number"
+                              className="w-full p-2 rounded-lg border dark:bg-slate-800 dark:border-slate-600"
+                              value={stockForm.quantity} onChange={e => setStockForm({...stockForm, quantity: Number(e.target.value)})}
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-bold text-gray-500 mb-1 block">Local de Armazenamento</label>
+                            <input 
+                              type="text"
+                              placeholder="Ex: Silo 1"
+                              className="w-full p-2 rounded-lg border dark:bg-slate-800 dark:border-slate-600"
+                              value={stockForm.location} onChange={e => setStockForm({...stockForm, location: e.target.value})}
+                            />
+                          </div>
+                       </div>
+                       <div className="flex justify-end gap-2">
+                          <button onClick={resetStockForm} className="text-gray-500 text-sm font-bold px-4 py-2">Cancelar</button>
+                          <button onClick={handleSaveStock} className="bg-agro-green text-white text-sm font-bold px-4 py-2 rounded-lg">Salvar Estoque</button>
+                       </div>
+                    </div>
+                 )}
+
+                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {crop.inventory?.length > 0 ? crop.inventory.map((item) => (
+                      <div key={item.id} className="relative bg-gray-50 dark:bg-slate-900 p-5 rounded-2xl border border-gray-200 dark:border-slate-700 group">
+                         <div className="flex justify-between items-start mb-2">
+                            <span className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-xs font-bold px-2 py-1 rounded-lg text-gray-500">{item.location}</span>
+                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                               <button onClick={() => handleEditStock(item)} className="p-1 text-blue-500 hover:bg-blue-50 rounded"><Edit2 size={14}/></button>
+                               <button onClick={() => handleDeleteStock(item.id)} className="p-1 text-red-500 hover:bg-red-50 rounded"><Trash2 size={14}/></button>
+                            </div>
+                         </div>
+                         <h3 className="text-3xl font-extrabold text-gray-900 dark:text-white">{item.quantity} <span className="text-sm text-gray-500 font-medium">{item.unit}</span></h3>
+                         <p className="text-sm text-gray-500 mt-1">Valor Est: <span className="text-green-600 font-bold">{(item.quantity * marketPrice).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</span></p>
+                         <p className="text-[10px] text-gray-400 mt-3 flex items-center gap-1"><Calendar size={10}/> {new Date(item.dateStored).toLocaleDateString()}</p>
+                      </div>
+                    )) : (
+                      <div className="col-span-3 text-center py-8 text-gray-400 border-2 border-dashed border-gray-200 dark:border-slate-700 rounded-2xl">Estoque vazio.</div>
+                    )}
+                 </div>
+              </div>
+           </div>
+         )}
+
+         {activeTab === 'assistant' && (
+            <div className="h-[600px] flex flex-col bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden animate-slide-up">
+               <div className="p-4 bg-gray-50 dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-agro-green flex items-center justify-center text-white">
+                    <Sprout size={20} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 dark:text-white">Tonico (IA)</h3>
+                    <p className="text-xs text-gray-500">Engenheiro Agrônomo Virtual</p>
+                  </div>
+               </div>
+               
+               <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/50 dark:bg-slate-900/50">
+                  {chatHistory.map((msg, i) => (
+                    <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                       <div className={`max-w-[80%] p-4 rounded-2xl text-sm leading-relaxed shadow-sm ${msg.role === 'user' ? 'bg-agro-green text-white rounded-tr-none' : 'bg-white dark:bg-slate-800 text-gray-800 dark:text-gray-200 border border-gray-100 dark:border-slate-700 rounded-tl-none'}`}>
+                          {msg.text}
+                       </div>
+                    </div>
+                  ))}
+                  {isChatLoading && (
+                    <div className="flex justify-start">
+                       <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl rounded-tl-none border border-gray-100 dark:border-slate-700">
+                          <Loader2 size={16} className="animate-spin text-agro-green"/>
+                       </div>
+                    </div>
+                  )}
+               </div>
+
+               <form onSubmit={handleChatSubmit} className="p-4 bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700 flex gap-2">
+                  <input 
+                    className="flex-1 bg-gray-100 dark:bg-slate-900 border-0 rounded-xl px-4 py-3 focus:ring-2 focus:ring-agro-green outline-none"
+                    placeholder="Pergunte sobre sua lavoura..."
+                    value={chatInput}
+                    onChange={e => setChatInput(e.target.value)}
+                  />
+                  <button type="submit" disabled={!chatInput.trim() || isChatLoading} className="p-3 bg-agro-green text-white rounded-xl hover:bg-green-700 disabled:opacity-50 transition-colors">
+                    <Send size={20} />
+                  </button>
+               </form>
+            </div>
+         )}
+
+         {activeTab === 'reports' && <Reports crop={crop} />}
       </div>
     </div>
   );

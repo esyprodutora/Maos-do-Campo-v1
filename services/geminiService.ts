@@ -209,10 +209,29 @@ const getFallbackPlan = (type: CropType, areaHa: number) => {
     };
 };
 
+// Safe way to get API Key in any environment
+const getApiKey = () => {
+  try {
+    // @ts-ignore
+    if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_KEY) {
+      // @ts-ignore
+      return import.meta.env.VITE_API_KEY;
+    }
+  } catch (e) {}
+
+  try {
+    if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
+      return process.env.API_KEY;
+    }
+  } catch (e) {}
+
+  return "";
+};
+
 // Lazy initialization
 const getAiClient = () => {
-  const apiKey = process.env.API_KEY;
-  if (!apiKey) return null; // Allow null to trigger fallback
+  const apiKey = getApiKey();
+  if (!apiKey) return null;
   return new GoogleGenAI({ apiKey });
 };
 

@@ -11,7 +11,46 @@ import { CropData } from './types';
 import { Menu, Loader2, WifiOff, RefreshCw, Sun, Moon } from 'lucide-react';
 import { supabase } from './services/supabaseClient';
 
-const App: React.FC = () => {
+// --- Error Boundary Component ---
+class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: any}> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error: any, errorInfo: any) {
+    console.error("ErrorBoundary caught an error", error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex items-center justify-center min-h-screen bg-gray-50 text-center p-4">
+          <div className="max-w-md">
+             <div className="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+               <span className="text-2xl">⚠️</span>
+             </div>
+             <h1 className="text-xl font-bold text-gray-800 mb-2">Ops! Ocorreu um erro.</h1>
+             <p className="text-gray-500 mb-6 text-sm">A aplicação encontrou um problema inesperado ao renderizar.</p>
+             
+             <button onClick={() => { localStorage.clear(); window.location.reload(); }} className="px-6 py-3 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 transition-colors shadow-lg">
+               Limpar Dados e Recarregar
+             </button>
+             
+             <details className="mt-8 text-left bg-gray-100 p-4 rounded-lg overflow-auto text-xs text-gray-500 max-h-40">
+               <summary className="cursor-pointer font-bold mb-2">Ver detalhes do erro</summary>
+               {this.state.error?.toString()}
+             </details>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+const AppContent: React.FC = () => {
   const [session, setSession] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
 
@@ -78,7 +117,10 @@ const App: React.FC = () => {
     const localData = localStorage.getItem('maos-do-campo-crops');
     if (localData) {
       try {
-        setCrops(JSON.parse(localData));
+        const parsed = JSON.parse(localData);
+        if (Array.isArray(parsed)) {
+            setCrops(parsed);
+        }
       } catch (e) {
         console.error("Erro ao ler cache local", e);
       }
@@ -104,7 +146,7 @@ const App: React.FC = () => {
       if (result.error) throw result.error;
 
       // Map Supabase rows back to CropData structure
-      const loadedCrops = result.data.map((row: any) => ({
+      const loadedCrops = (result.data || []).map((row: any) => ({
         ...row.content,
         id: row.id 
       }));
@@ -118,8 +160,6 @@ const App: React.FC = () => {
       // Only set error state if we have NO data to show
       if (!localData && crops.length === 0) {
         setError("Não foi possível carregar seus dados. Verifique a conexão.");
-      } else {
-        // Silent fail (toast could go here) - User still sees local data
       }
     } finally {
       setIsLoading(false);
@@ -151,7 +191,6 @@ const App: React.FC = () => {
         if (error) throw error;
       } catch (e) {
         console.error("Erro ao salvar no Supabase:", e);
-        // We could add a "pending sync" flag here in future
       }
     }
   };
@@ -357,6 +396,14 @@ const App: React.FC = () => {
         {renderContent()}
       </main>
     </div>
+  );
+}
+
+const App: React.FC = () => {
+  return (
+    <ErrorBoundary>
+      <AppContent />
+    </ErrorBoundary>
   );
 };
 
