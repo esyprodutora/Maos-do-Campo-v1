@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { CropData, StageResource, ResourceType, InventoryItem, FinancialTransaction, TimelineStage } from '../types';
 import { getAssistantResponse } from '../services/geminiService';
@@ -20,7 +21,7 @@ interface CropDetailsProps {
   onDeleteCrop: () => void;
 }
 
-export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdateCrop, onDeleteCrop }) => {
+export const CropDetails = ({ crop, onBack, onUpdateCrop, onDeleteCrop }: CropDetailsProps) => {
   const [activeTab, setActiveTab] = useState<'timeline' | 'finance' | 'inventory' | 'assistant' | 'reports'>('timeline');
   
   // Assistant State
@@ -89,7 +90,7 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
   };
 
   const handleSaveResource = (stageId: string) => {
-      if (!resourceForm.name || !resourceForm.quantity || !resourceForm.unitCost) return alert("Preencha todos os campos");
+      if (!resourceForm.name || !resourceForm.quantity || !resourceForm.unitCost) return alert("Preencha nome, quantidade e custo.");
       
       const updatedTimeline = crop.timeline.map(stage => {
           if (stage.id === stageId) {
@@ -101,7 +102,7 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                   name: resourceForm.name!,
                   type: resourceForm.type as ResourceType,
                   quantity: Number(resourceForm.quantity),
-                  unit: resourceForm.unit!,
+                  unit: resourceForm.unit || 'un',
                   unitCost: Number(resourceForm.unitCost),
                   totalCost: totalCost,
                   ownership: resourceForm.type === 'maquinario' ? resourceForm.ownership : undefined
@@ -453,24 +454,50 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                         </div>
 
                         {resourceFormStageId === stage.id && (
-                           <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl mb-6 border-2 border-agro-green animate-fade-in shadow-lg">
+                           <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl mb-6 border-2 border-agro-green animate-fade-in shadow-lg relative z-20">
                               <h6 className="font-bold mb-4 text-sm uppercase tracking-wide text-gray-500">{editingResourceId ? 'Editar Recurso' : 'Novo Recurso'}</h6>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                <select 
-                                    className="p-3 rounded-xl border bg-gray-50 dark:bg-slate-900 dark:border-slate-700"
-                                    value={resourceForm.type}
-                                    onChange={e => setResourceForm({...resourceForm, type: e.target.value as any})}
-                                >
-                                    <option value="insumo">Insumo (Sementes, Adubos...)</option>
-                                    <option value="maquinario">Maquinário (Tratores...)</option>
-                                    <option value="mao_de_obra">Mão de Obra (Operador...)</option>
-                                </select>
-                                <input placeholder="Nome (Ex: Adubo NPK)" className="p-3 rounded-xl border bg-gray-50 dark:bg-slate-900 dark:border-slate-700" value={resourceForm.name} onChange={e=>setResourceForm({...resourceForm, name: e.target.value})}/>
-                                <input type="number" placeholder="Quantidade" className="p-3 rounded-xl border bg-gray-50 dark:bg-slate-900 dark:border-slate-700" value={resourceForm.quantity || ''} onChange={e=>setResourceForm({...resourceForm, quantity: Number(e.target.value)})}/>
-                                <div className="relative">
-                                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">R$</span>
-                                     <input type="number" placeholder="Custo Unitário" className="p-3 pl-8 rounded-xl border bg-gray-50 dark:bg-slate-900 dark:border-slate-700 w-full" value={resourceForm.unitCost || ''} onChange={e=>setResourceForm({...resourceForm, unitCost: Number(e.target.value)})}/>
+                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-4">
+                                <div className="lg:col-span-2">
+                                    <label className="text-xs font-bold text-gray-500 mb-1 block">Tipo</label>
+                                    <select 
+                                        className="w-full p-3 rounded-xl border bg-gray-50 dark:bg-slate-900 dark:border-slate-700"
+                                        value={resourceForm.type}
+                                        onChange={e => setResourceForm({...resourceForm, type: e.target.value as any})}
+                                    >
+                                        <option value="insumo">Insumo (Sementes, Adubos...)</option>
+                                        <option value="maquinario">Maquinário (Trator, Drone...)</option>
+                                        <option value="mao_de_obra">Mão de Obra</option>
+                                    </select>
                                 </div>
+                                <div className="lg:col-span-4">
+                                    <label className="text-xs font-bold text-gray-500 mb-1 block">Nome do Item</label>
+                                    <input placeholder="Ex: Adubo NPK 04-14-08" className="w-full p-3 rounded-xl border bg-gray-50 dark:bg-slate-900 dark:border-slate-700" value={resourceForm.name || ''} onChange={e=>setResourceForm({...resourceForm, name: e.target.value})}/>
+                                </div>
+                                <div className="lg:col-span-2">
+                                    <label className="text-xs font-bold text-gray-500 mb-1 block">Quantidade</label>
+                                    <input type="number" placeholder="0.00" className="w-full p-3 rounded-xl border bg-gray-50 dark:bg-slate-900 dark:border-slate-700" value={resourceForm.quantity || ''} onChange={e=>setResourceForm({...resourceForm, quantity: Number(e.target.value)})}/>
+                                </div>
+                                <div className="lg:col-span-2">
+                                    <label className="text-xs font-bold text-gray-500 mb-1 block">Unidade</label>
+                                    <input placeholder="kg, lt, sc, h" className="w-full p-3 rounded-xl border bg-gray-50 dark:bg-slate-900 dark:border-slate-700" value={resourceForm.unit || ''} onChange={e=>setResourceForm({...resourceForm, unit: e.target.value})}/>
+                                </div>
+                                <div className="lg:col-span-2">
+                                    <label className="text-xs font-bold text-gray-500 mb-1 block">Custo Unit. (R$)</label>
+                                    <input type="number" placeholder="0.00" className="w-full p-3 rounded-xl border bg-gray-50 dark:bg-slate-900 dark:border-slate-700" value={resourceForm.unitCost || ''} onChange={e=>setResourceForm({...resourceForm, unitCost: Number(e.target.value)})}/>
+                                </div>
+                                {resourceForm.type === 'maquinario' && (
+                                    <div className="lg:col-span-3">
+                                        <label className="text-xs font-bold text-gray-500 mb-1 block">Propriedade</label>
+                                        <select 
+                                            className="w-full p-3 rounded-xl border bg-gray-50 dark:bg-slate-900 dark:border-slate-700"
+                                            value={resourceForm.ownership || 'alugado'}
+                                            onChange={e => setResourceForm({...resourceForm, ownership: e.target.value as any})}
+                                        >
+                                            <option value="alugado">Alugado / Terceirizado</option>
+                                            <option value="proprio">Próprio</option>
+                                        </select>
+                                    </div>
+                                )}
                               </div>
                               <div className="flex gap-3">
                                   <button onClick={handleCloseResourceForm} className="flex-1 bg-gray-100 text-gray-600 py-3 rounded-xl font-bold hover:bg-gray-200 transition-colors">Cancelar</button>
@@ -491,11 +518,11 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                                                 <span className="font-bold text-gray-700 dark:text-gray-200 w-2/3">{res.name}</span>
                                                 <span className="font-bold text-gray-900 dark:text-white">{res.totalCost.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</span>
                                             </div>
-                                            <div className="text-gray-500 text-xs mt-0.5">{res.quantity} {res.unit} x {res.unitCost}</div>
+                                            <div className="text-gray-500 text-xs mt-0.5">{res.quantity} {res.unit} x {res.unitCost.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</div>
                                             {isEditingTimeline && (
-                                              <div className="absolute right-0 top-0 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                                                  <button onClick={() => handleOpenResourceForm(stage.id, res)} className="p-1 bg-blue-100 text-blue-500 rounded hover:bg-blue-200"><Edit2 size={12}/></button>
-                                                  <button onClick={() => handleDeleteResource(stage.id, res.id)} className="p-1 bg-red-100 text-red-500 rounded hover:bg-red-200"><Trash2 size={12}/></button>
+                                              <div className="absolute right-0 top-0 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 bg-white dark:bg-slate-800 shadow-sm p-1 rounded-lg">
+                                                  <button onClick={() => handleOpenResourceForm(stage.id, res)} className="p-1.5 bg-blue-100 text-blue-500 rounded hover:bg-blue-200"><Edit2 size={14}/></button>
+                                                  <button onClick={() => handleDeleteResource(stage.id, res.id)} className="p-1.5 bg-red-100 text-red-500 rounded hover:bg-red-200"><Trash2 size={14}/></button>
                                               </div>
                                             )}
                                         </div>
@@ -515,11 +542,14 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                                                 <span className="font-bold text-gray-700 dark:text-gray-200 w-2/3">{res.name}</span>
                                                 <span className="font-bold text-gray-900 dark:text-white">{res.totalCost.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</span>
                                             </div>
-                                            <div className="text-gray-500 text-xs mt-0.5">{res.quantity} {res.unit} x {res.unitCost}</div>
+                                            <div className="text-gray-500 text-xs mt-0.5 flex gap-2">
+                                                <span>{res.quantity} {res.unit} x {res.unitCost.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</span>
+                                                {res.ownership === 'proprio' && <span className="text-[10px] bg-blue-100 text-blue-600 px-1 rounded">Próprio</span>}
+                                            </div>
                                             {isEditingTimeline && (
-                                              <div className="absolute right-0 top-0 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                                                  <button onClick={() => handleOpenResourceForm(stage.id, res)} className="p-1 bg-blue-100 text-blue-500 rounded hover:bg-blue-200"><Edit2 size={12}/></button>
-                                                  <button onClick={() => handleDeleteResource(stage.id, res.id)} className="p-1 bg-red-100 text-red-500 rounded hover:bg-red-200"><Trash2 size={12}/></button>
+                                              <div className="absolute right-0 top-0 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 bg-white dark:bg-slate-800 shadow-sm p-1 rounded-lg">
+                                                  <button onClick={() => handleOpenResourceForm(stage.id, res)} className="p-1.5 bg-blue-100 text-blue-500 rounded hover:bg-blue-200"><Edit2 size={14}/></button>
+                                                  <button onClick={() => handleDeleteResource(stage.id, res.id)} className="p-1.5 bg-red-100 text-red-500 rounded hover:bg-red-200"><Trash2 size={14}/></button>
                                               </div>
                                             )}
                                         </div>
@@ -539,11 +569,11 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
                                                 <span className="font-bold text-gray-700 dark:text-gray-200 w-2/3">{res.name}</span>
                                                 <span className="font-bold text-gray-900 dark:text-white">{res.totalCost.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</span>
                                             </div>
-                                            <div className="text-gray-500 text-xs mt-0.5">{res.quantity} {res.unit} x {res.unitCost}</div>
+                                            <div className="text-gray-500 text-xs mt-0.5">{res.quantity} {res.unit} x {res.unitCost.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</div>
                                             {isEditingTimeline && (
-                                              <div className="absolute right-0 top-0 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                                                  <button onClick={() => handleOpenResourceForm(stage.id, res)} className="p-1 bg-blue-100 text-blue-500 rounded hover:bg-blue-200"><Edit2 size={12}/></button>
-                                                  <button onClick={() => handleDeleteResource(stage.id, res.id)} className="p-1 bg-red-100 text-red-500 rounded hover:bg-red-200"><Trash2 size={12}/></button>
+                                              <div className="absolute right-0 top-0 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 bg-white dark:bg-slate-800 shadow-sm p-1 rounded-lg">
+                                                  <button onClick={() => handleOpenResourceForm(stage.id, res)} className="p-1.5 bg-blue-100 text-blue-500 rounded hover:bg-blue-200"><Edit2 size={14}/></button>
+                                                  <button onClick={() => handleDeleteResource(stage.id, res.id)} className="p-1.5 bg-red-100 text-red-500 rounded hover:bg-red-200"><Trash2 size={14}/></button>
                                               </div>
                                             )}
                                         </div>
@@ -583,212 +613,288 @@ export const CropDetails: React.FC<CropDetailsProps> = ({ crop, onBack, onUpdate
   );
 
   return (
-    <div className="animate-fade-in pb-20 md:pb-0">
-        <div className="flex items-center gap-4 mb-8">
-            <button onClick={onBack} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors">
-                <ArrowLeft size={24} className="text-gray-600 dark:text-gray-300"/>
+    <div className="max-w-7xl mx-auto pb-20">
+      {/* Header of Details */}
+      <div className="flex items-center justify-between mb-8 animate-fade-in">
+        <button 
+          onClick={onBack}
+          className="flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-agro-green transition-colors font-bold"
+        >
+          <ArrowLeft size={20} /> Voltar
+        </button>
+        <div className="flex gap-2">
+            <button onClick={onDeleteCrop} className="p-3 bg-white dark:bg-slate-800 text-red-500 rounded-xl shadow border border-gray-200 dark:border-slate-700 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+               <Trash2 size={20} />
             </button>
+        </div>
+      </div>
+
+      {/* Main Info Card */}
+      <div className="bg-gradient-to-br from-agro-green to-emerald-700 rounded-3xl p-8 text-white shadow-xl shadow-green-900/20 relative overflow-hidden mb-8 animate-slide-up">
+         <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
+         <div className="relative z-10 flex flex-col md:flex-row justify-between md:items-end gap-6">
             <div>
-                <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
-                    {crop.name}
-                    <span className={`text-xs px-2 py-1 rounded-full text-white bg-gradient-to-r ${getCropGradient(crop.type)}`}>
-                        {crop.type}
-                    </span>
-                </h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {crop.areaHa} hectares • {crop.productivityGoal || 'Meta não definida'}
-                </p>
+               <div className="flex items-center gap-2 mb-2">
+                  <span className="bg-white/20 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider backdrop-blur-sm">
+                    {crop.type}
+                  </span>
+                  <span className="bg-white/20 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider backdrop-blur-sm flex items-center gap-1">
+                    <MapPin size={12}/> {crop.areaHa} ha
+                  </span>
+               </div>
+               <h1 className="text-4xl md:text-5xl font-extrabold mb-2 leading-tight">{crop.name}</h1>
+               <p className="text-green-100 max-w-xl text-lg opacity-90">{crop.aiAdvice}</p>
             </div>
-            <div className="ml-auto">
-                <button onClick={onDeleteCrop} className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors" title="Excluir Lavoura">
-                    <Trash2 size={20} />
-                </button>
-            </div>
-        </div>
-
-        <div className="flex overflow-x-auto pb-4 gap-2 mb-6 scrollbar-hide">
-             <button onClick={() => setActiveTab('timeline')} className={`px-4 py-2 rounded-xl font-bold whitespace-nowrap transition-colors flex items-center gap-2 ${activeTab === 'timeline' ? 'bg-agro-green text-white' : 'bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700'}`}>
-                 <ListTodo size={18} /> Cronograma
-             </button>
-             <button onClick={() => setActiveTab('finance')} className={`px-4 py-2 rounded-xl font-bold whitespace-nowrap transition-colors flex items-center gap-2 ${activeTab === 'finance' ? 'bg-agro-green text-white' : 'bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700'}`}>
-                 <DollarSign size={18} /> Financeiro
-             </button>
-             <button onClick={() => setActiveTab('inventory')} className={`px-4 py-2 rounded-xl font-bold whitespace-nowrap transition-colors flex items-center gap-2 ${activeTab === 'inventory' ? 'bg-agro-green text-white' : 'bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700'}`}>
-                 <Warehouse size={18} /> Estoque
-             </button>
-             <button onClick={() => setActiveTab('reports')} className={`px-4 py-2 rounded-xl font-bold whitespace-nowrap transition-colors flex items-center gap-2 ${activeTab === 'reports' ? 'bg-agro-green text-white' : 'bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700'}`}>
-                 <FileText size={18} /> Relatórios
-             </button>
-             <button onClick={() => setActiveTab('assistant')} className={`px-4 py-2 rounded-xl font-bold whitespace-nowrap transition-colors flex items-center gap-2 ${activeTab === 'assistant' ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-slate-800 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-slate-700'}`}>
-                 <MessageCircle size={18} /> IA Assistente
-             </button>
-        </div>
-
-        <div className="min-h-[500px]">
-            {activeTab === 'timeline' && renderTimeline()}
             
-            {activeTab === 'finance' && (
-                <div className="animate-slide-up space-y-6">
-                   <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-gray-200 dark:border-slate-700">
-                          <p className="text-gray-500 text-sm">Custo Operacional</p>
-                          <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{totalOperationalCost.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</h3>
-                      </div>
-                      <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-gray-200 dark:border-slate-700">
-                          <p className="text-gray-500 text-sm">Total Pago</p>
-                          <h3 className="text-2xl font-bold text-green-600">{totalPaid.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</h3>
-                      </div>
-                   </div>
+            <div className="flex gap-4">
+               <div className="bg-white/10 backdrop-blur-sm p-4 rounded-2xl border border-white/10 min-w-[140px]">
+                  <p className="text-xs text-green-200 uppercase font-bold mb-1">Custo Total</p>
+                  <p className="text-2xl font-bold">{totalOperationalCost.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL', maximumFractionDigits: 0})}</p>
+               </div>
+               <div className="bg-white/10 backdrop-blur-sm p-4 rounded-2xl border border-white/10 min-w-[140px]">
+                  <p className="text-xs text-green-200 uppercase font-bold mb-1">Colheita</p>
+                  <p className="text-2xl font-bold">{new Date(crop.estimatedHarvestDate).toLocaleDateString('pt-BR', {month: 'short', year: 'numeric'})}</p>
+               </div>
+            </div>
+         </div>
+      </div>
 
-                   <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border border-gray-200 dark:border-slate-700">
-                      <div className="flex justify-between items-center mb-6">
-                          <h3 className="font-bold text-lg">Transações</h3>
-                          <button onClick={() => setIsAddingTransaction(!isAddingTransaction)} className="text-sm font-bold text-agro-green bg-green-50 dark:bg-green-900/20 px-4 py-2 rounded-xl">
-                              {isAddingTransaction ? 'Cancelar' : '+ Nova Transação'}
-                          </button>
-                      </div>
+      {/* Tabs */}
+      <div className="flex overflow-x-auto pb-4 gap-2 mb-6 custom-scrollbar animate-fade-in">
+         {[
+           {id: 'timeline', label: 'Cronograma', icon: Calendar},
+           {id: 'finance', label: 'Financeiro', icon: DollarSign},
+           {id: 'inventory', label: 'Estoque', icon: Warehouse},
+           {id: 'reports', label: 'Relatórios', icon: FileText},
+           {id: 'assistant', label: 'Assistente IA', icon: MessageCircle},
+         ].map(tab => (
+           <button
+             key={tab.id}
+             onClick={() => setActiveTab(tab.id as any)}
+             className={`
+               flex items-center gap-2 px-6 py-3 rounded-xl font-bold whitespace-nowrap transition-all
+               ${activeTab === tab.id 
+                 ? 'bg-agro-dark text-white shadow-lg' 
+                 : 'bg-white dark:bg-slate-800 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-700'}
+             `}
+           >
+             <tab.icon size={18} />
+             {tab.label}
+           </button>
+         ))}
+      </div>
 
-                      {isAddingTransaction && (
-                          <div className="mb-6 p-4 bg-gray-50 dark:bg-slate-700/50 rounded-2xl grid gap-3 animate-fade-in">
-                              <input placeholder="Descrição" className="p-3 rounded-xl" value={newTx.description} onChange={e => setNewTx({...newTx, description: e.target.value})}/>
-                              <div className="grid grid-cols-2 gap-3">
-                                  <input type="number" placeholder="Valor" className="p-3 rounded-xl" value={newTx.amount || ''} onChange={e => setNewTx({...newTx, amount: Number(e.target.value)})}/>
-                                  <select className="p-3 rounded-xl" value={newTx.type} onChange={e => setNewTx({...newTx, type: e.target.value as any})}>
-                                      <option value="despesa">Despesa</option>
-                                      <option value="receita">Receita</option>
-                                  </select>
-                              </div>
-                              <button onClick={handleAddTransaction} className="bg-agro-green text-white py-3 rounded-xl font-bold">Salvar</button>
+      {/* Content */}
+      <div className="min-h-[500px]">
+         {activeTab === 'timeline' && renderTimeline()}
+
+         {activeTab === 'finance' && (
+           <div className="space-y-6 animate-slide-up">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm">
+                      <h3 className="text-gray-500 font-bold text-sm uppercase mb-2">Total Pago (Caixa)</h3>
+                      <p className="text-3xl font-extrabold text-gray-900 dark:text-white">
+                        {totalPaid.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}
+                      </p>
+                  </div>
+                  <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm">
+                      <h3 className="text-gray-500 font-bold text-sm uppercase mb-2">Previsto (Operacional)</h3>
+                      <p className="text-3xl font-extrabold text-gray-900 dark:text-white">
+                        {totalOperationalCost.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}
+                      </p>
+                  </div>
+              </div>
+
+              <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden">
+                 <div className="p-6 border-b border-gray-100 dark:border-slate-700 flex justify-between items-center">
+                    <h3 className="font-bold text-lg text-gray-900 dark:text-white">Lançamentos</h3>
+                    <button onClick={() => setIsAddingTransaction(!isAddingTransaction)} className="flex items-center gap-2 text-sm font-bold text-agro-green bg-green-50 dark:bg-green-900/20 px-4 py-2 rounded-xl hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors">
+                       <Plus size={16}/> Novo Lançamento
+                    </button>
+                 </div>
+                 
+                 {isAddingTransaction && (
+                    <div className="p-6 bg-gray-50 dark:bg-slate-900 border-b border-gray-100 dark:border-slate-700 animate-fade-in">
+                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
+                          <div className="lg:col-span-2">
+                             <label className="text-xs font-bold text-gray-500 mb-1 block">Descrição</label>
+                             <input className="w-full p-3 rounded-xl border bg-white dark:bg-slate-800 dark:border-slate-600" placeholder="Ex: Adubo Extra" value={newTx.description} onChange={e => setNewTx({...newTx, description: e.target.value})} />
                           </div>
-                      )}
-
-                      <div className="space-y-3">
-                          {crop.transactions?.length === 0 && <p className="text-center text-gray-400 py-4">Nenhuma transação registrada.</p>}
-                          {crop.transactions?.map(tx => (
-                              <div key={tx.id} className="flex justify-between items-center p-3 hover:bg-gray-50 dark:hover:bg-slate-700/50 rounded-xl transition-colors">
-                                  <div>
-                                      <p className="font-bold text-gray-800 dark:text-gray-200">{tx.description}</p>
-                                      <p className="text-xs text-gray-400">{new Date(tx.date).toLocaleDateString()}</p>
-                                  </div>
-                                  <span className={`font-bold ${tx.type === 'receita' ? 'text-green-600' : 'text-red-600'}`}>
-                                      {tx.type === 'receita' ? '+' : '-'} {tx.amount.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}
-                                  </span>
-                              </div>
-                          ))}
-                      </div>
-                   </div>
-                </div>
-            )}
-
-            {activeTab === 'inventory' && (
-                <div className="animate-slide-up space-y-6">
-                   <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-gray-200 dark:border-slate-700 text-center">
-                        <p className="text-gray-500 text-sm mb-1">Valor Estimado em Estoque</p>
-                        <h3 className="text-3xl font-extrabold text-gray-900 dark:text-white">
-                           {totalInventoryValue.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}
-                        </h3>
-                   </div>
-
-                   <div className="flex justify-end">
-                       <button onClick={() => setIsAddingStock(!isAddingStock)} className="bg-agro-green text-white px-6 py-3 rounded-xl font-bold shadow-lg flex items-center gap-2">
-                           {isAddingStock ? <X size={20}/> : <Plus size={20}/>}
-                           {isAddingStock ? 'Cancelar' : 'Adicionar Item'}
-                       </button>
-                   </div>
-
-                   {isAddingStock && (
-                       <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-lg border border-agro-green animate-fade-in">
-                           <h4 className="font-bold mb-4">{editingStockId ? 'Editar Item' : 'Novo Item de Estoque'}</h4>
-                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                               <div>
-                                   <label className="text-xs font-bold text-gray-500 ml-1">Quantidade ({marketUnit})</label>
-                                   <input type="number" className="w-full p-3 rounded-xl border bg-gray-50 dark:bg-slate-900 dark:border-slate-700" value={stockForm.quantity} onChange={e => setStockForm({...stockForm, quantity: Number(e.target.value)})}/>
-                               </div>
-                               <div>
-                                   <label className="text-xs font-bold text-gray-500 ml-1">Local de Armazenamento</label>
-                                   <input type="text" className="w-full p-3 rounded-xl border bg-gray-50 dark:bg-slate-900 dark:border-slate-700" placeholder="Ex: Silo 1" value={stockForm.location} onChange={e => setStockForm({...stockForm, location: e.target.value})}/>
-                               </div>
-                           </div>
-                           <button onClick={handleSaveStock} className="w-full bg-agro-green text-white py-3 rounded-xl font-bold hover:bg-green-700">Salvar no Estoque</button>
+                          <div>
+                             <label className="text-xs font-bold text-gray-500 mb-1 block">Valor (R$)</label>
+                             <input type="number" className="w-full p-3 rounded-xl border bg-white dark:bg-slate-800 dark:border-slate-600" placeholder="0.00" value={newTx.amount || ''} onChange={e => setNewTx({...newTx, amount: Number(e.target.value)})} />
+                          </div>
+                          <div>
+                             <label className="text-xs font-bold text-gray-500 mb-1 block">Tipo</label>
+                             <select className="w-full p-3 rounded-xl border bg-white dark:bg-slate-800 dark:border-slate-600" value={newTx.type} onChange={e => setNewTx({...newTx, type: e.target.value as any})}>
+                                <option value="despesa">Despesa</option>
+                                <option value="receita">Receita</option>
+                             </select>
+                          </div>
+                          <div>
+                             <label className="text-xs font-bold text-gray-500 mb-1 block">Status</label>
+                             <select className="w-full p-3 rounded-xl border bg-white dark:bg-slate-800 dark:border-slate-600" value={newTx.status} onChange={e => setNewTx({...newTx, status: e.target.value as any})}>
+                                <option value="pago">Pago</option>
+                                <option value="pendente">Pendente</option>
+                             </select>
+                          </div>
                        </div>
-                   )}
-
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                       {crop.inventory?.map(item => (
-                           <div key={item.id} className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm relative group">
-                               <div className="flex justify-between items-start mb-2">
-                                   <span className="bg-yellow-100 text-yellow-700 text-xs font-bold px-2 py-1 rounded-lg uppercase">{item.cropType}</span>
-                                   <div className="text-right">
-                                       <p className="font-bold text-lg">{item.quantity} {item.unit}</p>
-                                       <p className="text-xs text-gray-400">{(item.quantity * (item.estimatedUnitValue || 0)).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</p>
-                                   </div>
-                               </div>
-                               <div className="flex items-center gap-2 text-sm text-gray-500">
-                                   <MapPin size={14}/> {item.location}
-                               </div>
-                               <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
-                                   <button onClick={() => handleEditStock(item)} className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200"><Edit2 size={16}/></button>
-                                   <button onClick={() => handleDeleteStock(item.id)} className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200"><Trash2 size={16}/></button>
-                               </div>
-                           </div>
-                       ))}
-                       {crop.inventory?.length === 0 && (
-                           <div className="col-span-full text-center py-10 text-gray-400 border-2 border-dashed border-gray-200 rounded-3xl">
-                               <Warehouse size={40} className="mx-auto mb-2 opacity-50"/>
-                               <p>Estoque vazio.</p>
-                           </div>
-                       )}
-                   </div>
-                </div>
-            )}
-
-            {activeTab === 'reports' && <Reports crop={crop} />}
-
-            {activeTab === 'assistant' && (
-                <div className="animate-slide-up bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden flex flex-col h-[600px]">
-                    <div className="p-4 bg-indigo-600 text-white flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-                            <MessageCircle size={20}/>
-                        </div>
-                        <div>
-                            <h3 className="font-bold">Tonico IA</h3>
-                            <p className="text-xs text-indigo-200">Assistente Agronômico 24h</p>
-                        </div>
+                       <button onClick={handleAddTransaction} className="w-full bg-agro-green text-white py-3 rounded-xl font-bold shadow hover:bg-green-700">Salvar Lançamento</button>
                     </div>
-                    
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-slate-900/50">
-                        {chatHistory.map((msg, i) => (
-                            <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`max-w-[80%] p-4 rounded-2xl ${msg.role === 'user' ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-white dark:bg-slate-800 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-slate-700 rounded-bl-none shadow-sm'}`}>
-                                    <p className="text-sm leading-relaxed">{msg.text}</p>
-                                </div>
-                            </div>
-                        ))}
-                        {isChatLoading && (
-                            <div className="flex justify-start">
-                                <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl rounded-bl-none shadow-sm flex gap-2 items-center">
-                                    <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce"></span>
-                                    <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce delay-75"></span>
-                                    <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce delay-150"></span>
-                                </div>
-                            </div>
-                        )}
-                    </div>
+                 )}
 
-                    <form onSubmit={handleChatSubmit} className="p-4 bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700 flex gap-2">
-                        <input 
-                            className="flex-1 bg-gray-100 dark:bg-slate-900 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none"
-                            placeholder="Pergunte sobre sua lavoura..."
-                            value={chatInput}
-                            onChange={e => setChatInput(e.target.value)}
-                        />
-                        <button type="submit" disabled={!chatInput.trim() || isChatLoading} className="bg-indigo-600 text-white p-3 rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-                            <Send size={20} />
-                        </button>
-                    </form>
-                </div>
-            )}
-        </div>
+                 <div className="divide-y divide-gray-100 dark:divide-slate-700">
+                    {crop.transactions?.length === 0 ? (
+                       <div className="p-8 text-center text-gray-400">Nenhuma transação registrada.</div>
+                    ) : (
+                       crop.transactions?.map(tx => (
+                          <div key={tx.id} className="p-4 hover:bg-gray-50 dark:hover:bg-slate-700/50 flex items-center justify-between transition-colors">
+                             <div className="flex items-center gap-3">
+                                <div className={`p-2 rounded-full ${tx.type === 'receita' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                                   {tx.type === 'receita' ? <TrendingUp size={18} /> : <TrendingDown size={18} />}
+                                </div>
+                                <div>
+                                   <p className="font-bold text-gray-800 dark:text-gray-200">{tx.description}</p>
+                                   <p className="text-xs text-gray-400 capitalize">{tx.category} • {new Date(tx.date).toLocaleDateString()}</p>
+                                </div>
+                             </div>
+                             <div className="text-right">
+                                <p className={`font-bold ${tx.type === 'receita' ? 'text-green-600' : 'text-gray-900 dark:text-white'}`}>
+                                   {tx.type === 'receita' ? '+' : '-'} {tx.amount.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}
+                                </p>
+                                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${tx.status === 'pago' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                                   {tx.status}
+                                </span>
+                             </div>
+                          </div>
+                       ))
+                    )}
+                 </div>
+              </div>
+           </div>
+         )}
+
+         {activeTab === 'inventory' && (
+           <div className="space-y-6 animate-slide-up">
+              <div className="bg-indigo-600 text-white p-6 rounded-3xl shadow-xl shadow-indigo-600/20">
+                 <div className="flex justify-between items-start">
+                    <div>
+                       <p className="text-indigo-200 font-bold text-sm uppercase mb-1">Valor Estimado em Estoque</p>
+                       <h2 className="text-4xl font-extrabold">{totalInventoryValue.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</h2>
+                       <p className="text-sm text-indigo-200 mt-2">Baseado na cotação atual de {marketPrice.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}/{marketUnit}</p>
+                    </div>
+                    <div className="bg-white/20 p-3 rounded-xl">
+                       <Warehouse size={32} className="text-white"/>
+                    </div>
+                 </div>
+              </div>
+
+              <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden">
+                 <div className="p-6 border-b border-gray-100 dark:border-slate-700 flex justify-between items-center">
+                    <h3 className="font-bold text-lg text-gray-900 dark:text-white">Itens Armazenados</h3>
+                    <button onClick={() => { setIsAddingStock(!isAddingStock); setEditingStockId(null); setStockForm({quantity: 0, location: ''}); }} className="flex items-center gap-2 text-sm font-bold text-agro-green bg-green-50 dark:bg-green-900/20 px-4 py-2 rounded-xl hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors">
+                       <Plus size={16}/> Novo Item
+                    </button>
+                 </div>
+
+                 {isAddingStock && (
+                    <div className="p-6 bg-gray-50 dark:bg-slate-900 border-b border-gray-100 dark:border-slate-700 animate-fade-in">
+                       <h4 className="font-bold text-gray-700 dark:text-gray-300 mb-4">{editingStockId ? 'Editar Estoque' : 'Adicionar ao Estoque'}</h4>
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                          <div>
+                             <label className="text-xs font-bold text-gray-500 mb-1 block">Quantidade ({marketUnit})</label>
+                             <input type="number" className="w-full p-3 rounded-xl border bg-white dark:bg-slate-800 dark:border-slate-600" placeholder="0.00" value={stockForm.quantity || ''} onChange={e => setStockForm({...stockForm, quantity: Number(e.target.value)})} />
+                          </div>
+                          <div>
+                             <label className="text-xs font-bold text-gray-500 mb-1 block">Local de Armazenamento</label>
+                             <input className="w-full p-3 rounded-xl border bg-white dark:bg-slate-800 dark:border-slate-600" placeholder="Ex: Silo 1" value={stockForm.location} onChange={e => setStockForm({...stockForm, location: e.target.value})} />
+                          </div>
+                       </div>
+                       <div className="flex gap-3">
+                          <button onClick={resetStockForm} className="flex-1 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 py-3 rounded-xl font-bold">Cancelar</button>
+                          <button onClick={handleSaveStock} className="flex-1 bg-agro-green text-white py-3 rounded-xl font-bold shadow hover:bg-green-700">Salvar</button>
+                       </div>
+                    </div>
+                 )}
+
+                 <div className="divide-y divide-gray-100 dark:divide-slate-700">
+                    {crop.inventory?.length === 0 ? (
+                       <div className="p-8 text-center text-gray-400">Estoque vazio.</div>
+                    ) : (
+                       crop.inventory?.map(item => (
+                          <div key={item.id} className="p-4 hover:bg-gray-50 dark:hover:bg-slate-700/50 flex items-center justify-between transition-colors group">
+                             <div>
+                                <p className="font-bold text-gray-800 dark:text-gray-200 text-lg">{item.quantity} <span className="text-sm font-normal text-gray-500">{item.unit}</span></p>
+                                <p className="text-xs text-gray-400 flex items-center gap-1"><MapPin size={12}/> {item.location} • {new Date(item.dateStored).toLocaleDateString()}</p>
+                             </div>
+                             <div className="flex items-center gap-4">
+                                <p className="font-bold text-gray-900 dark:text-white text-right">
+                                   {(item.quantity * marketPrice).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}
+                                </p>
+                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                   <button onClick={() => handleEditStock(item)} className="p-2 bg-blue-50 text-blue-500 rounded-lg hover:bg-blue-100"><Edit2 size={16}/></button>
+                                   <button onClick={() => handleDeleteStock(item.id)} className="p-2 bg-red-50 text-red-500 rounded-lg hover:bg-red-100"><Trash2 size={16}/></button>
+                                </div>
+                             </div>
+                          </div>
+                       ))
+                    )}
+                 </div>
+              </div>
+           </div>
+         )}
+
+         {activeTab === 'assistant' && (
+           <div className="h-[600px] flex flex-col bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 animate-slide-up overflow-hidden">
+              <div className="p-4 bg-agro-dark text-white flex items-center gap-3">
+                 <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-agro-dark font-bold text-xl">
+                    <MessageCircle size={20} />
+                 </div>
+                 <div>
+                    <h3 className="font-bold">Tonico IA</h3>
+                    <p className="text-xs opacity-70">Especialista em {crop.type}</p>
+                 </div>
+              </div>
+              
+              <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-gray-50 dark:bg-slate-900">
+                 {chatHistory.map((msg, idx) => (
+                    <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                       <div className={`max-w-[80%] p-4 rounded-2xl text-sm leading-relaxed shadow-sm ${msg.role === 'user' ? 'bg-agro-green text-white rounded-br-none' : 'bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200 rounded-bl-none border border-gray-200 dark:border-slate-700'}`}>
+                          {msg.text}
+                       </div>
+                    </div>
+                 ))}
+                 {isChatLoading && (
+                    <div className="flex justify-start">
+                       <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl rounded-bl-none border border-gray-200 dark:border-slate-700 shadow-sm">
+                          <div className="flex gap-1">
+                             <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                             <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-75"></div>
+                             <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-150"></div>
+                          </div>
+                       </div>
+                    </div>
+                 )}
+              </div>
+
+              <form onSubmit={handleChatSubmit} className="p-4 bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-slate-700 flex gap-2">
+                 <input 
+                   value={chatInput}
+                   onChange={e => setChatInput(e.target.value)}
+                   className="flex-1 bg-gray-100 dark:bg-slate-900 border-0 rounded-xl px-4 py-3 focus:ring-2 focus:ring-agro-green outline-none dark:text-white"
+                   placeholder="Pergunte sobre manejo, pragas, clima..."
+                 />
+                 <button type="submit" disabled={!chatInput.trim() || isChatLoading} className="bg-agro-green text-white p-3 rounded-xl hover:bg-green-700 disabled:opacity-50 transition-colors">
+                    <Send size={20} />
+                 </button>
+              </form>
+           </div>
+         )}
+
+         {activeTab === 'reports' && (
+             <Reports crop={crop} />
+         )}
+      </div>
     </div>
   );
 };
